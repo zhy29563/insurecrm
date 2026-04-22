@@ -1220,7 +1220,7 @@ class AppState extends ChangeNotifier {
           'id': maxId + 1,
           'customer_id': sale.customerId,
           'product_id': sale.productId,
-          'amount': sale.amount,
+          'notes': sale.notes,
           'sale_date': sale.saleDate,
           'colleague_id': sale.colleagueId,
           'commission_rate': sale.commissionRate,
@@ -1478,7 +1478,7 @@ class AppState extends ChangeNotifier {
           sales[index] = {
             ...sales[index],
             'product_id': sale.productId,
-            'amount': sale.amount,
+            'notes': sale.notes,
             'sale_date': sale.saleDate,
             'colleague_id': sale.colleagueId,
             'commission_rate': sale.commissionRate,

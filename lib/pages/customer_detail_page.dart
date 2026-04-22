@@ -657,8 +657,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 SizedBox(height: 10),
                 TextField(
                   controller: _amountController,
-                  decoration: InputDecoration(labelText: '保额'),
-                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: '备注',
+                    hintText: '请输入备注信息（可多行）',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 5,
+                  minLines: 3,
                 ),
                 SizedBox(height: 10),
                 Text('选择合作同事:'),
@@ -700,17 +705,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                   ).showSnackBar(SnackBar(content: Text('请选择产品')));
                   return;
                 }
-                if (_amountController.text.isEmpty) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('请输入保额')));
-                  return;
-                }
 
                 final sale = Sale(
                   customerId: widget.customer!.id!,
                   productId: _selectedProduct!.id!,
-                  amount: double.parse(_amountController.text),
+                  notes: _amountController.text,
                   saleDate: _dateController.text,
                   colleagueId: _selectedColleague?.id,
                   commissionRate: _selectedColleague != null
@@ -2107,7 +2106,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                                           ),
                                         ),
                                         Text('产品: ${sale['product_name']}'),
-                                        Text('保额: ${sale['amount']}'),
+                                        if (sale['notes'] != null &&
+                                            sale['notes'].toString().isNotEmpty)
+                                          Text('备注: ${sale['notes']}'),
                                         if (sale['colleague_name'] != null)
                                           Text(
                                             '合作同事: ${sale['colleague_name']} (分成比例: ${sale['commission_rate']}%)',

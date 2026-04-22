@@ -2,7 +2,7 @@ class Sale {
   int? id;
   int customerId;
   int productId;
-  double amount;
+  String notes;
   String saleDate;
   int? colleagueId;
   double? commissionRate;
@@ -17,7 +17,7 @@ class Sale {
     this.id,
     required this.customerId,
     required this.productId,
-    required this.amount,
+    required this.notes,
     required this.saleDate,
     this.colleagueId,
     this.commissionRate,
@@ -34,7 +34,7 @@ class Sale {
       'id': id,
       'customer_id': customerId,
       'product_id': productId,
-      'amount': amount,
+      'notes': notes,
       'sale_date': saleDate,
       'colleague_id': colleagueId,
       'commission_rate': commissionRate,
@@ -52,7 +52,7 @@ class Sale {
       id: map['id'],
       customerId: map['customer_id'],
       productId: map['product_id'],
-      amount: map['amount'],
+      notes: map['notes'] ?? '',
       saleDate: map['sale_date'],
       colleagueId: map['colleague_id'],
       commissionRate: map['commission_rate'],

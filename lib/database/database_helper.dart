@@ -154,7 +154,7 @@ class DatabaseHelper {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_id INTEGER NOT NULL,
             product_id INTEGER NOT NULL,
-            amount REAL NOT NULL,
+            notes TEXT,
             sale_date TEXT NOT NULL,
             colleague_id INTEGER,
             commission_rate REAL,
@@ -1090,7 +1090,9 @@ class DatabaseHelper {
     return await db.insert('product_attachments', row);
   }
 
-  Future<List<Map<String, dynamic>>> getProductAttachments(int productId) async {
+  Future<List<Map<String, dynamic>>> getProductAttachments(
+    int productId,
+  ) async {
     Database db = await instance.database;
     return await db.query(
       'product_attachments',
@@ -1103,26 +1105,46 @@ class DatabaseHelper {
   Future<void> deleteProductAttachment(int id) async {
     Database db = await instance.database;
     // Get file paths to delete physical files
-    final results = await db.query('product_attachments', where: 'id = ?', whereArgs: [id]);
+    final results = await db.query(
+      'product_attachments',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     if (results.isNotEmpty) {
       final path = results.first['file_path'] as String?;
       final thumbPath = results.first['thumbnail_path'] as String?;
-      try { if (path != null) File(path).delete(); } catch (_) {}
-      try { if (thumbPath != null) File(thumbPath).delete(); } catch (_) {}
+      try {
+        if (path != null) File(path).delete();
+      } catch (_) {}
+      try {
+        if (thumbPath != null) File(thumbPath).delete();
+      } catch (_) {}
     }
     await db.delete('product_attachments', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> deleteProductAttachmentsByProductId(int productId) async {
     Database db = await instance.database;
-    final results = await db.query('product_attachments', where: 'product_id = ?', whereArgs: [productId]);
+    final results = await db.query(
+      'product_attachments',
+      where: 'product_id = ?',
+      whereArgs: [productId],
+    );
     for (var r in results) {
       final path = r['file_path'] as String?;
       final thumbPath = r['thumbnail_path'] as String?;
-      try { if (path != null) File(path).delete(); } catch (_) {}
-      try { if (thumbPath != null) File(thumbPath).delete(); } catch (_) {}
+      try {
+        if (path != null) File(path).delete();
+      } catch (_) {}
+      try {
+        if (thumbPath != null) File(thumbPath).delete();
+      } catch (_) {}
     }
-    await db.delete('product_attachments', where: 'product_id = ?', whereArgs: [productId]);
+    await db.delete(
+      'product_attachments',
+      where: 'product_id = ?',
+      whereArgs: [productId],
+    );
   }
 
   // ===== Password Hashing =====
@@ -1205,7 +1227,10 @@ class DatabaseHelper {
   }
 
   /// Validate login credentials. Returns User map on success, null on failure.
-  Future<Map<String, dynamic>?> validateLogin(String username, String password) async {
+  Future<Map<String, dynamic>?> validateLogin(
+    String username,
+    String password,
+  ) async {
     Database db = await instance.database;
 
     final results = await db.query(
@@ -1250,15 +1275,30 @@ class DatabaseHelper {
   /// Get all users (for admin management)
   Future<List<Map<String, dynamic>>> getAllUsers() async {
     Database db = await instance.database;
-    return await db.query('users', orderBy: 'id ASC', columns: [
-      'id', 'username', 'display_name', 'role', 'is_active', 'created_at', 'last_login'
-    ]);
+    return await db.query(
+      'users',
+      orderBy: 'id ASC',
+      columns: [
+        'id',
+        'username',
+        'display_name',
+        'role',
+        'is_active',
+        'created_at',
+        'last_login',
+      ],
+    );
   }
 
   /// Update user role
   Future<void> updateUserRole(int userId, String newRole) async {
     Database db = await instance.database;
-    await db.update('users', {'role': newRole}, where: 'id = ?', whereArgs: [userId]);
+    await db.update(
+      'users',
+      {'role': newRole},
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
   }
 
   /// Reset password via security question verification
@@ -1307,7 +1347,11 @@ class DatabaseHelper {
   }) async {
     Database db = await instance.database;
 
-    final results = await db.query('users', where: 'id = ?', whereArgs: [userId]);
+    final results = await db.query(
+      'users',
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
     if (results.isEmpty) {
       return (false, '用户不存在');
     }
