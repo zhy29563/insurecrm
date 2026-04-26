@@ -10,7 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 class DatabaseHelper {
   static final _databaseName = "insurance_app.db";
-  static final _databaseVersion = 5;
+  static final _databaseVersion = 6;
   static int get databaseVersion => _databaseVersion;
 
   static final tableCustomers = 'customers';
@@ -218,6 +218,48 @@ class DatabaseHelper {
             tag TEXT NOT NULL,
             FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id)
           )''');
+
+    // Create product_attachments table (v4)
+    await db.execute('''
+          CREATE TABLE IF NOT EXISTS product_attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            file_path TEXT NOT NULL,
+            thumbnail_path TEXT,
+            media_type TEXT NOT NULL DEFAULT 'image',
+            file_name TEXT,
+            created_at TEXT,
+            FOREIGN KEY (product_id) REFERENCES $tableProducts (id)
+          )''');
+
+    // Create users table (v5)
+    await db.execute('''
+          CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            display_name TEXT,
+            role TEXT NOT NULL DEFAULT 'user',
+            security_question TEXT,
+            security_answer_hash TEXT,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT,
+            last_login TEXT
+          )''');
+
+    // Insert default admin account: admin / 123456
+    final defaultAdminPasswordHash = hashPassword('123456');
+    final defaultAdminSecurityAnswer = hashPassword('保险');
+    await db.insert('users', {
+      'username': 'admin',
+      'password_hash': defaultAdminPasswordHash,
+      'display_name': '系统管理员',
+      'role': 'admin',
+      'security_question': '您从事的行业是什么？',
+      'security_answer_hash': defaultAdminSecurityAnswer,
+      'is_active': 1,
+      'created_at': DateTime.now().toIso8601String(),
+    });
   }
 
   // Database upgrade
@@ -282,8 +324,8 @@ class DatabaseHelper {
         )''');
 
       // Insert default admin account: admin / 123456
-      final defaultAdminPasswordHash = _hashPassword('123456');
-      final defaultAdminSecurityAnswer = _hashPassword('保险');
+      final defaultAdminPasswordHash = hashPassword('123456');
+      final defaultAdminSecurityAnswer = hashPassword('保险');
       await db.insert('users', {
         'username': 'admin',
         'password_hash': defaultAdminPasswordHash,
@@ -294,6 +336,67 @@ class DatabaseHelper {
         'is_active': 1,
         'created_at': DateTime.now().toIso8601String(),
       });
+    }
+    if (oldVersion < 6) {
+      // Fix: Ensure users table exists (old _onCreate missed it for fresh installs)
+      // and re-hash default admin password with consistent hashPassword() method
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL UNIQUE,
+          password_hash TEXT NOT NULL,
+          display_name TEXT,
+          role TEXT NOT NULL DEFAULT 'user',
+          security_question TEXT,
+          security_answer_hash TEXT,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT,
+          last_login TEXT
+        )''');
+
+      // Also ensure product_attachments table exists
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS product_attachments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          file_path TEXT NOT NULL,
+          thumbnail_path TEXT,
+          media_type TEXT NOT NULL DEFAULT 'image',
+          file_name TEXT,
+          created_at TEXT,
+          FOREIGN KEY (product_id) REFERENCES $tableProducts (id)
+        )''');
+
+      // Check if admin account exists
+      final adminRows = await db.query(
+        'users',
+        where: 'username = ?',
+        whereArgs: ['admin'],
+      );
+      if (adminRows.isEmpty) {
+        // No admin account — insert default one
+        await db.insert('users', {
+          'username': 'admin',
+          'password_hash': hashPassword('123456'),
+          'display_name': '系统管理员',
+          'role': 'admin',
+          'security_question': '您从事的行业是什么？',
+          'security_answer_hash': hashPassword('保险'),
+          'is_active': 1,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      } else {
+        // Admin exists — fix password hash (old v5 used wrong hash method)
+        await db.update(
+          'users',
+          {
+            'password_hash': hashPassword('123456'),
+            'security_answer_hash': hashPassword('保险'),
+          },
+          where: 'username = ?',
+          whereArgs: ['admin'],
+        );
+      }
     }
   }
 
@@ -1148,24 +1251,6 @@ class DatabaseHelper {
   }
 
   // ===== Password Hashing =====
-
-  /// Hash a password using SHA-256 with salt
-  static String _hashPassword(String password) {
-    final bytes = password.codeUnits;
-    final salt = 'insurecrm_salt_2026';
-    final saltedBytes = [...bytes, ...salt.codeUnits];
-    // Simple hash using dart:convert (no external dependency)
-    return _simpleHash(saltedBytes.join(','));
-  }
-
-  static String _simpleHash(String input) {
-    var hash = 0;
-    for (var i = 0; i < input.length; i++) {
-      hash = ((hash << 5) - hash) + input.codeUnitAt(i);
-      hash = hash & 0xffffffff; // Convert to 32bit integer
-    }
-    return hash.toRadixString(16).padLeft(8, '0');
-  }
 
   /// Public method for password hashing
   static String hashPassword(String password) {
