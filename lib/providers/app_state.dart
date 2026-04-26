@@ -55,6 +55,9 @@ class AppState extends ChangeNotifier {
   List<Map<String, dynamic>> conversionFunnel = [];
   List<Map<String, dynamic>> visitEfficiency = [];
 
+  bool _isAddingSampleData = false;
+  bool _isAddingColleagues = false;
+
   // Initialize app data
   Future<void> initializeApp() async {
     try {
@@ -65,6 +68,7 @@ class AppState extends ChangeNotifier {
       await loadReminders();
       await loadStatistics();
       await loadSystemNotifications();
+
       // Auto backup check (non-blocking)
       if (!kIsWeb) {
         try {
@@ -668,8 +672,10 @@ class AppState extends ChangeNotifier {
 
       if (kIsWeb) {
         // For web platform, use in-memory data
-        if (customers.isEmpty) {
+        if (customers.isEmpty && !_isAddingSampleData) {
+          _isAddingSampleData = true;
           await addSampleCustomers();
+          _isAddingSampleData = false;
         }
       } else {
         // For mobile platforms, use database
@@ -699,15 +705,70 @@ class AppState extends ChangeNotifier {
         }
 
         // 添加示例客户数据（如果没有数据）
-        if (customers.isEmpty) {
+        if (customers.isEmpty && !_isAddingSampleData) {
+          _isAddingSampleData = true;
           await addSampleCustomers();
+          _isAddingSampleData = false;
+
+          // 重新从数据库加载客户数据
+          final newCustomerMaps = await db.getAllCustomers();
+          customers = [];
+          for (var map in newCustomerMaps) {
+            final phones = await db.getCustomerPhones(map['id']);
+            final addresses = await db.getCustomerAddresses(map['id']);
+            final visits = await db.getCustomerVisits(map['id']);
+            final products = await db.getCustomerProducts(map['id']);
+            final relationships = await db.getCustomerRelationships(map['id']);
+            final tags = await db.getCustomerTags(map['id']);
+
+            customers.add(
+              Customer.fromMap(
+                map,
+                phones: phones,
+                addresses: addresses,
+                visits: visits,
+                products: products,
+                relationships: relationships,
+                tagListFromDb: tags,
+              ),
+            );
+          }
         }
       }
     } catch (e) {
       AppLogger.error('loading customers: $e');
-      // If error occurs, add sample data
-      if (customers.isEmpty) {
-        await addSampleCustomers();
+      // If error occurs, try adding sample data
+      if (customers.isEmpty && !_isAddingSampleData) {
+        _isAddingSampleData = true;
+        try {
+          await addSampleCustomers();
+          // Reload from database after adding sample data
+          if (!kIsWeb) {
+            final db = DatabaseHelper.instance;
+            final newCustomerMaps = await db.getAllCustomers();
+            customers = [];
+            for (var map in newCustomerMaps) {
+              final phones = await db.getCustomerPhones(map['id']);
+              final addresses = await db.getCustomerAddresses(map['id']);
+              final visits = await db.getCustomerVisits(map['id']);
+              final products = await db.getCustomerProducts(map['id']);
+              final relationships = await db.getCustomerRelationships(map['id']);
+              final tags = await db.getCustomerTags(map['id']);
+              customers.add(
+                Customer.fromMap(
+                  map,
+                  phones: phones,
+                  addresses: addresses,
+                  visits: visits,
+                  products: products,
+                  relationships: relationships,
+                  tagListFromDb: tags,
+                ),
+              );
+            }
+          }
+        } catch (_) {}
+        _isAddingSampleData = false;
       }
     } finally {
       isLoading = false;
@@ -717,61 +778,573 @@ class AppState extends ChangeNotifier {
 
   // 添加示例客户数据
   Future<void> addSampleCustomers() async {
-    final sampleCustomers = [
-      Customer(
-        name: '张三',
-        alias: '张总',
-        age: 35,
-        gender: '男',
-        rating: 5,
-        phones: ['13800138001'],
-        addresses: ['北京市朝阳区建国路88号'],
-        createdAt: DateTime.now().toIso8601String(),
-      ),
-      Customer(
-        name: '李四',
-        alias: '李经理',
-        age: 28,
-        gender: '女',
-        rating: 4,
-        phones: ['13900139002'],
-        addresses: ['上海市浦东新区陆家嘴金融中心'],
-        createdAt: DateTime.now().toIso8601String(),
-      ),
-      Customer(
-        name: '王五',
-        alias: '王老板',
-        age: 42,
-        gender: '男',
-        rating: 5,
-        phones: ['13700137003'],
-        addresses: ['广州市天河区珠江新城'],
-        createdAt: DateTime.now().toIso8601String(),
-      ),
-      Customer(
-        name: '赵六',
-        alias: '赵女士',
-        age: 31,
-        gender: '女',
-        rating: 3,
-        phones: ['13600136004'],
-        addresses: ['深圳市南山区科技园'],
-        createdAt: DateTime.now().toIso8601String(),
-      ),
-      Customer(
-        name: '钱七',
-        alias: '钱总',
-        age: 45,
-        gender: '男',
-        rating: 4,
-        phones: ['13500135005'],
-        addresses: ['杭州市西湖区阿里巴巴总部'],
-        createdAt: DateTime.now().toIso8601String(),
-      ),
-    ];
+    if (kIsWeb) {
+      // Web平台：直接操作内存数据
+      if (colleagues.isEmpty) {
+        // 添加测试同事
+        final testColleagues = [
+          Colleague(name: '张三', phone: '13800138001', specialty: '销售经理'),
+          Colleague(name: '李四', phone: '13800138002', specialty: '销售代表'),
+          Colleague(name: '王五', phone: '13800138003', specialty: '市场专员'),
+          Colleague(name: '赵六', phone: '13800138004', specialty: '客服经理'),
+        ];
 
-    for (var customer in sampleCustomers) {
-      await addCustomer(customer);
+        for (int i = 0; i < testColleagues.length; i++) {
+          testColleagues[i].id = i + 1;
+          colleagues.add(testColleagues[i]);
+        }
+      }
+
+      if (customers.isEmpty) {
+        final now = DateTime.now();
+        // 添加测试客户
+        final sampleCustomers = [
+          Customer(
+            id: 1,
+            name: '陈小明',
+            alias: '小明',
+            age: 35,
+            gender: '男',
+            rating: 5,
+            phones: ['13900139001', '13900139002'],
+            addresses: ['北京市朝阳区建国路88号'],
+            latitude: 39.9042,
+            longitude: 116.4074,
+            tags: '高意向,重点客户',
+            birthday: '1991-05-15',
+            nextFollowUpDate:
+                now.add(Duration(days: 2)).toIso8601String().substring(0, 10),
+            createdAt:
+                now.subtract(Duration(days: 15)).toIso8601String(),
+          ),
+          Customer(
+            id: 2,
+            name: '刘小红',
+            alias: '小红',
+            age: 28,
+            gender: '女',
+            rating: 4,
+            phones: ['13900139003'],
+            addresses: ['上海市浦东新区世纪大道100号'],
+            latitude: 31.2304,
+            longitude: 121.4737,
+            tags: '中等意向',
+            birthday: '1998-08-22',
+            nextFollowUpDate:
+                now.add(Duration(days: 7)).toIso8601String().substring(0, 10),
+            createdAt:
+                now.subtract(Duration(days: 10)).toIso8601String(),
+          ),
+          Customer(
+            id: 3,
+            name: '王大力',
+            alias: '大力',
+            age: 42,
+            gender: '男',
+            rating: 3,
+            phones: ['13900139004'],
+            addresses: ['广州市天河区天河路123号'],
+            latitude: 23.1291,
+            longitude: 113.2644,
+            tags: '低意向',
+            birthday: '1984-03-10',
+            nextFollowUpDate:
+                now.subtract(Duration(days: 3)).toIso8601String().substring(
+                  0,
+                  10,
+                ),
+            createdAt:
+                now.subtract(Duration(days: 30)).toIso8601String(),
+          ),
+          Customer(
+            id: 4,
+            name: '张丽',
+            alias: '丽丽',
+            age: 30,
+            gender: '女',
+            rating: 5,
+            phones: ['13900139005', '13900139006'],
+            addresses: ['深圳市南山区科技园路1号'],
+            latitude: 22.5431,
+            longitude: 114.0579,
+            tags: '高意向,VIP客户',
+            birthday: '1996-11-08',
+            nextFollowUpDate:
+                now.add(Duration(days: 1)).toIso8601String().substring(0, 10),
+            createdAt:
+                now.subtract(Duration(days: 5)).toIso8601String(),
+          ),
+          Customer(
+            id: 5,
+            name: '李强',
+            alias: '强哥',
+            age: 38,
+            gender: '男',
+            rating: 4,
+            phones: ['13900139007'],
+            addresses: ['杭州市西湖区文二路100号'],
+            latitude: 30.2741,
+            longitude: 120.1551,
+            tags: '中等意向,重点客户',
+            birthday: '1988-07-25',
+            nextFollowUpDate:
+                now.add(Duration(days: 5)).toIso8601String().substring(0, 10),
+            createdAt: now.toIso8601String(),
+          ),
+        ];
+
+        customers.addAll(sampleCustomers);
+      }
+
+      notifyListeners();
+    } else {
+      // 移动平台：操作数据库
+      final db = DatabaseHelper.instance;
+
+      // 检查是否已有客户数据
+      final existingCustomers = await db.getAllCustomers();
+      if (existingCustomers.isEmpty) {
+        try {
+        final now = DateTime.now();
+
+        // 添加测试客户（含birthday和next_follow_up_date）
+        final sampleCustomers = [
+          {
+            'name': '陈小明',
+            'alias': '小明',
+            'age': 35,
+            'gender': '男',
+            'rating': 5,
+            'latitude': 39.9042,
+            'longitude': 116.4074,
+            'tags': '高意向,重点客户',
+            'birthday': '1991-05-15',
+            'next_follow_up_date':
+                now.add(Duration(days: 2)).toIso8601String().substring(0, 10),
+            'created_at':
+                now.subtract(Duration(days: 15)).toIso8601String(),
+          },
+          {
+            'name': '刘小红',
+            'alias': '小红',
+            'age': 28,
+            'gender': '女',
+            'rating': 4,
+            'latitude': 31.2304,
+            'longitude': 121.4737,
+            'tags': '中等意向',
+            'birthday': '1998-08-22',
+            'next_follow_up_date':
+                now.add(Duration(days: 7)).toIso8601String().substring(0, 10),
+            'created_at':
+                now.subtract(Duration(days: 10)).toIso8601String(),
+          },
+          {
+            'name': '王大力',
+            'alias': '大力',
+            'age': 42,
+            'gender': '男',
+            'rating': 3,
+            'latitude': 23.1291,
+            'longitude': 113.2644,
+            'tags': '低意向',
+            'birthday': '1984-03-10',
+            'next_follow_up_date':
+                now.subtract(Duration(days: 3)).toIso8601String().substring(
+                  0,
+                  10,
+                ),
+            'created_at':
+                now.subtract(Duration(days: 30)).toIso8601String(),
+          },
+          {
+            'name': '张丽',
+            'alias': '丽丽',
+            'age': 30,
+            'gender': '女',
+            'rating': 5,
+            'latitude': 22.5431,
+            'longitude': 114.0579,
+            'tags': '高意向,VIP客户',
+            'birthday': '1996-11-08',
+            'next_follow_up_date':
+                now.add(Duration(days: 1)).toIso8601String().substring(0, 10),
+            'created_at':
+                now.subtract(Duration(days: 5)).toIso8601String(),
+          },
+          {
+            'name': '李强',
+            'alias': '强哥',
+            'age': 38,
+            'gender': '男',
+            'rating': 4,
+            'latitude': 30.2741,
+            'longitude': 120.1551,
+            'tags': '中等意向,重点客户',
+            'birthday': '1988-07-25',
+            'next_follow_up_date':
+                now.add(Duration(days: 5)).toIso8601String().substring(0, 10),
+            'created_at': now.toIso8601String(),
+          },
+        ];
+
+        // 客户联系方式
+        final customerPhones = [
+          ['13900139001', '13900139002'], // 陈小明
+          ['13900139003'], // 刘小红
+          ['13900139004'], // 王大力
+          ['13900139005', '13900139006'], // 张丽
+          ['13900139007'], // 李强
+        ];
+
+        // 客户地址
+        final customerAddresses = [
+          ['北京市朝阳区建国路88号'], // 陈小明
+          ['上海市浦东新区世纪大道100号'], // 刘小红
+          ['广州市天河区天河路123号'], // 王大力
+          ['深圳市南山区科技园路1号'], // 张丽
+          ['杭州市西湖区文二路100号'], // 李强
+        ];
+
+        // 插入客户数据并收集ID
+        final customerIds = <int>[];
+        for (int i = 0; i < sampleCustomers.length; i++) {
+          final customerId = await db.insertCustomer(sampleCustomers[i]);
+          customerIds.add(customerId);
+
+          for (final phone in customerPhones[i]) {
+            await db.insertCustomerPhone(customerId, phone);
+          }
+          for (final address in customerAddresses[i]) {
+            await db.insertCustomerAddress(customerId, address);
+          }
+        }
+
+        // 确保产品数据存在
+        final existingProducts = await db.getAllProducts();
+        if (existingProducts.isEmpty) {
+          final sampleProducts = [
+            {
+              'company': '平安保险',
+              'name': '平安福重疾险',
+              'description': '涵盖100种重疾和50种轻症，保障全面',
+              'advantages': '保障范围广，理赔速度快',
+              'category': '重疾险',
+              'start_date': '2026-01-01',
+              'end_date': '2026-12-31',
+              'created_at': now.toIso8601String(),
+            },
+            {
+              'company': '太平洋保险',
+              'name': '太平洋健康险',
+              'description': '提供全面的健康保障',
+              'advantages': '保障全面，保费合理',
+              'category': '健康险',
+              'start_date': '2026-01-01',
+              'end_date': '2026-12-31',
+              'created_at': now.toIso8601String(),
+            },
+            {
+              'company': '中国人寿',
+              'name': '国寿养老险',
+              'description': '为老年人提供稳定的养老保障',
+              'advantages': '收益稳定，安全可靠',
+              'category': '养老险',
+              'start_date': '2026-01-01',
+              'end_date': '2026-12-31',
+              'created_at': now.toIso8601String(),
+            },
+            {
+              'company': '人保财险',
+              'name': '人保车险',
+              'description': '为车辆提供全面的保险保障',
+              'advantages': '理赔速度快，服务好',
+              'category': '财产险',
+              'start_date': '2026-01-01',
+              'end_date': '2026-12-31',
+              'created_at': now.toIso8601String(),
+            },
+            {
+              'company': '泰康人寿',
+              'name': '泰康年金险',
+              'description': '提供稳定的年金收益',
+              'advantages': '收益稳定，安全可靠',
+              'category': '年金险',
+              'start_date': '2026-01-01',
+              'end_date': '2026-12-31',
+              'created_at': now.toIso8601String(),
+            },
+          ];
+          for (final product in sampleProducts) {
+            await db.insertProduct(product);
+          }
+        }
+
+        // 确保同事数据存在
+        final existingColleagues = await db.getAllColleagues();
+        if (existingColleagues.isEmpty) {
+          final testColleagues = [
+            {'name': '张三', 'phone': '13800138001', 'specialty': '销售经理'},
+            {'name': '李四', 'phone': '13800138002', 'specialty': '销售代表'},
+            {'name': '王五', 'phone': '13800138003', 'specialty': '市场专员'},
+            {'name': '赵六', 'phone': '13800138004', 'specialty': '客服经理'},
+          ];
+          for (final colleague in testColleagues) {
+            await db.insertColleague(colleague);
+          }
+        }
+
+        // 获取产品和同事ID用于关联
+        final productMaps = await db.getAllProducts();
+        final colleagueMaps = await db.getAllColleagues();
+        final productIds = productMaps.map((p) => p['id'] as int).toList();
+
+        // 添加示例拜访记录
+        final sampleVisits = [
+          {
+            'customer_id': customerIds[0],
+            'date':
+                now.subtract(Duration(days: 5)).toIso8601String().substring(
+                  0,
+                  10,
+                ),
+            'location': '北京办公室',
+            'accompanying_persons': '张三',
+            'introduced_products': '平安福重疾险',
+            'interested_products': '平安福重疾险',
+            'notes': '客户对重疾险很感兴趣，希望了解更多细节',
+          },
+          {
+            'customer_id': customerIds[0],
+            'date':
+                now.subtract(Duration(days: 20)).toIso8601String().substring(
+                  0,
+                  10,
+                ),
+            'location': '客户家中',
+            'notes': '初次拜访，了解客户需求',
+          },
+          {
+            'customer_id': customerIds[1],
+            'date':
+                now.subtract(Duration(days: 3)).toIso8601String().substring(
+                  0,
+                  10,
+                ),
+            'location': '上海办公室',
+            'introduced_products': '太平洋健康险',
+            'notes': '客户对健康险有兴趣，需要进一步跟进',
+          },
+          {
+            'customer_id': customerIds[3],
+            'date':
+                now.subtract(Duration(days: 1)).toIso8601String().substring(
+                  0,
+                  10,
+                ),
+            'location': '深圳咖啡厅',
+            'accompanying_persons': '李四',
+            'introduced_products': '太平洋健康险,国寿养老险',
+            'interested_products': '太平洋健康险',
+            'notes': 'VIP客户，对健康险和养老险都有兴趣',
+          },
+          {
+            'customer_id': customerIds[4],
+            'date':
+                now.subtract(Duration(days: 8)).toIso8601String().substring(
+                  0,
+                  10,
+                ),
+            'location': '杭州茶馆',
+            'notes': '客户正在考虑养老规划',
+          },
+        ];
+        for (final visit in sampleVisits) {
+          await db.insertVisit(visit);
+        }
+
+        // 添加示例销售记录
+        if (productIds.isNotEmpty) {
+          final sampleSales = [
+            {
+              'customer_id': customerIds[0],
+              'product_id': productIds[0],
+              'amount': 50000.0,
+              'notes': '购买平安福重疾险，保额50万',
+              'sale_date':
+                  now.subtract(Duration(days: 3)).toIso8601String().substring(
+                    0,
+                    10,
+                  ),
+              'colleague_id': colleagueMaps.isNotEmpty
+                  ? colleagueMaps[0]['id']
+                  : null,
+              'commission_rate': 8.5,
+            },
+            {
+              'customer_id': customerIds[3],
+              'product_id': productIds.length > 1 ? productIds[1] : productIds[0],
+              'amount': 8000.0,
+              'notes': '购买太平洋健康险，年缴保费8000元',
+              'sale_date':
+                  now.subtract(Duration(days: 1)).toIso8601String().substring(
+                    0,
+                    10,
+                  ),
+              'colleague_id': colleagueMaps.length > 1
+                  ? colleagueMaps[1]['id']
+                  : null,
+              'commission_rate': 5.0,
+            },
+            {
+              'customer_id': customerIds[4],
+              'product_id': productIds.length > 2 ? productIds[2] : productIds[0],
+              'amount': 120000.0,
+              'notes': '购买国寿养老险，年缴保费12万',
+              'sale_date': now.toIso8601String().substring(0, 10),
+              'colleague_id': colleagueMaps.isNotEmpty
+                  ? colleagueMaps[0]['id']
+                  : null,
+              'commission_rate': 3.0,
+            },
+          ];
+          for (final sale in sampleSales) {
+            await db.insertSale(sale);
+          }
+        }
+
+        // 添加示例提醒
+        final sampleReminders = [
+          {
+            'customer_id': customerIds[0],
+            'title': '跟进陈小明 - 重疾险方案',
+            'description': '发送详细的重疾险保障方案',
+            'reminder_date':
+                now.add(Duration(days: 2)).toIso8601String().substring(0, 10),
+            'reminder_time': '10:00',
+            'type': 'follow_up',
+            'status': 'pending',
+            'created_at': now.toIso8601String(),
+          },
+          {
+            'customer_id': customerIds[3],
+            'title': '张丽 - 健康险方案讲解',
+            'description': '上门讲解太平洋健康险方案',
+            'reminder_date': now.toIso8601String().substring(0, 10),
+            'reminder_time': '14:00',
+            'type': 'visit',
+            'status': 'pending',
+            'created_at': now.toIso8601String(),
+          },
+          {
+            'customer_id': customerIds[2],
+            'title': '跟进王大力 - 续保提醒',
+            'description': '车险即将到期，提醒续保',
+            'reminder_date':
+                now.subtract(Duration(days: 3)).toIso8601String().substring(
+                  0,
+                  10,
+                ),
+            'type': 'renewal',
+            'status': 'pending',
+            'created_at': now.toIso8601String(),
+          },
+          {
+            'customer_id': customerIds[1],
+            'title': '刘小红 - 健康险跟进',
+            'description': '跟进健康险意向，发送产品资料',
+            'reminder_date':
+                now.add(Duration(days: 7)).toIso8601String().substring(0, 10),
+            'reminder_time': '09:00',
+            'type': 'follow_up',
+            'status': 'pending',
+            'created_at': now.toIso8601String(),
+          },
+          {
+            'customer_id': customerIds[4],
+            'title': '李强 - 养老规划回访',
+            'description': '回访养老规划需求',
+            'reminder_date':
+                now.add(Duration(days: 5)).toIso8601String().substring(0, 10),
+            'type': 'follow_up',
+            'status': 'pending',
+            'created_at': now.toIso8601String(),
+          },
+        ];
+        for (final reminder in sampleReminders) {
+          await db.insertReminder(reminder);
+        }
+
+        // 添加示例客户-产品关联
+        if (productIds.isNotEmpty) {
+          final sampleCustomerProducts = [
+            {
+              'customer_id': customerIds[0],
+              'product_id': productIds[0],
+              'purchase_date':
+                  now.subtract(Duration(days: 3)).toIso8601String().substring(
+                    0,
+                    10,
+                  ),
+            },
+            {
+              'customer_id': customerIds[3],
+              'product_id':
+                  productIds.length > 1 ? productIds[1] : productIds[0],
+              'purchase_date':
+                  now.subtract(Duration(days: 1)).toIso8601String().substring(
+                    0,
+                    10,
+                  ),
+            },
+            {
+              'customer_id': customerIds[4],
+              'product_id':
+                  productIds.length > 2 ? productIds[2] : productIds[0],
+              'purchase_date': now.toIso8601String().substring(0, 10),
+            },
+          ];
+          for (final cp in sampleCustomerProducts) {
+            await db.insertCustomerProduct(cp);
+          }
+        }
+
+        // 添加示例客户关系
+        if (customerIds.length >= 5) {
+          final sampleRelationships = [
+            {
+              'customer_id': customerIds[0],
+              'related_customer_id': customerIds[1],
+              'relationship': '朋友',
+            },
+            {
+              'customer_id': customerIds[3],
+              'related_customer_id': customerIds[4],
+              'relationship': '同事',
+            },
+          ];
+          for (final rel in sampleRelationships) {
+            await db.insertCustomerRelationship(rel);
+          }
+        }
+
+        // 添加示例客户标签（到customer_tags表）
+        final sampleTags = [
+          {'customer_id': customerIds[0], 'tags': ['高意向', '重点客户']},
+          {'customer_id': customerIds[1], 'tags': ['中等意向']},
+          {'customer_id': customerIds[2], 'tags': ['低意向']},
+          {'customer_id': customerIds[3], 'tags': ['高意向', 'VIP客户']},
+          {'customer_id': customerIds[4], 'tags': ['中等意向', '重点客户']},
+        ];
+        for (final tagEntry in sampleTags) {
+          for (final tag in tagEntry['tags'] as List<String>) {
+            await db.insertCustomerTag(tagEntry['customer_id'] as int, tag);
+          }
+        }
+        } catch (e) {
+          AppLogger.error('adding sample customers (mobile): $e');
+        }
+      }
     }
   }
 

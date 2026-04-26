@@ -183,6 +183,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           widget.customer!.longitude!,
         );
       }
+    } else {
+      // 添加新客户时，默认处于编辑模式
+      _isEditing = true;
     }
     _getCurrentLocation();
   }
@@ -891,6 +894,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 ),
               ],
             ),
+          // 添加新客户时显示保存按钮
+          if (!isEditMode && _isEditing)
+            IconButton(icon: Icon(Icons.save), onPressed: _saveCustomer),
         ],
       ),
       body: SingleChildScrollView(

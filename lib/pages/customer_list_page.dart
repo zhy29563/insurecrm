@@ -467,7 +467,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                       runSpacing: 2,
                       children: customer.tagList
                           .take(3)
-                          .map(
+                          .map<Widget>(
                             (tag) => Container(
                               padding: EdgeInsets.symmetric(
                                 horizontal: 6,

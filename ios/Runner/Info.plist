@@ -66,5 +66,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- 定位权限 -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>该应用需要访问您的位置以提供客户地图和附近客户功能</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>该应用需要持续访问您的位置以提供后台位置更新和客户拜访提醒</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>该应用需要持续访问您的位置以提供后台位置更新和客户拜访提醒</string>
 </dict>
 </plist>

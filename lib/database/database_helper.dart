@@ -10,7 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 class DatabaseHelper {
   static final _databaseName = "insurance_app.db";
-  static final _databaseVersion = 6;
+  static final _databaseVersion = 8;
   static int get databaseVersion => _databaseVersion;
 
   static final tableCustomers = 'customers';
@@ -98,6 +98,10 @@ class DatabaseHelper {
             latitude REAL,
             longitude REAL,
             address TEXT,
+            birthday TEXT,
+            tags TEXT,
+            photos TEXT,
+            next_follow_up_date TEXT,
             created_at TEXT
           )''');
 
@@ -154,10 +158,17 @@ class DatabaseHelper {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_id INTEGER NOT NULL,
             product_id INTEGER NOT NULL,
+            amount REAL,
             notes TEXT,
             sale_date TEXT NOT NULL,
             colleague_id INTEGER,
             commission_rate REAL,
+            policy_number TEXT,
+            policy_status TEXT DEFAULT '有效',
+            payment_method TEXT,
+            payment_term INTEGER,
+            guarantee_period INTEGER,
+            renewal_date TEXT,
             FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id),
             FOREIGN KEY (product_id) REFERENCES $tableProducts (id),
             FOREIGN KEY (colleague_id) REFERENCES $tableColleagues (id)
@@ -291,8 +302,11 @@ class DatabaseHelper {
         )''');
     }
     if (oldVersion < 4) {
-      // Add photos column to customers table
+      // Add missing columns to customers table
       await db.execute('ALTER TABLE $tableCustomers ADD COLUMN photos TEXT');
+      await db.execute('ALTER TABLE $tableCustomers ADD COLUMN birthday TEXT');
+      await db.execute('ALTER TABLE $tableCustomers ADD COLUMN tags TEXT');
+      await db.execute('ALTER TABLE $tableCustomers ADD COLUMN next_follow_up_date TEXT');
 
       // Create product_attachments table
       await db.execute('''
@@ -338,6 +352,13 @@ class DatabaseHelper {
       });
     }
     if (oldVersion < 6) {
+      // Fix: Ensure missing columns in customers table
+      // v4 upgrade only added 'photos', but 'birthday', 'tags', 'next_follow_up_date' were missing
+      try { await db.execute('ALTER TABLE $tableCustomers ADD COLUMN photos TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE $tableCustomers ADD COLUMN birthday TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE $tableCustomers ADD COLUMN tags TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE $tableCustomers ADD COLUMN next_follow_up_date TEXT'); } catch (_) {}
+
       // Fix: Ensure users table exists (old _onCreate missed it for fresh installs)
       // and re-hash default admin password with consistent hashPassword() method
       await db.execute('''
@@ -397,6 +418,32 @@ class DatabaseHelper {
           whereArgs: ['admin'],
         );
       }
+    }
+    if (oldVersion < 7) {
+      // Add missing columns to sales table (referenced by Sale model and statistics queries)
+      try { await db.execute('ALTER TABLE $tableSales ADD COLUMN amount REAL'); } catch (_) {}
+      try { await db.execute('ALTER TABLE $tableSales ADD COLUMN policy_number TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE $tableSales ADD COLUMN policy_status TEXT DEFAULT \'有效\''); } catch (_) {}
+      try { await db.execute('ALTER TABLE $tableSales ADD COLUMN payment_method TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE $tableSales ADD COLUMN payment_term INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE $tableSales ADD COLUMN guarantee_period INTEGER'); } catch (_) {}
+      try { await db.execute('ALTER TABLE $tableSales ADD COLUMN renewal_date TEXT'); } catch (_) {}
+    }
+    if (oldVersion < 8) {
+      // v8: Clean up stale/duplicate data from previous bugs
+      // Delete all sample data so it can be cleanly re-inserted by addSampleCustomers()
+      await db.delete(tableCustomerTags);
+      await db.delete(tableCustomerRelations);
+      await db.delete(tableCustomerProducts);
+      await db.delete(tableSales);
+      await db.delete(tableReminders);
+      await db.delete(tableVisits);
+      await db.delete(tableColleagues);
+      await db.delete('customer_phones');
+      await db.delete('customer_addresses');
+      await db.delete(tableCustomers);
+      // Also delete stale products so they can be re-created with proper IDs
+      await db.delete(tableProducts);
     }
   }
 

@@ -125,68 +125,7 @@ class _HomeContent extends StatefulWidget {
   __HomeContentState createState() => __HomeContentState();
 }
 
-class __HomeContentState extends State<_HomeContent>
-    with TickerProviderStateMixin {
-  late AnimationController _greetingController;
-  late AnimationController _statsController;
-  late AnimationController _quickActionsController;
-  late Animation<double> _greetingAnimation;
-  late Animation<double> _statsAnimation;
-  late Animation<double> _quickActionsAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // 问候语动画
-    _greetingController = AnimationController(
-      duration: Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _greetingAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _greetingController, curve: Curves.easeOut),
-    );
-
-    // 统计卡片动画
-    _statsController = AnimationController(
-      duration: Duration(milliseconds: 1000),
-      vsync: this,
-    );
-    _statsAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _statsController,
-        curve: Interval(0.2, 1.0, curve: Curves.easeOut),
-      ),
-    );
-
-    // 快捷操作动画
-    _quickActionsController = AnimationController(
-      duration: Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _quickActionsAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _quickActionsController,
-        curve: Interval(0.4, 1.0, curve: Curves.easeOut),
-      ),
-    );
-
-    // 延迟启动动画
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _greetingController.forward();
-      _statsController.forward();
-      _quickActionsController.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _greetingController.dispose();
-    _statsController.dispose();
-    _quickActionsController.dispose();
-    super.dispose();
-  }
-
+class __HomeContentState extends State<_HomeContent> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
@@ -196,11 +135,76 @@ class __HomeContentState extends State<_HomeContent>
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 280,
+          expandedHeight: 56,
           floating: false,
           pinned: true,
           elevation: 0,
           backgroundColor: Color(0xFF0D47A1),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '保险管理系统',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NotificationCenterPage(),
+                      ),
+                    );
+                  },
+                  child: Stack(
+                    children: [
+                      Icon(
+                        Icons.notifications_none_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                      if (appState.overdueReminders.isNotEmpty ||
+                          appState.systemNotifications.isNotEmpty)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFE53935),
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: BoxConstraints(
+                              minWidth: 8,
+                              minHeight: 8,
+                            ),
+                            child: Text(
+                              '${(appState.overdueReminders.length + appState.systemNotifications.length).clamp(1, 99)}',
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
           flexibleSpace: FlexibleSpaceBar(
             background: Container(
               decoration: BoxDecoration(
@@ -214,172 +218,50 @@ class __HomeContentState extends State<_HomeContent>
                   ],
                 ),
               ),
-              child: SafeArea(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(24, 16, 24, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '保险管理系统',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        NotificationCenterPage(),
-                                  ),
-                                );
-                              },
-                                child: Stack(
-                                  children: [
-                                    Icon(
-                                      Icons.notifications_none_rounded,
-                                      color: Colors.white,
-                                      size: 22,
-                                    ),
-                                    if (appState.overdueReminders.isNotEmpty ||
-                                        appState.systemNotifications.isNotEmpty)
-                                      Positioned(
-                                        right: 0,
-                                        top: 0,
-                                        child: Container(
-                                          padding: EdgeInsets.all(2),
-                                          decoration: BoxDecoration(
-                                            color: Color(0xFFE53935),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          constraints: BoxConstraints(
-                                            minWidth: 8,
-                                            minHeight: 8,
-                                          ),
-                                          child: Text(
-                                            '${(appState.overdueReminders.length + appState.systemNotifications.length).clamp(1, 99)}',
-                                            style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      FadeTransition(
-                        opacity: _greetingAnimation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: Offset(-0.1, 0),
-                            end: Offset(0, 0),
-                          ).animate(_greetingAnimation),
-                          child: Text(
-                            _getGreeting(),
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      FadeTransition(
-                        opacity: _greetingAnimation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: Offset(-0.1, 0),
-                            end: Offset(0, 0),
-                          ).animate(_greetingAnimation),
-                          child: Text(
-                            '今天也是充满机遇的一天',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withOpacity(0.8),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ),
           ),
-          bottom: PreferredSize(
-            preferredSize: Size.fromHeight(130),
-            child: FadeTransition(
-              opacity: _statsAnimation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: Offset(0, 0.1),
-                  end: Offset(0, 0),
-                ).animate(_statsAnimation),
-                child: Container(
-                  decoration: BoxDecoration(
+        ),
+        SliverToBoxAdapter(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF1976D2),
+                  Color(0xFFE3F2FD),
+                  Color(0xFFF8FAFE),
+                ],
+                stops: [0.0, 0.6, 1.0],
+              ),
+            ),
+            padding: EdgeInsets.only(left: 20, right: 20, bottom: 10, top: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    icon: Icons.people_rounded,
+                    title: '客户总数',
+                    value: '${appState.customers.length}',
                     gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFF1976D2),
-                        Color(0xFFE3F2FD),
-                        Color(0xFFF8FAFE),
-                      ],
-                      stops: [0.0, 0.6, 1.0],
+                      colors: [Color(0xFF42A5F5), Color(0xFF1E88E5)],
                     ),
                   ),
-                  padding: EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    bottom: 10,
-                    top: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          icon: Icons.people_rounded,
-                          title: '客户总数',
-                          value: '${appState.customers.length}',
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF42A5F5), Color(0xFF1E88E5)],
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          icon: Icons.auto_stories_rounded,
-                          title: '产品总数',
-                          value: '${appState.products.length}',
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF26A69A), Color(0xFF00897B)],
-                          ),
-                        ),
-                      ),
-                    ],
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    icon: Icons.auto_stories_rounded,
+                    title: '产品总数',
+                    value: '${appState.products.length}',
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF26A69A), Color(0xFF00897B)],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -433,214 +315,240 @@ class __HomeContentState extends State<_HomeContent>
                   ],
                 ),
                 SizedBox(height: 16),
-                FadeTransition(
-                  opacity: _quickActionsAnimation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: Offset(0, 0.1),
-                      end: Offset(0, 0),
-                    ).animate(_quickActionsAnimation),
-                    child: GridView.count(
-                      crossAxisCount: 4,
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.85,
+                GridView.count(
+                  crossAxisCount: 4,
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.85,
+                  children: [
+                    _buildQuickAction(
+                      context,
+                      '添加客户',
+                      Icons.person_add_rounded,
+                      Color(0xFF42A5F5),
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CustomerListPage(addMode: true),
+                        ),
+                      ),
+                    ),
+                    _buildQuickAction(
+                      context,
+                      '添加产品',
+                      Icons.add_circle_rounded,
+                      Color(0xFF26A69A),
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProductListPage(addMode: true),
+                        ),
+                      ),
+                    ),
+                    _buildQuickAction(
+                      context,
+                      '客户地图',
+                      Icons.map_rounded,
+                      Color(0xFFFF7043),
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => CustomerMapPage()),
+                      ),
+                    ),
+                    _buildQuickAction(
+                      context,
+                      '产品推荐',
+                      Icons.recommend_rounded,
+                      Color(0xFFAB47BC),
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProductRecommendationPage(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 32),
+                // 数据看板入口
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StatisticsDashboardPage(),
+                    ),
+                  ),
+                  child: Container(
+                    padding: EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xFF1565C0).withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
                       children: [
-                        _buildQuickAction(
-                          context,
-                          '添加客户',
-                          Icons.person_add_rounded,
-                          Color(0xFF42A5F5),
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => CustomerListPage(addMode: true),
-                            ),
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.bar_chart_rounded,
+                            color: Colors.white,
+                            size: 24,
                           ),
                         ),
-                        _buildQuickAction(
-                          context,
-                          '添加产品',
-                          Icons.add_circle_rounded,
-                          Color(0xFF26A69A),
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ProductListPage(addMode: true),
-                            ),
+                        SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '数据看板',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                '销售业绩 · 客户分析 · 拜访统计',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.8),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        _buildQuickAction(
-                          context,
-                          '客户地图',
-                          Icons.map_rounded,
-                          Color(0xFFFF7043),
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => CustomerMapPage(),
-                            ),
-                          ),
-                        ),
-                        _buildQuickAction(
-                          context,
-                          '产品推荐',
-                          Icons.recommend_rounded,
-                          Color(0xFFAB47BC),
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ProductRecommendationPage(),
-                            ),
-                          ),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: Colors.white.withOpacity(0.7),
+                          size: 18,
                         ),
                       ],
                     ),
                   ),
                 ),
-                SizedBox(height: 32),
-                // 数据看板入口
-                FadeTransition(
-                  opacity: _quickActionsAnimation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: Offset(0, 0.1),
-                      end: Offset(0, 0),
-                    ).animate(_quickActionsAnimation),
-                    child: GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => StatisticsDashboardPage(),
-                        ),
-                      ),
-                      child: Container(
-                        padding: EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFF1565C0).withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.bar_chart_rounded,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                            SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '数据看板',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  SizedBox(height: 2),
-                                  Text(
-                                    '销售业绩 · 客户分析 · 拜访统计',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.white.withOpacity(0.8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              color: Colors.white.withOpacity(0.7),
-                              size: 18,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
                 SizedBox(height: 28),
                 // 今日待办
-                FadeTransition(
-                  opacity: _quickActionsAnimation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: Offset(0, 0.1),
-                      end: Offset(0, 0),
-                    ).animate(_quickActionsAnimation),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              '今日待办',
+                        Text(
+                          '今日待办',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (appState.todayReminders.isNotEmpty)
+                          Container(
+                            margin: EdgeInsets.only(left: 8),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFE53935),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${appState.todayReminders.where((r) => r['status'] == 'pending').length}',
                               style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            if (appState.todayReminders.isNotEmpty)
-                              Container(
-                                margin: EdgeInsets.only(left: 8),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Color(0xFFE53935),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '${appState.todayReminders.where((r) => r['status'] == 'pending').length}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => CalendarPage()),
                           ),
-                          child: Row(
+                      ],
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => CalendarPage()),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            '日历',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF1565C0),
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: Color(0xFF1565C0),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                // 超期提醒
+                if (appState.overdueReminders.isNotEmpty)
+                  Container(
+                    margin: EdgeInsets.only(bottom: 10),
+                    padding: EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFE53935).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Color(0xFFE53935).withOpacity(0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFE53935).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.warning_amber_rounded,
+                            size: 18,
+                            color: Color(0xFFE53935),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '日历',
+                                '${appState.overdueReminders.length}个超期未跟进',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Color(0xFF1565C0),
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFE53935),
                                 ),
                               ),
-                              Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                size: 14,
-                                color: Color(0xFF1565C0),
+                              SizedBox(height: 2),
+                              Text(
+                                '请尽快处理超期提醒',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFFE53935).withOpacity(0.7),
+                                ),
                               ),
                             ],
                           ),
@@ -648,198 +556,75 @@ class __HomeContentState extends State<_HomeContent>
                       ],
                     ),
                   ),
-                ),
-                SizedBox(height: 12),
-                // 超期提醒
-                if (appState.overdueReminders.isNotEmpty)
-                  FadeTransition(
-                    opacity: _quickActionsAnimation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: Offset(0, 0.1),
-                        end: Offset(0, 0),
-                      ).animate(_quickActionsAnimation),
-                      child: Container(
-                        margin: EdgeInsets.only(bottom: 10),
-                        padding: EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Color(0xFFE53935).withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Color(0xFFE53935).withOpacity(0.2),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Color(0xFFE53935).withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.warning_amber_rounded,
-                                size: 18,
-                                color: Color(0xFFE53935),
-                              ),
-                            ),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${appState.overdueReminders.length}个超期未跟进',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFFE53935),
-                                    ),
-                                  ),
-                                  SizedBox(height: 2),
-                                  Text(
-                                    '请尽快处理超期提醒',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFFE53935).withOpacity(0.7),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                 // 今日待办列表
                 if (appState.todayReminders.isEmpty)
-                  FadeTransition(
-                    opacity: _quickActionsAnimation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: Offset(0, 0.1),
-                        end: Offset(0, 0),
-                      ).animate(_quickActionsAnimation),
-                      child: Container(
-                        padding: EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Color(0xFF2C2C2C)
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(14),
+                  Container(
+                    padding: EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: isDark ? Color(0xFF2C2C2C) : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 20,
+                          color: Colors.grey.shade400,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.check_circle_outline_rounded,
-                              size: 20,
-                              color: Colors.grey.shade400,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              '今天暂无待办',
-                              style: TextStyle(
-                                color: Colors.grey.shade400,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+                        SizedBox(width: 8),
+                        Text(
+                          '今天暂无待办',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   )
                 else
                   ...appState.todayReminders
                       .take(3)
-                      .map(
-                        (r) => FadeTransition(
-                          opacity: _quickActionsAnimation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: Offset(0, 0.1),
-                              end: Offset(0, 0),
-                            ).animate(_quickActionsAnimation),
-                            child: _buildReminderItem(context, r, isDark),
-                          ),
-                        ),
-                      ),
+                      .map((r) => _buildReminderItem(context, r, isDark)),
                 SizedBox(height: 32),
                 // 最近客户
-                FadeTransition(
-                  opacity: _quickActionsAnimation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: Offset(0, 0.1),
-                      end: Offset(0, 0),
-                    ).animate(_quickActionsAnimation),
-                    child: Text(
-                      '最近客户',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                Text(
+                  '最近客户',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 16),
                 if (appState.customers.isEmpty)
-                  FadeTransition(
-                    opacity: _quickActionsAnimation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: Offset(0, 0.1),
-                        end: Offset(0, 0),
-                      ).animate(_quickActionsAnimation),
-                      child: Container(
-                        padding: EdgeInsets.all(40),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Color(0xFF2C2C2C)
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(16),
+                  Container(
+                    padding: EdgeInsets.all(40),
+                    decoration: BoxDecoration(
+                      color: isDark ? Color(0xFF2C2C2C) : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.people_outline_rounded,
+                          size: 48,
+                          color: Colors.grey.shade400,
                         ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.people_outline_rounded,
-                              size: 48,
-                              color: Colors.grey.shade400,
-                            ),
-                            SizedBox(height: 12),
-                            Text(
-                              '暂无客户数据',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              '点击上方"添加客户"开始',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade400,
-                              ),
-                            ),
-                          ],
+                        SizedBox(height: 12),
+                        Text('暂无客户数据', style: TextStyle(color: Colors.grey)),
+                        SizedBox(height: 8),
+                        Text(
+                          '点击上方"添加客户"开始',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade400,
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   )
                 else
                   ...appState.customers
                       .take(3)
-                      .map(
-                        (c) => FadeTransition(
-                          opacity: _quickActionsAnimation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: Offset(0, 0.1),
-                              end: Offset(0, 0),
-                            ).animate(_quickActionsAnimation),
-                            child: _buildRecentCustomerItem(context, c),
-                          ),
-                        ),
-                      ),
+                      .map((c) => _buildRecentCustomerItem(context, c)),
                 SizedBox(height: 24),
               ],
             ),
@@ -847,15 +632,6 @@ class __HomeContentState extends State<_HomeContent>
         ),
       ],
     );
-  }
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 6) return '夜深了';
-    if (hour < 12) return '早上好';
-    if (hour < 14) return '中午好';
-    if (hour < 18) return '下午好';
-    return '晚上好';
   }
 
   Widget _buildStatCard(
@@ -986,13 +762,14 @@ class __HomeContentState extends State<_HomeContent>
       child: Row(
         children: [
           CircleAvatar(
-            radius: 22,
+            radius: 24,
             backgroundColor: Color(0xFF1565C0).withOpacity(0.1),
             child: Text(
               customer.name.substring(0, 1),
               style: TextStyle(
                 color: Color(0xFF1565C0),
                 fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
             ),
           ),
@@ -1005,11 +782,40 @@ class __HomeContentState extends State<_HomeContent>
                   customer.name,
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
-                SizedBox(height: 2),
+                SizedBox(height: 3),
                 Text(
                   customer.phones.isNotEmpty ? customer.phones[0] : '暂无电话',
                   style: TextStyle(fontSize: 13, color: Colors.grey),
                 ),
+                if (customer.tagList.isNotEmpty) ...[
+                  SizedBox(height: 6),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 2,
+                    children: customer.tagList
+                        .take(3)
+                        .map<Widget>(
+                          (tag) => Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Color(0xFF1565C0).withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              tag,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF1565C0),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1027,6 +833,12 @@ class __HomeContentState extends State<_HomeContent>
                 fontWeight: FontWeight.w500,
               ),
             ),
+          ),
+          SizedBox(width: 6),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 20,
+            color: Colors.grey.shade300,
           ),
         ],
       ),
