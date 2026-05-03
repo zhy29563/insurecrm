@@ -4,8 +4,9 @@ class User {
   String passwordHash;
   String? displayName;
   String? role;
-  String? securityQuestion;
-  int isActive;
+  String? securityQuestion; // 密保问题 (Password Reset Security Question)
+  String? securityAnswerHash; // 密保答案哈希 (Security answer hash)
+  int activeStatus; // 账号活跃状态 (Active status: 1=active, 0=disabled)
   String? createdAt;
   String? lastLogin;
 
@@ -16,10 +17,14 @@ class User {
     this.displayName,
     this.role = 'user',
     this.securityQuestion,
-    this.isActive = 1,
+    this.securityAnswerHash,
+    this.activeStatus = 1,
     this.createdAt,
     this.lastLogin,
   });
+
+  /// 是否处于活跃状态
+  bool get isActive => activeStatus == 1;
 
   Map<String, dynamic> toMap() {
     return {
@@ -29,7 +34,8 @@ class User {
       'display_name': displayName,
       'role': role,
       'security_question': securityQuestion,
-      'is_active': isActive,
+      'security_answer_hash': securityAnswerHash,
+      'is_active': activeStatus,
       'created_at': createdAt,
       'last_login': lastLogin,
     };
@@ -37,22 +43,23 @@ class User {
 
   factory User.fromMap(Map<String, dynamic> map) {
     return User(
-      id: map['id'],
-      username: map['username'],
-      passwordHash: map['password_hash'] ?? '',
-      displayName: map['display_name'],
-      role: map['role'] ?? 'user',
-      securityQuestion: map['security_question'],
-      isActive: map['is_active'] ?? 1,
-      createdAt: map['created_at'],
-      lastLogin: map['last_login'],
+      id: (map['id'] as num?)?.toInt(),
+      username: map['username'] as String? ?? '',
+      passwordHash: map['password_hash'] as String? ?? '',
+      displayName: map['display_name'] as String?,
+      role: map['role'] as String? ?? 'user',
+      securityQuestion: map['security_question'] as String?,
+      securityAnswerHash: map['security_answer_hash'] as String?,
+      activeStatus: (map['is_active'] as num?)?.toInt() ?? 1,
+      createdAt: map['created_at'] as String?,
+      lastLogin: map['last_login'] as String?,
     );
   }
 
   /// Check if user is admin
   bool get isAdmin => role == 'admin';
 
-  /// Get display name or fallback
+  /// Get display name or fallback to username
   String get displayNameOrUsername => (displayName != null && displayName!.isNotEmpty)
       ? displayName! : username;
 }

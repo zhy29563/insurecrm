@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Insurance App</string>
+	<string>InsuranceManager</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>insurance_app</string>
+	<string>InsuranceManager</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -73,5 +73,18 @@
 	<string>该应用需要持续访问您的位置以提供后台位置更新和客户拜访提醒</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>该应用需要持续访问您的位置以提供后台位置更新和客户拜访提醒</string>
+	<!-- 语音识别权限 -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>该应用需要访问麦克风以提供语音输入功能</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>该应用需要语音识别功能以将您的语音转为文字输入</string>
+	<!-- 相机权限 -->
+	<key>NSCameraUsageDescription</key>
+	<string>该应用需要访问相机以拍摄客户照片和文件</string>
+	<!-- 相册权限 -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>该应用需要访问相册以选择客户照片和文件</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>该应用需要保存图片到相册</string>
 </dict>
 </plist>

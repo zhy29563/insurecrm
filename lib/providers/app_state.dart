@@ -1,16 +1,18 @@
+import 'dart:io' show File;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:insurecrm/database/database_helper.dart';
-import 'package:insurecrm/models/customer.dart';
-import 'package:insurecrm/models/product.dart';
-import 'package:insurecrm/models/visit.dart';
-import 'package:insurecrm/models/colleague.dart';
-import 'package:insurecrm/models/sale.dart';
-import 'package:insurecrm/models/user.dart';
+import 'package:insurance_manager/database/database_helper.dart';
+import 'package:insurance_manager/models/customer.dart';
+import 'package:insurance_manager/models/product.dart';
+import 'package:insurance_manager/models/visit.dart';
+import 'package:insurance_manager/models/colleague.dart';
+import 'package:insurance_manager/models/sale.dart';
+import 'package:insurance_manager/models/user.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:insurecrm/services/backup_service.dart';
-import 'package:insurecrm/utils/app_logger.dart';
+import 'package:insurance_manager/services/backup_service.dart';
+import 'package:insurance_manager/utils/app_logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppState extends ChangeNotifier {
   // ===== Authentication State =====
@@ -21,15 +23,21 @@ class AppState extends ChangeNotifier {
   List<Customer> customers = [];
   List<Product> products = [];
   List<Colleague> colleagues = [];
-  List<Map<String, dynamic>> sales = [];
+  List<Map<String, dynamic>> salesRecords = [];
   List<String> allTags = [];
-  bool isLoading = false;
+  bool isDataLoading = false;
   bool darkMode = false;
 
-  // AI引擎配置
-  Map<String, dynamic> aiConfigs = {
-    'doubao': {'apiKey': '', 'enabled': false},
-    'qianwen': {'apiKey': '', 'enabled': false},
+  // 客户关系标签（可自定义）
+  static const List<String> _defaultRelationshipLabels = ['家人', '朋友', '同事', '同学', '客户', '邻居', '其他'];
+  List<String> _relationshipLabels = List.from(_defaultRelationshipLabels);
+  List<String> get relationshipLabels => _relationshipLabels;
+
+  // AI引擎配置 (AI = Artificial Intelligence, 人工智能)
+  // category: 'asr' = 语音识别, 'chat' = 对话分析
+  Map<String, dynamic> aiProviderConfigs = {
+    'doubao': {'apiKey': '', 'enabled': false, 'category': 'chat'},
+    'qianwen': {'apiKey': '', 'enabled': false, 'category': 'chat'},
   };
 
   // 统计数据
@@ -42,11 +50,11 @@ class AppState extends ChangeNotifier {
   List<Map<String, dynamic>> todayReminders = [];
   List<Map<String, dynamic>> overdueReminders = [];
   List<Map<String, dynamic>> systemNotifications = [];
-  int totalSalesAmount = 0;
-  int totalVisitsCount = 0;
-  int thisMonthNewCustomers = 0;
-  int thisMonthSalesAmount = 0;
-  int thisMonthVisitsCount = 0;
+  double totalSalesAmountAllTime = 0;
+  int totalVisitsCountAllTime = 0;
+  int currentMonthNewCustomerCount = 0;
+  double currentMonthSalesAmount = 0;
+  int currentMonthVisitsCount = 0;
   List<Map<String, dynamic>> quarterlySales = [];
   List<Map<String, dynamic>> annualSales = [];
   List<Map<String, dynamic>> monthlyCommissions = [];
@@ -55,103 +63,225 @@ class AppState extends ChangeNotifier {
   List<Map<String, dynamic>> conversionFunnel = [];
   List<Map<String, dynamic>> visitEfficiency = [];
 
-  bool _isAddingSampleData = false;
-  bool _isAddingColleagues = false;
+  bool _isSeedingSampleData = false;
 
-  // Initialize app data
+  // 高德地图 API Key (AMap API Key)
+  String _amapApiKey = '9899118f0feee8101d581461cd896476';
+  String _amapApiKeyIOS = '';
+  String get amapApiKey => _amapApiKey;
+  String get amapApiKeyIOS => _amapApiKeyIOS;
+  bool get hasAmapApiKey => _amapApiKey.isNotEmpty || _amapApiKeyIOS.isNotEmpty;
+
+  // Load AMap API Key from SharedPreferences
+  Future<void> loadAmapApiKey() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // 兼容旧版本：先读取高德 key，若为空则读取旧的 Google Maps key
+      _amapApiKey = prefs.getString('amap_api_key') ??
+          prefs.getString('google_maps_api_key') ?? _amapApiKey;
+      _amapApiKeyIOS = prefs.getString('amap_api_key_ios') ?? '';
+      notifyListeners();
+    } catch (e) {
+      AppLogger.error('loading AMap API key: $e');
+    }
+  }
+
+  // Save AMap Android API Key to SharedPreferences
+  Future<void> setAmapApiKey(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (key.isEmpty) {
+        await prefs.remove('amap_api_key');
+      } else {
+        await prefs.setString('amap_api_key', key);
+      }
+      _amapApiKey = key;
+      notifyListeners();
+    } catch (e) {
+      AppLogger.error('saving AMap API key: $e');
+    }
+  }
+
+  // Save AMap iOS API Key to SharedPreferences
+  Future<void> setAmapApiKeyIOS(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (key.isEmpty) {
+        await prefs.remove('amap_api_key_ios');
+      } else {
+        await prefs.setString('amap_api_key_ios', key);
+      }
+      _amapApiKeyIOS = key;
+      notifyListeners();
+    } catch (e) {
+      AppLogger.error('saving AMap iOS API key: $e');
+    }
+  }
+
+  // 加载关系标签
+  Future<void> _loadRelationshipLabels() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getStringList('relationship_labels');
+      if (saved != null && saved.isNotEmpty) {
+        _relationshipLabels = saved;
+      }
+    } catch (e) {
+      AppLogger.error('loading relationship labels: $e');
+    }
+  }
+
+  // 保存关系标签
+  Future<void> _saveRelationshipLabels() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('relationship_labels', _relationshipLabels);
+    } catch (e) {
+      AppLogger.error('saving relationship labels: $e');
+    }
+  }
+
+  // 添加关系标签
+  Future<void> addRelationshipLabel(String label) async {
+    if (label.trim().isEmpty || _relationshipLabels.contains(label.trim())) return;
+    _relationshipLabels.add(label.trim());
+    await _saveRelationshipLabels();
+    notifyListeners();
+  }
+
+  // 删除关系标签
+  Future<void> removeRelationshipLabel(String label) async {
+    _relationshipLabels.remove(label);
+    await _saveRelationshipLabels();
+    notifyListeners();
+  }
+
+  // 重置关系标签为默认
+  Future<void> resetRelationshipLabels() async {
+    _relationshipLabels = List.from(_defaultRelationshipLabels);
+    await _saveRelationshipLabels();
+    notifyListeners();
+  }
+
+  // Initialize app data (parallelized for performance)
   Future<void> initializeApp() async {
     try {
+      // Load config data in parallel (lightweight)
+      await Future.wait([
+        loadAmapApiKey(),
+        _loadRelationshipLabels(),
+        _loadAIConfigs(),
+      ]);
+
+      // Load core data (customers first since others may depend on it)
       await loadCustomers();
-      await loadProducts();
-      await loadColleagues();
-      await loadSales();
-      await loadReminders();
-      await loadStatistics();
-      await loadSystemNotifications();
+
+      // Products, colleagues, sales can be loaded in parallel
+      await Future.wait([
+        loadProducts(),
+        loadColleagues(),
+        loadSales(),
+      ]);
+
+      // Load dependent data (reminders + statistics + notifications in parallel)
+      await Future.wait([
+        loadReminders(),
+        loadStatistics(),
+        loadSystemNotifications(),
+      ]);
 
       // Auto backup check (non-blocking)
       if (!kIsWeb) {
         try {
           await BackupService.instance.runAutoBackupIfNeeded();
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.error('auto backup: $e');
+        }
       }
     } catch (e) {
       AppLogger.error('initializing app: $e');
     }
   }
 
-  // Load statistics
+  // Load statistics (parallelized DB queries for performance)
   Future<void> loadStatistics() async {
     try {
       if (kIsWeb) {
         // Web platform: calculate from in-memory data
-        _calculateWebStatistics();
+        _calculateInMemoryStatistics();
       } else {
         final db = DatabaseHelper.instance;
         final now = DateTime.now();
         final year = now.year;
         final thisMonth = now.month;
 
-        // Monthly sales
-        monthlySales = await db.getMonthlySalesSummary(year);
+        // Run all 14+ DB queries in parallel
+        final results = await Future.wait([
+          db.getMonthlySalesSummary(year),
+          db.getMonthlyVisitSummary(year),
+          db.getMonthlyNewCustomerSummary(year),
+          db.getProductSalesRanking(),
+          db.getCustomerRatingDistribution(),
+          db.getQuarterlySalesSummary(year),
+          db.getAnnualSalesSummary(year),
+          db.getMonthlyCommissionSummary(year),
+          db.getQuarterlyCommissionSummary(year),
+          db.getAnnualCommissionSummary(year),
+          db.getConversionFunnelAnalysis(),
+          db.getVisitEfficiencyAnalysis(),
+          db.getAllTimeTotalSalesAmount(),
+          db.getAllTimeTotalVisitsCount(),
+        ]);
 
-        // Monthly visits
-        monthlyVisits = await db.getMonthlyVisitSummary(year);
+        monthlySales = results[0] as List<Map<String, dynamic>>;
+        monthlyVisits = results[1] as List<Map<String, dynamic>>;
+        monthlyNewCustomers = results[2] as List<Map<String, dynamic>>;
+        productRanking = results[3] as List<Map<String, dynamic>>;
+        ratingDistribution = results[4] as List<Map<String, dynamic>>;
+        quarterlySales = results[5] as List<Map<String, dynamic>>;
+        annualSales = results[6] as List<Map<String, dynamic>>;
+        monthlyCommissions = results[7] as List<Map<String, dynamic>>;
+        quarterlyCommissions = results[8] as List<Map<String, dynamic>>;
+        annualCommissions = results[9] as List<Map<String, dynamic>>;
+        final rawConversionFunnel = results[10] as List<Map<String, dynamic>>;
+        visitEfficiency = results[11] as List<Map<String, dynamic>>;
+        totalSalesAmountAllTime = (results[12] as num?)?.toDouble() ?? 0.0;
+        totalVisitsCountAllTime = (results[13] as num?)?.toInt() ?? 0;
 
-        // Monthly new customers
-        monthlyNewCustomers = await db.getMonthlyNewCustomerSummary(year);
+        // Conversion funnel with labels
+        final ratingLabelMap = {0: '未评级', 1: '无意向', 2: '低意向', 3: '中意向', 4: '高意向', 5: '已成交'};
+        conversionFunnel = rawConversionFunnel.map((item) {
+          final count = (item['count'] as num?)?.toInt() ?? 0;
+          return {
+            ...item,
+            'label': ratingLabelMap[item['rating']] ?? '未知',
+            'percentage': customers.isNotEmpty ? (count / customers.length * 100) : 0.0,
+          };
+        }).toList();
 
-        // Product ranking
-        productRanking = await db.getProductSalesRanking();
-
-        // Rating distribution
-        ratingDistribution = await db.getCustomerRatingDistribution();
-
-        // Quarterly and annual sales
-        quarterlySales = await db.getQuarterlySalesSummary(year);
-        annualSales = await db.getAnnualSalesSummary(year);
-
-        // Commission summaries
-        monthlyCommissions = await db.getMonthlyCommissionSummary(year);
-        quarterlyCommissions = await db.getQuarterlyCommissionSummary(year);
-        annualCommissions = await db.getAnnualCommissionSummary(year);
-
-        // Conversion funnel analysis
-        conversionFunnel = await db.getConversionFunnelAnalysis();
-
-        // Visit efficiency analysis
-        visitEfficiency = await db.getVisitEfficiencyAnalysis();
-
-        // Calculate totals
-        totalSalesAmount = monthlySales.fold(
-          0,
-          (sum, s) => sum + ((s['total_amount'] as num?)?.toInt() ?? 0),
+        // This month specific (use firstWhere to avoid creating temporary lists)
+        final thisMonthSalesEntry = monthlySales.cast<Map<String, dynamic>?>().firstWhere(
+          (s) => s?['month'] == thisMonth,
+          orElse: () => null,
         );
-        totalVisitsCount = monthlyVisits.fold(
-          0,
-          (sum, v) => sum + ((v['count'] as num?)?.toInt() ?? 0),
-        );
-
-        // This month specific
-        final thisMonthSalesData = monthlySales
-            .where((s) => s['month'] == thisMonth)
-            .toList();
-        thisMonthSalesAmount = thisMonthSalesData.isNotEmpty
-            ? (thisMonthSalesData.first['total_amount'] as num?)?.toInt() ?? 0
+        currentMonthSalesAmount = thisMonthSalesEntry != null
+            ? (thisMonthSalesEntry['total_amount'] as num?)?.toDouble() ?? 0
             : 0;
 
-        final thisMonthVisitsData = monthlyVisits
-            .where((v) => v['month'] == thisMonth)
-            .toList();
-        thisMonthVisitsCount = thisMonthVisitsData.isNotEmpty
-            ? (thisMonthVisitsData.first['count'] as num?)?.toInt() ?? 0
+        final thisMonthVisitsEntry = monthlyVisits.cast<Map<String, dynamic>?>().firstWhere(
+          (v) => v?['month'] == thisMonth,
+          orElse: () => null,
+        );
+        currentMonthVisitsCount = thisMonthVisitsEntry != null
+            ? (thisMonthVisitsEntry['count'] as num?)?.toInt() ?? 0
             : 0;
 
-        final thisMonthCustomersData = monthlyNewCustomers
-            .where((c) => c['month'] == thisMonth)
-            .toList();
-        thisMonthNewCustomers = thisMonthCustomersData.isNotEmpty
-            ? (thisMonthCustomersData.first['count'] as num?)?.toInt() ?? 0
+        final thisMonthCustomersEntry = monthlyNewCustomers.cast<Map<String, dynamic>?>().firstWhere(
+          (c) => c?['month'] == thisMonth,
+          orElse: () => null,
+        );
+        currentMonthNewCustomerCount = thisMonthCustomersEntry != null
+            ? (thisMonthCustomersEntry['count'] as num?)?.toInt() ?? 0
             : 0;
       }
       notifyListeners();
@@ -160,19 +290,25 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Load reminders
+  // Load reminders (parallelized DB queries for performance)
   Future<void> loadReminders() async {
     try {
       if (kIsWeb) {
         // Web: reminders not persisted, use empty list
+        reminders = [];
         todayReminders = [];
         overdueReminders = [];
       } else {
         final db = DatabaseHelper.instance;
-        reminders = await db.getAllReminders();
-        final today = DateTime.now().toIso8601String().substring(0, 10);
-        todayReminders = await db.getRemindersByDate(today);
-        overdueReminders = await db.getOverdueReminders();
+        // Run all 3 queries in parallel instead of sequentially
+        final results = await Future.wait([
+          db.getAllReminders(),
+          db.getRemindersByDate(DateTime.now().toIso8601String().substring(0, 10)),
+          db.getOverdueReminders(),
+        ]);
+        reminders = results[0] as List<Map<String, dynamic>>;
+        todayReminders = results[1] as List<Map<String, dynamic>>;
+        overdueReminders = results[2] as List<Map<String, dynamic>>;
       }
       notifyListeners();
     } catch (e) {
@@ -184,7 +320,7 @@ class AppState extends ChangeNotifier {
   Future<void> loadSystemNotifications() async {
     try {
       final now = DateTime.now();
-      final today = now;
+      final today = DateTime(now.year, now.month, now.day);
       final in30Days = today.add(Duration(days: 30));
       final notifications = <Map<String, dynamic>>[];
 
@@ -218,8 +354,8 @@ class AppState extends ChangeNotifier {
 
       // 2. 保单/产品到期提醒 (product endDate)
       for (var p in products) {
-        if (p.endDate == null || p.endDate!.isEmpty) continue;
-        final endDate = DateTime.tryParse(p.endDate!);
+        if (p.salesEndDate == null || p.salesEndDate!.isEmpty) continue;
+        final endDate = DateTime.tryParse(p.salesEndDate!);
         if (endDate == null) continue;
         if (!endDate.isAfter(in30Days)) {
           String statusLabel;
@@ -234,10 +370,10 @@ class AppState extends ChangeNotifier {
             'id': 'policy_${p.id}',
             'type': 'policy_expiry',
             'title': '${p.company} - ${p.name} 保单到期',
-            'subtitle': '$statusLabel · 到期日 ${p.endDate!.substring(5)}',
+            'subtitle': '$statusLabel · 到期日 ${p.salesEndDate!.substring(5)}',
             'icon': Icons.autorenew_rounded,
             'color': Color(0xFFFF9800),
-            'time': p.endDate,
+            'time': p.salesEndDate,
             'isUrgent': !endDate.isAfter(today.add(Duration(days: 14))),
           });
         }
@@ -253,7 +389,7 @@ class AppState extends ChangeNotifier {
             ? (parts[2].length <= 2 ? parts[2] : parts[2].substring(0, 2))
             : '1';
         final dayNum = int.tryParse(dayStr) ?? 1;
-        var birthdayCheck = DateTime(now.year, int.parse(parts[1]), dayNum);
+        var birthdayCheck = DateTime(now.year, int.tryParse(parts[1]) ?? 1, dayNum);
 
         if (birthdayCheck.month < now.month ||
             (birthdayCheck.month == now.month && birthdayCheck.day < now.day)) {
@@ -264,14 +400,14 @@ class AppState extends ChangeNotifier {
           );
         }
 
-        final daysUntilBirthday = birthdayCheck.difference(now).inDays;
+        final daysUntilBirthday = birthdayCheck.difference(today).inDays;
 
         if (daysUntilBirthday >= 0 && daysUntilBirthday <= 30) {
           String label;
           if (daysUntilBirthday == 0) {
             label = '今天生日！';
           } else if (daysUntilBirthday <= 7) {
-            label = '${daysUntilBirthday}天后生日';
+            label = '$daysUntilBirthday天后生日';
           } else {
             label = '$daysUntilBirthday天后生日';
           }
@@ -315,8 +451,8 @@ class AppState extends ChangeNotifier {
   ) async {
     try {
       if (kIsWeb) {
-        // Web: fallback to hardcoded for compatibility
-        if (username == 'admin' && password == '123456') {
+        // Web: fallback to hardcoded for debug compatibility only
+        if (kDebugMode && username == 'admin' && password == '123456') {
           currentUser = User(
             id: 0,
             username: 'admin',
@@ -450,12 +586,11 @@ class AppState extends ChangeNotifier {
   }) async {
     try {
       if (kIsWeb) {
-        final customer = customers.firstWhere(
-          (c) => c.id == customerId,
-          orElse: () => Customer(name: 'Unknown'),
-        );
+        final customerIndex = customers.indexWhere((c) => c.id == customerId);
+        if (customerIndex == -1) return;
+        final customer = customers[customerIndex];
         final maxId = reminders.fold(0, (max, r) {
-          final id = r['id'] as int?;
+          final id = (r['id'] as num?)?.toInt();
           return id != null && id > max ? id : max;
         });
         final newReminder = {
@@ -474,6 +609,10 @@ class AppState extends ChangeNotifier {
         final today = DateTime.now().toIso8601String().substring(0, 10);
         if (reminderDate == today) {
           todayReminders.add(newReminder);
+        }
+        // Also check if the reminder is overdue (past date)
+        if (reminderDate.compareTo(today) < 0) {
+          overdueReminders.add(newReminder);
         }
         notifyListeners();
       } else {
@@ -505,7 +644,19 @@ class AppState extends ChangeNotifier {
         }
         final todayIndex = todayReminders.indexWhere((r) => r['id'] == id);
         if (todayIndex != -1) {
-          todayReminders[todayIndex]['status'] = status;
+          if (status == 'completed' || status == 'dismissed') {
+            todayReminders.removeAt(todayIndex);
+          } else {
+            todayReminders[todayIndex]['status'] = status;
+          }
+        }
+        final overdueIndex = overdueReminders.indexWhere((r) => r['id'] == id);
+        if (overdueIndex != -1) {
+          if (status == 'completed' || status == 'dismissed') {
+            overdueReminders.removeAt(overdueIndex);
+          } else {
+            overdueReminders[overdueIndex]['status'] = status;
+          }
         }
         notifyListeners();
       } else {
@@ -524,6 +675,7 @@ class AppState extends ChangeNotifier {
       if (kIsWeb) {
         reminders.removeWhere((r) => r['id'] == id);
         todayReminders.removeWhere((r) => r['id'] == id);
+        overdueReminders.removeWhere((r) => r['id'] == id);
         notifyListeners();
       } else {
         final db = DatabaseHelper.instance;
@@ -535,7 +687,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void _calculateWebStatistics() {
+  void _calculateInMemoryStatistics() {
     final now = DateTime.now();
     final thisMonth = now.month;
     final thisYear = now.year;
@@ -550,11 +702,11 @@ class AppState extends ChangeNotifier {
         .map((e) => {'rating': e.key, 'count': e.value})
         .toList();
     ratingDistribution.sort(
-      (a, b) => (b['rating'] as int).compareTo(a['rating'] as int),
+      (a, b) => ((b['rating'] as num?) ?? 0).compareTo((a['rating'] as num?) ?? 0),
     );
 
     // New customers this month
-    thisMonthNewCustomers = customers.where((c) {
+    currentMonthNewCustomerCount = customers.where((c) {
       if (c.createdAt == null) return false;
       final dt = DateTime.tryParse(c.createdAt!);
       return dt != null && dt.month == thisMonth && dt.year == thisYear;
@@ -573,87 +725,90 @@ class AppState extends ChangeNotifier {
         monthlyCounts.entries
             .map((e) => {'month': e.key, 'count': e.value})
             .toList()
-          ..sort((a, b) => (a['month'] as int).compareTo(b['month'] as int));
+          ..sort((a, b) => ((a['month'] as num?) ?? 0).compareTo((b['month'] as num?) ?? 0));
 
     // Sales and visits from in-memory data
-    totalSalesAmount = sales.fold(
-      0,
-      (sum, s) => sum + ((s['amount'] as num?)?.toInt() ?? 0),
+    totalSalesAmountAllTime = salesRecords.fold(
+      0.0,
+      (sum, s) => sum + ((s['amount'] as num?)?.toDouble() ?? 0),
     );
-    totalVisitsCount = customers.fold(0, (sum, c) => sum + c.visits.length);
-    thisMonthSalesAmount = sales
-        .where((s) {
-          final sd = s['sale_date'] as String?;
-          if (sd == null) return false;
-          final dt = DateTime.tryParse(sd);
-          return dt != null && dt.month == thisMonth && dt.year == thisYear;
+    totalVisitsCountAllTime = customers.fold(0, (sum, c) => sum + c.visits.length);
+    currentMonthSalesAmount = salesRecords
+        .where((saleRecord) {
+          final saleDateStr = saleRecord['sale_date'] as String?;
+          if (saleDateStr == null) return false;
+          final saleDate = DateTime.tryParse(saleDateStr);
+          return saleDate != null && saleDate.month == thisMonth && saleDate.year == thisYear;
         })
-        .fold(0, (sum, s) => sum + ((s['amount'] as num?)?.toInt() ?? 0));
+        .fold(0.0, (sum, s) => sum + ((s['amount'] as num?)?.toDouble() ?? 0));
 
-    thisMonthVisitsCount = customers.fold(0, (sum, c) {
+    currentMonthVisitsCount = customers.fold(0, (sum, customer) {
       return sum +
-          c.visits.where((v) {
-            final vd = v['date'] as String?;
-            if (vd == null) return false;
-            final dt = DateTime.tryParse(vd);
-            return dt != null && dt.month == thisMonth && dt.year == thisYear;
+          customer.visits.where((visitRecord) {
+            final visitDateStr = visitRecord['date'] as String?;
+            if (visitDateStr == null) return false;
+            final visitDate = DateTime.tryParse(visitDateStr);
+            return visitDate != null && visitDate.month == thisMonth && visitDate.year == thisYear;
           }).length;
     });
 
     // Product ranking from sales
     Map<int, int> productSaleCounts = {};
     Map<int, double> productSaleAmounts = {};
-    for (var s in sales) {
-      final pid = s['product_id'] as int?;
-      if (pid == null) continue;
-      productSaleCounts[pid] = (productSaleCounts[pid] ?? 0) + 1;
-      productSaleAmounts[pid] =
-          (productSaleAmounts[pid] ?? 0) +
-          ((s['amount'] as num?)?.toDouble() ?? 0);
+    for (var saleRecord in salesRecords) {
+      final productId = (saleRecord['product_id'] as num?)?.toInt();
+      if (productId == null) continue;
+      productSaleCounts[productId] = (productSaleCounts[productId] ?? 0) + 1;
+      productSaleAmounts[productId] =
+          (productSaleAmounts[productId] ?? 0) +
+          ((saleRecord['amount'] as num?)?.toDouble() ?? 0);
     }
     productRanking =
-        productSaleCounts.entries.map((e) {
+        productSaleCounts.entries.map((entry) {
           final product = products.firstWhere(
-            (p) => p.id == e.key,
+            (p) => p.id == entry.key,
             orElse: () => Product(company: '', name: 'Unknown'),
           );
           return {
             'product_name': product.name,
             'product_category': product.category ?? '',
-            'sale_count': e.value,
-            'total_amount': productSaleAmounts[e.key] ?? 0,
+            'sale_count': entry.value,
+            'total_amount': productSaleAmounts[entry.key] ?? 0,
           };
         }).toList()..sort(
-          (a, b) => (b['sale_count'] as int).compareTo(a['sale_count'] as int),
+          (a, b) => ((b['sale_count'] as num?) ?? 0).compareTo((a['sale_count'] as num?) ?? 0),
         );
 
     // Monthly sales
     Map<int, double> monthlySalesMap = {};
-    for (var s in sales) {
-      final sd = s['sale_date'] as String?;
-      if (sd == null) continue;
-      final dt = DateTime.tryParse(sd);
-      if (dt != null && dt.year == thisYear) {
-        monthlySalesMap[dt.month] =
-            (monthlySalesMap[dt.month] ?? 0) +
-            ((s['amount'] as num?)?.toDouble() ?? 0);
+    Map<int, int> monthlySalesCountMap = {};
+    for (var saleRecord in salesRecords) {
+      final saleDateStr = saleRecord['sale_date'] as String?;
+      if (saleDateStr == null) continue;
+      final saleDate = DateTime.tryParse(saleDateStr);
+      if (saleDate != null && saleDate.year == thisYear) {
+        monthlySalesMap[saleDate.month] =
+            (monthlySalesMap[saleDate.month] ?? 0) +
+            ((saleRecord['amount'] as num?)?.toDouble() ?? 0);
+        monthlySalesCountMap[saleDate.month] =
+            (monthlySalesCountMap[saleDate.month] ?? 0) + 1;
       }
     }
     monthlySales =
         monthlySalesMap.entries
-            .map((e) => {'month': e.key, 'count': 0, 'total_amount': e.value})
+            .map((entry) => {'month': entry.key, 'count': monthlySalesCountMap[entry.key] ?? 0, 'total_amount': entry.value})
             .toList()
-          ..sort((a, b) => (a['month'] as int).compareTo(b['month'] as int));
+          ..sort((a, b) => ((a['month'] as num?) ?? 0).compareTo((b['month'] as num?) ?? 0));
 
     // Monthly visits
     Map<int, int> monthlyVisitsMap = {};
-    for (var c in customers) {
-      for (var v in c.visits) {
-        final vd = v['date'] as String?;
-        if (vd == null) continue;
-        final dt = DateTime.tryParse(vd);
-        if (dt != null && dt.year == thisYear) {
-          monthlyVisitsMap[dt.month] = (monthlyVisitsMap[dt.month] ?? 0) + 1;
+    for (var customer in customers) {
+      for (var visitRecord in customer.visits) {
+        final visitDateStr = visitRecord['date'] as String?;
+        if (visitDateStr == null) continue;
+        final visitDate = DateTime.tryParse(visitDateStr);
+        if (visitDate != null && visitDate.year == thisYear) {
+          monthlyVisitsMap[visitDate.month] = (monthlyVisitsMap[visitDate.month] ?? 0) + 1;
         }
       }
     }
@@ -661,132 +816,216 @@ class AppState extends ChangeNotifier {
         monthlyVisitsMap.entries
             .map((e) => {'month': e.key, 'count': e.value})
             .toList()
-          ..sort((a, b) => (a['month'] as int).compareTo(b['month'] as int));
+          ..sort((a, b) => ((a['month'] as num?) ?? 0).compareTo((b['month'] as num?) ?? 0));
+
+    // Quarterly sales
+    Map<int, double> quarterlySalesMap = {};
+    Map<int, int> quarterlySalesCountMap = {};
+    for (var saleRecord in salesRecords) {
+      final saleDateStr = saleRecord['sale_date'] as String?;
+      if (saleDateStr == null) continue;
+      final saleDate = DateTime.tryParse(saleDateStr);
+      if (saleDate != null && saleDate.year == thisYear) {
+        final q = ((saleDate.month - 1) ~/ 3) + 1;
+        quarterlySalesMap[q] = (quarterlySalesMap[q] ?? 0) + ((saleRecord['amount'] as num?)?.toDouble() ?? 0);
+        quarterlySalesCountMap[q] = (quarterlySalesCountMap[q] ?? 0) + 1;
+      }
+    }
+    quarterlySales = quarterlySalesMap.entries
+        .map((e) => {'quarter': e.key, 'count': quarterlySalesCountMap[e.key] ?? 0, 'total_amount': e.value})
+        .toList()..sort((a, b) => ((a['quarter'] as num?) ?? 0).compareTo((b['quarter'] as num?) ?? 0));
+
+    // Annual sales (only current year)
+    final thisYearSales = salesRecords.where((s) {
+      final d = DateTime.tryParse(s['sale_date'] as String? ?? '');
+      return d != null && d.year == thisYear;
+    }).toList();
+    final thisYearSalesAmount = thisYearSales.fold(0.0, (sum, s) => sum + ((s['amount'] as num?)?.toDouble() ?? 0));
+    annualSales = [{'year': thisYear, 'count': thisYearSales.length, 'total_amount': thisYearSalesAmount}];
+
+    // Monthly commissions
+    Map<int, double> monthlyCommMap = {};
+    for (var saleRecord in salesRecords) {
+      final saleDateStr = saleRecord['sale_date'] as String?;
+      if (saleDateStr == null) continue;
+      final saleDate = DateTime.tryParse(saleDateStr);
+      final amount = (saleRecord['amount'] as num?)?.toDouble() ?? 0;
+      final rate = (saleRecord['commission_rate'] as num?)?.toDouble() ?? 0;
+      final commission = amount * rate / 100;
+      if (saleDate != null && saleDate.year == thisYear) {
+        monthlyCommMap[saleDate.month] = (monthlyCommMap[saleDate.month] ?? 0) + commission;
+      }
+    }
+    monthlyCommissions = monthlyCommMap.entries
+        .map((e) => {'month': e.key, 'total_commission': e.value})
+        .toList()          ..sort((a, b) => ((a['month'] as num?) ?? 0).compareTo((b['month'] as num?) ?? 0));
+
+    // Quarterly commissions
+    Map<int, double> quarterlyCommMap = {};
+    for (var saleRecord in salesRecords) {
+      final saleDateStr = saleRecord['sale_date'] as String?;
+      if (saleDateStr == null) continue;
+      final saleDate = DateTime.tryParse(saleDateStr);
+      final amount = (saleRecord['amount'] as num?)?.toDouble() ?? 0;
+      final rate = (saleRecord['commission_rate'] as num?)?.toDouble() ?? 0;
+      final commission = amount * rate / 100;
+      if (saleDate != null && saleDate.year == thisYear) {
+        final q = ((saleDate.month - 1) ~/ 3) + 1;
+        quarterlyCommMap[q] = (quarterlyCommMap[q] ?? 0) + commission;
+      }
+    }
+    quarterlyCommissions = quarterlyCommMap.entries
+        .map((e) => {'quarter': e.key, 'total_commission': e.value})
+        .toList()..sort((a, b) => ((a['quarter'] as num?) ?? 0).compareTo((b['quarter'] as num?) ?? 0));
+
+    // Annual commissions (only current year)
+    final thisYearCommission = thisYearSales.fold(0.0, (sum, s) {
+      final amount = (s['amount'] as num?)?.toDouble() ?? 0;
+      final rate = (s['commission_rate'] as num?)?.toDouble() ?? 0;
+      return sum + amount * rate / 100;
+    });
+    annualCommissions = [{'year': thisYear, 'total_commission': thisYearCommission}];
+
+    // Conversion funnel (based on customer ratings) - optimized with Set for O(N+M) instead of O(N*M)
+    final ratingLabels = {0: '未评级', 1: '无意向', 2: '低意向', 3: '中意向', 4: '高意向', 5: '已成交'};
+    final totalCustomers = customers.length;
+    // Pre-compute Set of customer IDs that have sales for O(1) lookup
+    final customerIdsWithSales = salesRecords
+        .map((s) => (s['customer_id'] as num?)?.toInt())
+        .whereType<int>()
+        .toSet();
+    conversionFunnel = ratingLabels.entries.map((e) {
+      final count = customers.where((c) => (c.rating ?? 0) == e.key).length;
+      final convertedInRating = customers.where((c) =>
+          (c.rating ?? 0) == e.key &&
+          customerIdsWithSales.contains(c.id)
+      ).length;
+      return {
+        'rating': e.key,
+        'label': e.value,
+        'count': count,
+        'percentage': totalCustomers > 0 ? (count / totalCustomers * 100) : 0.0,
+        'conversion_rate': count > 0 ? (convertedInRating / count * 100) : 0.0,
+      };
+    }).toList();
+
+    // Visit efficiency (converted = rating 5 "已成交")
+    final totalVisitsAll = customers.fold(0, (sum, c) => sum + c.visits.length);
+    final convertedCustomers = customers.where((c) => c.rating == 5).length;
+    visitEfficiency = [{
+      'total_visits': totalVisitsAll,
+      'total_customers': totalCustomers,
+      'converted_customers': convertedCustomers,
+      'conversion_per_visit': totalVisitsAll > 0 ? convertedCustomers / totalVisitsAll * 100 : 0.0,
+    }];
+  }
+
+  // Helper: load all customers from database with relations (batch query - eliminates N+1 problem)
+  Future<List<Customer>> _loadCustomersFromDb(DatabaseHelper db) async {
+    final customerMaps = await db.getAllCustomers();
+    if (customerMaps.isEmpty) return [];
+
+    // Batch load all customer-related data in 7 queries instead of 7*N queries
+    final batchData = await db.batchLoadCustomerData();
+    final phonesByCustomer = batchData['phones'] as Map<int, List<Map<String, dynamic>>>;
+    final addressesByCustomer = batchData['addresses'] as Map<int, List<Map<String, dynamic>>>;
+    final visitsByCustomer = batchData['visits'] as Map<int, List<Map<String, dynamic>>>;
+    final tagsByCustomer = batchData['tags'] as Map<int, List<String>>;
+    final photosByCustomer = batchData['photos'] as Map<int, List<String>>;
+    final productsByCustomer = batchData['products'] as Map<int, List<Map<String, dynamic>>>;
+    final relationsByCustomer = batchData['relations'] as Map<int, List<Map<String, dynamic>>>;
+
+    final List<Customer> result = [];
+    for (var map in customerMaps) {
+      final customerId = map['id'] as int;
+      final phones = (phonesByCustomer[customerId] ?? [])
+          .map((e) => e['phone'] as String? ?? '')
+          .where((p) => p.isNotEmpty)
+          .toList();
+      final addresses = (addressesByCustomer[customerId] ?? [])
+          .map((e) => e['address'] as String? ?? '')
+          .where((a) => a.isNotEmpty)
+          .toList();
+      final visits = visitsByCustomer[customerId] ?? [];
+      final tags = tagsByCustomer[customerId] ?? [];
+      final photoList = photosByCustomer[customerId] ?? [];
+      final products = productsByCustomer[customerId] ?? [];
+      final relationships = relationsByCustomer[customerId] ?? [];
+
+      result.add(
+        Customer.fromMap(
+          map,
+          phones: phones,
+          addresses: addresses,
+          visits: visits,
+          products: products,
+          relationships: relationships,
+          persistentTagList: tags,
+          persistentPhotoList: photoList,
+        ),
+      );
+    }
+    return result;
   }
 
   // Load all customers
   Future<void> loadCustomers() async {
     try {
-      isLoading = true;
-      notifyListeners();
+      isDataLoading = true;
 
       if (kIsWeb) {
         // For web platform, use in-memory data
-        if (customers.isEmpty && !_isAddingSampleData) {
-          _isAddingSampleData = true;
+        if (customers.isEmpty && !_isSeedingSampleData && kDebugMode) {
+          _isSeedingSampleData = true;
           await addSampleCustomers();
-          _isAddingSampleData = false;
+          _isSeedingSampleData = false;
         }
       } else {
         // For mobile platforms, use database
         final db = DatabaseHelper.instance;
-        final customerMaps = await db.getAllCustomers();
+        customers = await _loadCustomersFromDb(db);
 
-        customers = [];
-        for (var map in customerMaps) {
-          final phones = await db.getCustomerPhones(map['id']);
-          final addresses = await db.getCustomerAddresses(map['id']);
-          final visits = await db.getCustomerVisits(map['id']);
-          final products = await db.getCustomerProducts(map['id']);
-          final relationships = await db.getCustomerRelationships(map['id']);
-          final tags = await db.getCustomerTags(map['id']);
-
-          customers.add(
-            Customer.fromMap(
-              map,
-              phones: phones,
-              addresses: addresses,
-              visits: visits,
-              products: products,
-              relationships: relationships,
-              tagListFromDb: tags,
-            ),
-          );
-        }
-
-        // 添加示例客户数据（如果没有数据）
-        if (customers.isEmpty && !_isAddingSampleData) {
-          _isAddingSampleData = true;
+        // 仅在 Debug 模式下添加示例客户数据（如果没有数据）
+        if (customers.isEmpty && !_isSeedingSampleData && kDebugMode) {
+          _isSeedingSampleData = true;
           await addSampleCustomers();
-          _isAddingSampleData = false;
+          _isSeedingSampleData = false;
 
           // 重新从数据库加载客户数据
-          final newCustomerMaps = await db.getAllCustomers();
-          customers = [];
-          for (var map in newCustomerMaps) {
-            final phones = await db.getCustomerPhones(map['id']);
-            final addresses = await db.getCustomerAddresses(map['id']);
-            final visits = await db.getCustomerVisits(map['id']);
-            final products = await db.getCustomerProducts(map['id']);
-            final relationships = await db.getCustomerRelationships(map['id']);
-            final tags = await db.getCustomerTags(map['id']);
-
-            customers.add(
-              Customer.fromMap(
-                map,
-                phones: phones,
-                addresses: addresses,
-                visits: visits,
-                products: products,
-                relationships: relationships,
-                tagListFromDb: tags,
-              ),
-            );
-          }
+          customers = await _loadCustomersFromDb(db);
         }
       }
     } catch (e) {
       AppLogger.error('loading customers: $e');
-      // If error occurs, try adding sample data
-      if (customers.isEmpty && !_isAddingSampleData) {
-        _isAddingSampleData = true;
+      // If error occurs, try adding sample data (debug only)
+      if (customers.isEmpty && !_isSeedingSampleData && kDebugMode) {
+        _isSeedingSampleData = true;
         try {
           await addSampleCustomers();
           // Reload from database after adding sample data
           if (!kIsWeb) {
-            final db = DatabaseHelper.instance;
-            final newCustomerMaps = await db.getAllCustomers();
-            customers = [];
-            for (var map in newCustomerMaps) {
-              final phones = await db.getCustomerPhones(map['id']);
-              final addresses = await db.getCustomerAddresses(map['id']);
-              final visits = await db.getCustomerVisits(map['id']);
-              final products = await db.getCustomerProducts(map['id']);
-              final relationships = await db.getCustomerRelationships(map['id']);
-              final tags = await db.getCustomerTags(map['id']);
-              customers.add(
-                Customer.fromMap(
-                  map,
-                  phones: phones,
-                  addresses: addresses,
-                  visits: visits,
-                  products: products,
-                  relationships: relationships,
-                  tagListFromDb: tags,
-                ),
-              );
-            }
+            customers = await _loadCustomersFromDb(DatabaseHelper.instance);
           }
         } catch (_) {}
-        _isAddingSampleData = false;
+        _isSeedingSampleData = false;
       }
     } finally {
-      isLoading = false;
+      isDataLoading = false;
       notifyListeners();
     }
   }
 
-  // 添加示例客户数据
+  // 添加示例客户数据（仅 Debug 模式）
   Future<void> addSampleCustomers() async {
     if (kIsWeb) {
       // Web平台：直接操作内存数据
       if (colleagues.isEmpty) {
         // 添加测试同事
         final testColleagues = [
-          Colleague(name: '张三', phone: '13800138001', specialty: '销售经理'),
-          Colleague(name: '李四', phone: '13800138002', specialty: '销售代表'),
-          Colleague(name: '王五', phone: '13800138003', specialty: '市场专员'),
-          Colleague(name: '赵六', phone: '13800138004', specialty: '客服经理'),
+          Colleague(name: '张三', phone: '13800138001', departmentAndRole: '销售经理'),
+          Colleague(name: '李四', phone: '13800138002', departmentAndRole: '销售代表'),
+          Colleague(name: '王五', phone: '13800138003', departmentAndRole: '市场专员'),
+          Colleague(name: '赵六', phone: '13800138004', departmentAndRole: '客服经理'),
         ];
 
         for (int i = 0; i < testColleagues.length; i++) {
@@ -1097,7 +1336,7 @@ class AppState extends ChangeNotifier {
         // 获取产品和同事ID用于关联
         final productMaps = await db.getAllProducts();
         final colleagueMaps = await db.getAllColleagues();
-        final productIds = productMaps.map((p) => p['id'] as int).toList();
+        final productIds = productMaps.map((p) => (p['id'] as num?)?.toInt() ?? 0).toList();
 
         // 添加示例拜访记录
         final sampleVisits = [
@@ -1304,8 +1543,8 @@ class AppState extends ChangeNotifier {
               'purchase_date': now.toIso8601String().substring(0, 10),
             },
           ];
-          for (final cp in sampleCustomerProducts) {
-            await db.insertCustomerProduct(cp);
+          for (final customerProductEntry in sampleCustomerProducts) {
+            await db.insertCustomerProduct(customerProductEntry);
           }
         }
 
@@ -1337,8 +1576,8 @@ class AppState extends ChangeNotifier {
           {'customer_id': customerIds[4], 'tags': ['中等意向', '重点客户']},
         ];
         for (final tagEntry in sampleTags) {
-          for (final tag in tagEntry['tags'] as List<String>) {
-            await db.insertCustomerTag(tagEntry['customer_id'] as int, tag);
+          for (final tag in (tagEntry['tags'] as List?)?.cast<String>() ?? <String>[]) {
+            await db.insertCustomerTag((tagEntry['customer_id'] as num?)?.toInt() ?? 0, tag);
           }
         }
         } catch (e) {
@@ -1364,16 +1603,43 @@ class AppState extends ChangeNotifier {
           age: customer.age,
           gender: customer.gender,
           rating: customer.rating,
-          phones: customer.phones,
-          addresses: customer.addresses,
-          createdAt: customer.createdAt,
+          latitude: customer.latitude,
+          longitude: customer.longitude,
+          address: customer.address,
+          phones: List<String>.from(customer.phones),
+          addresses: List<String>.from(customer.addresses),
+          visits: List<Map<String, dynamic>>.from(customer.visits),
+          products: List<Map<String, dynamic>>.from(customer.products),
+          relationships: List<Map<String, dynamic>>.from(customer.relationships),
+          birthday: customer.birthday,
+          tags: customer.tags,
+          photos: customer.photos,
+          nextFollowUpDate: customer.nextFollowUpDate,
+          createdAt: customer.createdAt ?? DateTime.now().toIso8601String(),
+          persistentTagList: List<String>.from(customer.persistentTagList),
+          persistentPhotoList: List<String>.from(customer.persistentPhotoList),
+          wechatId: customer.wechatId,
+          idCardNumber: customer.idCardNumber,
+          occupation: customer.occupation,
+          source: customer.source,
+          notes: customer.notes,
+          purchaseIntentionLevel: customer.purchaseIntentionLevel,
         );
         customers.add(newCustomer);
+        // Update allTags with any new tags from this customer
+        for (var tag in newCustomer.tagList) {
+          if (!allTags.contains(tag)) {
+            allTags.add(tag);
+          }
+        }
+        allTags.sort();
+        _calculateInMemoryStatistics();
         notifyListeners();
       } else {
         // For mobile platforms, use database
         final db = DatabaseHelper.instance;
-        final id = await db.insertCustomer(customer.toMap());
+        final map = customer.toMap()..remove('id');
+        final id = await db.insertCustomer(map);
 
         // Insert phones
         for (var phone in customer.phones) {
@@ -1385,7 +1651,22 @@ class AppState extends ChangeNotifier {
           await db.insertCustomerAddress(id, address);
         }
 
+        // Insert photos
+        for (var photoPath in customer.persistentPhotoList) {
+          await db.insertCustomerPhoto({
+            'customer_id': id,
+            'file_path': photoPath,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
+
+        // Insert tags (use tagList which covers both persistentTagList and tags field)
+        for (var tag in customer.tagList) {
+          await db.insertCustomerTag(id, tag);
+        }
+
         await loadCustomers();
+        await loadTags(); // Tags depend on customer data, run after
       }
     } catch (e) {
       AppLogger.error('adding customer: $e');
@@ -1399,34 +1680,110 @@ class AppState extends ChangeNotifier {
         final index = customers.indexWhere((c) => c.id == customer.id);
         if (index != -1) {
           customers[index] = customer;
+          // Refresh allTags since customer tags may have changed
+          allTags = customers.expand((c) => c.tagList).toSet().toList()..sort();
+          _calculateInMemoryStatistics();
           notifyListeners();
         }
       } else {
         final db = DatabaseHelper.instance;
-        await db.updateCustomer(customer.toMap());
-
-        // Sync phones: delete old, insert new
         final dbInstance = await db.database;
-        await dbInstance.delete(
-          'customer_phones',
-          where: 'customer_id = ?',
-          whereArgs: [customer.id],
-        );
-        for (var phone in customer.phones) {
-          await db.insertCustomerPhone(customer.id!, phone);
-        }
 
-        // Sync addresses: delete old, insert new
-        await dbInstance.delete(
-          'customer_addresses',
-          where: 'customer_id = ?',
-          whereArgs: [customer.id],
-        );
-        for (var address in customer.addresses) {
-          await db.insertCustomerAddress(customer.id!, address);
+        // Query old photos before transaction to clean up orphaned files later
+        List<String> oldPhotoPaths = [];
+        try {
+          final oldPhotos = await dbInstance.query(
+            'customer_photos',
+            where: 'customer_id = ?',
+            whereArgs: [customer.id],
+          );
+          for (var p in oldPhotos) {
+            final fp = p['file_path'] as String?;
+            if (fp != null) oldPhotoPaths.add(fp);
+          }
+        } catch (_) {}
+
+        await dbInstance.transaction((txn) async {
+          // Update customer record (exclude 'id' from SET clause)
+          final customerMap = customer.toMap()..remove('id');
+          await txn.update(
+            DatabaseHelper.tableCustomers,
+            customerMap,
+            where: 'id = ?',
+            whereArgs: [customer.id],
+          );
+
+          // Sync phones: delete old, insert new
+          await txn.delete(
+            'customer_phones',
+            where: 'customer_id = ?',
+            whereArgs: [customer.id],
+          );
+          for (var phone in customer.phones) {
+            await txn.insert('customer_phones', {
+              'customer_id': customer.id,
+              'phone': phone,
+            });
+          }
+
+          // Sync addresses: delete old, insert new
+          await txn.delete(
+            'customer_addresses',
+            where: 'customer_id = ?',
+            whereArgs: [customer.id],
+          );
+          for (var address in customer.addresses) {
+            await txn.insert('customer_addresses', {
+              'customer_id': customer.id,
+              'address': address,
+            });
+          }
+
+          // Sync photos: delete old, insert new
+          await txn.delete(
+            'customer_photos',
+            where: 'customer_id = ?',
+            whereArgs: [customer.id],
+          );
+          for (var photoPath in customer.persistentPhotoList) {
+            await txn.insert('customer_photos', {
+              'customer_id': customer.id,
+              'file_path': photoPath,
+              'created_at': DateTime.now().toIso8601String(),
+            });
+          }
+
+          // Sync tags: delete old, insert new
+          await txn.delete(
+            'customer_tags',
+            where: 'customer_id = ?',
+            whereArgs: [customer.id],
+          );
+          for (var tag in customer.tagList) {
+            // Sync tags definition table
+            await txn.insert('tags', {
+              'name': tag,
+              'created_at': DateTime.now().toIso8601String(),
+            }, conflictAlgorithm: ConflictAlgorithm.ignore);
+            await txn.insert('customer_tags', {
+              'customer_id': customer.id,
+              'tag': tag,
+            }, conflictAlgorithm: ConflictAlgorithm.ignore);
+          }
+        });
+
+        // Delete orphaned photo files that are no longer in the new photo list
+        for (final oldPath in oldPhotoPaths) {
+          if (!customer.persistentPhotoList.contains(oldPath)) {
+            try { await File(oldPath).delete(); } catch (_) {}
+          }
         }
 
         await loadCustomers();
+        await Future.wait([
+          loadTags(),
+          loadStatistics(),
+        ]);
       }
     } catch (e) {
       AppLogger.error('updating customer: $e');
@@ -1436,9 +1793,24 @@ class AppState extends ChangeNotifier {
   // Delete customer
   Future<void> deleteCustomer(int id) async {
     try {
-      final db = DatabaseHelper.instance;
-      await db.deleteCustomer(id);
-      await loadCustomers();
+      if (kIsWeb) {
+        // Also clean up orphaned sales records for this customer
+        salesRecords.removeWhere((s) => (s['customer_id'] as num?)?.toInt() == id);
+        customers.removeWhere((c) => c.id == id);
+        // Rebuild allTags from remaining customers
+        allTags = customers.expand((c) => c.tagList).toSet().toList()..sort();
+        _calculateInMemoryStatistics();
+        notifyListeners();
+      } else {
+        final db = DatabaseHelper.instance;
+        await db.deleteCustomer(id);
+        await loadCustomers();
+        await Future.wait([
+          loadTags(),
+          loadSales(),
+          loadStatistics(),
+        ]);
+      }
     } catch (e) {
       AppLogger.error('deleting customer: $e');
     }
@@ -1446,13 +1818,12 @@ class AppState extends ChangeNotifier {
 
   // Load all products
   Future<void> loadProducts() async {
-    isLoading = true;
-    notifyListeners();
+    isDataLoading = true;
 
     try {
       if (kIsWeb) {
         // For web platform, use in-memory data
-        if (products.isEmpty) {
+        if (products.isEmpty && kDebugMode) {
           await addSampleProducts();
         }
       } else {
@@ -1461,19 +1832,19 @@ class AppState extends ChangeNotifier {
         final productMaps = await db.getAllProducts();
         products = productMaps.map((map) => Product.fromMap(map)).toList();
 
-        // 添加示例产品数据（如果没有数据）
-        if (products.isEmpty) {
+        // 仅在 Debug 模式下添加示例产品数据（如果没有数据）
+        if (products.isEmpty && kDebugMode) {
           await addSampleProducts();
         }
       }
     } catch (e) {
       AppLogger.error('loading products: $e');
-      // If error occurs, add sample data
-      if (products.isEmpty) {
+      // If error occurs, add sample data (debug only)
+      if (products.isEmpty && kDebugMode) {
         await addSampleProducts();
       }
     } finally {
-      isLoading = false;
+      isDataLoading = false;
       notifyListeners();
     }
   }
@@ -1485,50 +1856,50 @@ class AppState extends ChangeNotifier {
         company: '平安保险',
         name: '平安福重疾险',
         description: '涵盖100种重疾和50种轻症，保障全面',
-        advantages: '保障范围广，理赔速度快，服务好',
+        sellingPoints: '保障范围广，理赔速度快，服务好',
         category: '重疾险',
-        startDate: '2026-01-01',
-        endDate: '2026-12-31',
+        salesStartDate: '2026-01-01',
+        salesEndDate: '2026-12-31',
         createdAt: DateTime.now().toIso8601String(),
       ),
       Product(
         company: '太平洋保险',
         name: '太平洋健康险',
         description: '提供全面的健康保障，包括住院医疗、门诊医疗等',
-        advantages: '保障全面，保费合理，理赔便捷',
+        sellingPoints: '保障全面，保费合理，理赔便捷',
         category: '健康险',
-        startDate: '2026-01-01',
-        endDate: '2026-12-31',
+        salesStartDate: '2026-01-01',
+        salesEndDate: '2026-12-31',
         createdAt: DateTime.now().toIso8601String(),
       ),
       Product(
         company: '中国人寿',
         name: '国寿养老险',
         description: '为老年人提供稳定的养老保障',
-        advantages: '收益稳定，安全可靠，适合养老规划',
+        sellingPoints: '收益稳定，安全可靠，适合养老规划',
         category: '养老险',
-        startDate: '2026-01-01',
-        endDate: '2026-12-31',
+        salesStartDate: '2026-01-01',
+        salesEndDate: '2026-12-31',
         createdAt: DateTime.now().toIso8601String(),
       ),
       Product(
         company: '人保财险',
         name: '人保车险',
         description: '为车辆提供全面的保险保障',
-        advantages: '理赔速度快，服务好，保费合理',
+        sellingPoints: '理赔速度快，服务好，保费合理',
         category: '财产险',
-        startDate: '2026-01-01',
-        endDate: '2026-12-31',
+        salesStartDate: '2026-01-01',
+        salesEndDate: '2026-12-31',
         createdAt: DateTime.now().toIso8601String(),
       ),
       Product(
         company: '泰康人寿',
         name: '泰康年金险',
         description: '提供稳定的年金收益，适合长期理财',
-        advantages: '收益稳定，安全可靠，适合长期规划',
+        sellingPoints: '收益稳定，安全可靠，适合长期规划',
         category: '年金险',
-        startDate: '2026-01-01',
-        endDate: '2026-12-31',
+        salesStartDate: '2026-01-01',
+        salesEndDate: '2026-12-31',
         createdAt: DateTime.now().toIso8601String(),
       ),
     ];
@@ -1538,8 +1909,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Add product
-  Future<void> addProduct(Product product) async {
+  // Add product, returns the new product's id
+  Future<int?> addProduct(Product product) async {
     try {
       if (kIsWeb) {
         // For web platform, add to in-memory list
@@ -1552,31 +1923,47 @@ class AppState extends ChangeNotifier {
           company: product.company,
           name: product.name,
           description: product.description,
-          advantages: product.advantages,
+          sellingPoints: product.sellingPoints,
           category: product.category,
-          startDate: product.startDate,
-          endDate: product.endDate,
+          salesStartDate: product.salesStartDate,
+          salesEndDate: product.salesEndDate,
           createdAt: product.createdAt,
         );
         products.add(newProduct);
+        _calculateInMemoryStatistics();
         notifyListeners();
+        return newProduct.id;
       } else {
         // For mobile platforms, use database
         final db = DatabaseHelper.instance;
-        await db.insertProduct(product.toMap());
+        final id = await db.insertProduct(product.toMap());
         await loadProducts();
+        return id;
       }
     } catch (e) {
       AppLogger.error('adding product: $e');
+      return null;
     }
   }
 
   // Update product
   Future<void> updateProduct(Product product) async {
     try {
-      final db = DatabaseHelper.instance;
-      await db.updateProduct(product.toMap());
-      await loadProducts();
+      if (kIsWeb) {
+        final index = products.indexWhere((p) => p.id == product.id);
+        if (index != -1) {
+          products[index] = product;
+          _calculateInMemoryStatistics();
+          notifyListeners();
+        }
+      } else {
+        final db = DatabaseHelper.instance;
+        await db.updateProduct(product.toMap());
+        await Future.wait([
+          loadProducts(),
+          loadStatistics(),
+        ]);
+      }
     } catch (e) {
       AppLogger.error('updating product: $e');
     }
@@ -1585,9 +1972,20 @@ class AppState extends ChangeNotifier {
   // Delete product
   Future<void> deleteProduct(int id) async {
     try {
-      final db = DatabaseHelper.instance;
-      await db.deleteProduct(id);
-      await loadProducts();
+      if (kIsWeb) {
+        products.removeWhere((p) => p.id == id);
+        _calculateInMemoryStatistics();
+        notifyListeners();
+      } else {
+        final db = DatabaseHelper.instance;
+        await db.deleteProduct(id);
+        // Only reload what's actually affected by product deletion
+        await Future.wait([
+          loadProducts(),
+          loadSales(),
+          loadStatistics(),
+        ]);
+      }
     } catch (e) {
       AppLogger.error('deleting product: $e');
     }
@@ -1595,8 +1993,7 @@ class AppState extends ChangeNotifier {
 
   // Load all colleagues
   Future<void> loadColleagues() async {
-    isLoading = true;
-    notifyListeners();
+    isDataLoading = true;
 
     try {
       if (kIsWeb) {
@@ -1613,7 +2010,7 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       AppLogger.error('loading colleagues: $e');
     } finally {
-      isLoading = false;
+      isDataLoading = false;
       notifyListeners();
     }
   }
@@ -1632,9 +2029,10 @@ class AppState extends ChangeNotifier {
             name: colleague.name,
             phone: colleague.phone,
             email: colleague.email,
-            specialty: colleague.specialty,
+            departmentAndRole: colleague.departmentAndRole,
           ),
         );
+        _calculateInMemoryStatistics();
         notifyListeners();
       } else {
         final db = DatabaseHelper.instance;
@@ -1651,25 +2049,62 @@ class AppState extends ChangeNotifier {
     try {
       if (kIsWeb) {
         // For web platform, add to in-memory list
-        final customer = customers.firstWhere((c) => c.id == visit.customerId);
+        final customerIndex = customers.indexWhere((c) => c.id == visit.customerId);
+        if (customerIndex == -1) return;
+        final customer = customers[customerIndex];
         final newVisit = {
-          'id': customer.visits.length + 1,
+          'id': (customer.visits.fold(0, (max, v) { final id = (v['id'] as num?)?.toInt(); return id != null && id > max ? id : max; })) + 1,
           'customer_id': visit.customerId,
-          'date': visit.date,
+          'date': visit.visitDate,
           'location': visit.location,
           'accompanying_persons': visit.accompanyingPersons,
-          'introduced_products': visit.introducedProducts,
+          'introduced_products': visit.productsPresented,
           'interested_products': visit.interestedProducts,
           'competitors': visit.competitors,
           'notes': visit.notes,
         };
-        customer.visits.add(newVisit);
+        // Create new list to avoid mutating potentially const list
+        final updatedVisits = List<Map<String, dynamic>>.from(customer.visits)
+          ..add(newVisit);
+        customers[customerIndex] = Customer(
+          id: customer.id,
+          name: customer.name,
+          alias: customer.alias,
+          age: customer.age,
+          gender: customer.gender,
+          rating: customer.rating,
+          latitude: customer.latitude,
+          longitude: customer.longitude,
+          address: customer.address,
+          phones: customer.phones,
+          addresses: customer.addresses,
+          visits: updatedVisits,
+          products: customer.products,
+          relationships: customer.relationships,
+          birthday: customer.birthday,
+          tags: customer.tags,
+          photos: customer.photos,
+          nextFollowUpDate: customer.nextFollowUpDate,
+          createdAt: customer.createdAt ?? DateTime.now().toIso8601String(),
+          persistentTagList: customer.persistentTagList,
+          persistentPhotoList: customer.persistentPhotoList,
+          wechatId: customer.wechatId,
+          idCardNumber: customer.idCardNumber,
+          occupation: customer.occupation,
+          source: customer.source,
+          notes: customer.notes,
+          purchaseIntentionLevel: customer.purchaseIntentionLevel,
+        );
+        _calculateInMemoryStatistics();
         notifyListeners();
       } else {
         // For mobile platforms, use database
         final db = DatabaseHelper.instance;
         await db.insertVisit(visit.toMap());
-        await loadCustomers();
+        await Future.wait([
+          loadCustomers(),
+          loadStatistics(),
+        ]);
       }
     } catch (e) {
       AppLogger.error('adding visit: $e');
@@ -1683,13 +2118,64 @@ class AppState extends ChangeNotifier {
     String purchaseDate,
   ) async {
     try {
-      final db = DatabaseHelper.instance;
-      await db.insertCustomerProduct({
-        'customer_id': customerId,
-        'product_id': productId,
-        'purchase_date': purchaseDate,
-      });
-      await loadCustomers();
+      if (kIsWeb) {
+        final customerIndex = customers.indexWhere((c) => c.id == customerId);
+        if (customerIndex == -1) return;
+        final customer = customers[customerIndex];
+        final product = products.firstWhere(
+          (p) => p.id == productId,
+          orElse: () => Product(company: '', name: 'Unknown'),
+        );
+        final updatedProducts = List<Map<String, dynamic>>.from(customer.products)
+          ..add({
+            'id': (customer.products.fold(0, (max, p) { final id = (p['id'] as num?)?.toInt(); return id != null && id > max ? id : max; })) + 1,
+            'product_id': productId,
+            'name': product.name,
+            'purchase_date': purchaseDate,
+          });
+        customers[customerIndex] = Customer(
+          id: customer.id,
+          name: customer.name,
+          alias: customer.alias,
+          age: customer.age,
+          gender: customer.gender,
+          rating: customer.rating,
+          latitude: customer.latitude,
+          longitude: customer.longitude,
+          address: customer.address,
+          phones: customer.phones,
+          addresses: customer.addresses,
+          visits: customer.visits,
+          products: updatedProducts,
+          relationships: customer.relationships,
+          birthday: customer.birthday,
+          tags: customer.tags,
+          photos: customer.photos,
+          nextFollowUpDate: customer.nextFollowUpDate,
+          createdAt: customer.createdAt ?? DateTime.now().toIso8601String(),
+          persistentTagList: customer.persistentTagList,
+          persistentPhotoList: customer.persistentPhotoList,
+          wechatId: customer.wechatId,
+          idCardNumber: customer.idCardNumber,
+          occupation: customer.occupation,
+          source: customer.source,
+          notes: customer.notes,
+          purchaseIntentionLevel: customer.purchaseIntentionLevel,
+        );
+        _calculateInMemoryStatistics();
+        notifyListeners();
+      } else {
+        final db = DatabaseHelper.instance;
+        await db.insertCustomerProduct({
+          'customer_id': customerId,
+          'product_id': productId,
+          'purchase_date': purchaseDate,
+        });
+        await Future.wait([
+          loadCustomers(),
+          loadStatistics(),
+        ]);
+      }
     } catch (e) {
       AppLogger.error('adding customer product: $e');
     }
@@ -1704,12 +2190,15 @@ class AppState extends ChangeNotifier {
     try {
       if (kIsWeb) {
         // For web platform, add to in-memory list
-        final customer = customers.firstWhere((c) => c.id == customerId);
-        final relatedCustomer = customers.firstWhere(
-          (c) => c.id == relatedCustomerId,
-        );
+        final customerIndex = customers.indexWhere((c) => c.id == customerId);
+        if (customerIndex == -1) return;
+        final customer = customers[customerIndex];
+        final relatedCustomerIndex = customers.indexWhere((c) => c.id == relatedCustomerId);
+        if (relatedCustomerIndex == -1) return;
+        final relatedCustomer = customers[relatedCustomerIndex];
         final newRelationship = {
-          'id': customer.relationships.length + 1,
+          'id': (customer.relationships.fold(0, (max, r) { final id = (r['id'] as num?)?.toInt(); return id != null && id > max ? id : max; })) + 1,
+          'related_customer_id': relatedCustomerId,
           'name': relatedCustomer.name,
           'relationship': relationship,
         };
@@ -1734,14 +2223,23 @@ class AppState extends ChangeNotifier {
           visits: customer.visits,
           products: customer.products,
           relationships: updatedRelationships,
-          createdAt: customer.createdAt,
+          birthday: customer.birthday,
+          tags: customer.tags,
+          photos: customer.photos,
+          nextFollowUpDate: customer.nextFollowUpDate,
+          createdAt: customer.createdAt ?? DateTime.now().toIso8601String(),
+          persistentTagList: customer.persistentTagList,
+          persistentPhotoList: customer.persistentPhotoList,
+          wechatId: customer.wechatId,
+          idCardNumber: customer.idCardNumber,
+          occupation: customer.occupation,
+          source: customer.source,
+          notes: customer.notes,
+          purchaseIntentionLevel: customer.purchaseIntentionLevel,
         );
         // Replace the old customer with the new one
-        final customerIndex = customers.indexWhere((c) => c.id == customerId);
-        if (customerIndex != -1) {
-          customers[customerIndex] = updatedCustomer;
-          notifyListeners();
-        }
+        customers[customerIndex] = updatedCustomer;
+        notifyListeners();
       } else {
         // For mobile platforms, use database
         final db = DatabaseHelper.instance;
@@ -1750,7 +2248,10 @@ class AppState extends ChangeNotifier {
           'related_customer_id': relatedCustomerId,
           'relationship': relationship,
         });
-        await loadCustomers();
+        await Future.wait([
+          loadCustomers(),
+          loadStatistics(),
+        ]);
       }
     } catch (e) {
       AppLogger.error('adding customer relationship: $e');
@@ -1759,8 +2260,7 @@ class AppState extends ChangeNotifier {
 
   // Load all sales
   Future<void> loadSales() async {
-    isLoading = true;
-    notifyListeners();
+    isDataLoading = true;
 
     try {
       if (kIsWeb) {
@@ -1770,12 +2270,12 @@ class AppState extends ChangeNotifier {
         // For mobile platforms, use database
         final db = DatabaseHelper.instance;
         final saleMaps = await db.getAllSales();
-        sales = saleMaps;
+        salesRecords = saleMaps;
       }
     } catch (e) {
       AppLogger.error('loading sales: $e');
     } finally {
-      isLoading = false;
+      isDataLoading = false;
       notifyListeners();
     }
   }
@@ -1785,46 +2285,60 @@ class AppState extends ChangeNotifier {
     try {
       if (kIsWeb) {
         // For web platform, add to in-memory list
-        final maxId = sales.fold(0, (max, s) {
-          final id = s['id'] as int?;
+        final maxId = salesRecords.fold(0, (max, s) {
+          final id = (s['id'] as num?)?.toInt();
           return id != null && id > max ? id : max;
         });
         final newSale = {
           'id': maxId + 1,
           'customer_id': sale.customerId,
           'product_id': sale.productId,
+          'amount': sale.amount ?? 0.0,
           'notes': sale.notes,
           'sale_date': sale.saleDate,
           'colleague_id': sale.colleagueId,
-          'commission_rate': sale.commissionRate,
+          'commission_rate': sale.commissionRate ?? 0.0,
           'customer_name': customers
               .firstWhere(
                 (c) => c.id == sale.customerId,
-                orElse: () => Customer(name: 'Unknown'),
+                orElse: () {
+                  AppLogger.warning('Sale references non-existent customer_id: ${sale.customerId}');
+                  return Customer(name: 'Unknown');
+                },
               )
               .name,
           'product_name': products
               .firstWhere(
                 (p) => p.id == sale.productId,
-                orElse: () => Product(company: '', name: 'Unknown'),
+                orElse: () {
+                  AppLogger.warning('Sale references non-existent product_id: ${sale.productId}');
+                  return Product(company: '', name: 'Unknown');
+                },
               )
               .name,
           'colleague_name': sale.colleagueId != null
               ? colleagues
                     .firstWhere(
                       (c) => c.id == sale.colleagueId,
-                      orElse: () => Colleague(name: 'Unknown'),
+                      orElse: () {
+                        AppLogger.warning('Sale references non-existent colleague_id: ${sale.colleagueId}');
+                        return Colleague(name: 'Unknown');
+                      },
                     )
                     .name
               : null,
         };
-        sales.add(newSale);
+        salesRecords.add(newSale);
+        _calculateInMemoryStatistics();
         notifyListeners();
       } else {
         // For mobile platforms, use database
         final db = DatabaseHelper.instance;
         await db.insertSale(sale.toMap());
-        await loadSales();
+        await Future.wait([
+          loadSales(),
+          loadStatistics(),
+        ]);
       }
     } catch (e) {
       AppLogger.error('adding sale: $e');
@@ -1836,8 +2350,8 @@ class AppState extends ChangeNotifier {
     try {
       if (kIsWeb) {
         // For web platform, filter from in-memory list
-        return sales
-            .where((sale) => sale['customer_id'] == customerId)
+        return salesRecords
+            .where((sale) => (sale['customer_id'] as num?)?.toInt() == customerId)
             .toList();
       } else {
         // For mobile platforms, use database
@@ -1853,31 +2367,31 @@ class AppState extends ChangeNotifier {
   // Search customers
   List<Customer> searchCustomers(String query) {
     if (query.isEmpty) return customers;
+    final q = query.toLowerCase();
     return customers.where((customer) {
-      final nameMatch = customer.name.toLowerCase().contains(
-        query.toLowerCase(),
-      );
-      final phoneMatch = customer.phones.any((phone) => phone.contains(query));
+      final nameMatch = customer.name.toLowerCase().contains(q);
+      final aliasMatch = customer.alias?.toLowerCase().contains(q) ?? false;
+      final phoneMatch = customer.phones.any((phone) => phone.contains(q));
       final addressMatch = customer.addresses.any(
-        (address) => address.toLowerCase().contains(query.toLowerCase()),
+        (address) => address.toLowerCase().contains(q),
       );
-      return nameMatch || phoneMatch || addressMatch;
+      final tagMatch = customer.tagList.any((tag) => tag.toLowerCase().contains(q));
+      final wechatMatch = customer.wechatId?.toLowerCase().contains(q) ?? false;
+      final notesMatch = customer.notes?.toLowerCase().contains(q) ?? false;
+      final occupationMatch = customer.occupation?.toLowerCase().contains(q) ?? false;
+      return nameMatch || aliasMatch || phoneMatch || addressMatch || tagMatch || wechatMatch || notesMatch || occupationMatch;
     }).toList();
   }
 
   // Search products
   List<Product> searchProducts(String query) {
     if (query.isEmpty) return products;
+    final q = query.toLowerCase();
     return products.where((product) {
-      final nameMatch = product.name.toLowerCase().contains(
-        query.toLowerCase(),
-      );
-      final companyMatch = product.company.toLowerCase().contains(
-        query.toLowerCase(),
-      );
+      final nameMatch = product.name.toLowerCase().contains(q);
+      final companyMatch = product.company.toLowerCase().contains(q);
       final categoryMatch =
-          product.category?.toLowerCase().contains(query.toLowerCase()) ??
-          false;
+          product.category?.toLowerCase().contains(q) ?? false;
       return nameMatch || companyMatch || categoryMatch;
     }).toList();
   }
@@ -1909,7 +2423,7 @@ class AppState extends ChangeNotifier {
         .toList();
 
     customersWithDist.sort(
-      (a, b) => (a['distance'] as double).compareTo(b['distance'] as double),
+      (a, b) => ((a['distance'] as num?) ?? 0).compareTo((b['distance'] as num?) ?? 0),
     );
 
     if (limit != null && limit < customersWithDist.length) {
@@ -1943,22 +2457,22 @@ class AppState extends ChangeNotifier {
     double lat2,
     double lon2,
   ) {
-    const R = 6371; // Radius of the earth in km
-    final dLat = _deg2rad(lat2 - lat1);
-    final dLon = _deg2rad(lon2 - lon1);
-    final a =
+    const earthRadiusKm = 6371; // Radius of the earth in km
+    final dLat = _degreesToRadians(lat2 - lat1);
+    final dLon = _degreesToRadians(lon2 - lon1);
+    final haversineA =
         math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_deg2rad(lat1)) *
-            math.cos(_deg2rad(lat2)) *
+        math.cos(_degreesToRadians(lat1)) *
+            math.cos(_degreesToRadians(lat2)) *
             math.sin(dLon / 2) *
             math.sin(dLon / 2);
-    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    final d = R * c;
-    return d;
+    final haversineAngle = 2 * math.atan2(math.sqrt(haversineA), math.sqrt(1 - haversineA));
+    final distanceKm = earthRadiusKm * haversineAngle;
+    return distanceKm;
   }
 
-  double _deg2rad(double deg) {
-    return deg * (3.14159265359 / 180);
+  double _degreesToRadians(double degrees) {
+    return degrees * (math.pi / 180);
   }
 
   // Recommend products for customer
@@ -1981,8 +2495,14 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    // Remove duplicates and limit to 5 recommendations
-    return recommended.toSet().take(5).toList();
+    // Remove duplicates (by product id) and limit to 5 recommendations
+    final seenIds = <int>{};
+    return recommended.where((p) {
+      final id = p.id;
+      if (id == null || seenIds.contains(id)) return false;
+      seenIds.add(id);
+      return true;
+    }).take(5).toList();
   }
 
   // 切换主题模式
@@ -1992,17 +2512,168 @@ class AppState extends ChangeNotifier {
   }
 
   // 更新AI引擎配置
-  void updateAIConfig(String provider, Map<String, dynamic> config) {
-    aiConfigs[provider] = config;
+  Future<void> updateAIConfig(String provider, Map<String, dynamic> config) async {
+    aiProviderConfigs[provider] = config;
+    if (!kIsWeb) {
+      await _saveAIConfigToDb(provider, config);
+    }
     notifyListeners();
+  }
+
+  // 删除AI引擎配置
+  Future<void> deleteAIConfig(String provider) async {
+    aiProviderConfigs.remove(provider);
+    if (!kIsWeb) {
+      try {
+        final db = DatabaseHelper.instance;
+        await db.deleteAIConfigByKey(provider);
+      } catch (e) {
+        AppLogger.error('deleting AI config from db: $e');
+      }
+    }
+    notifyListeners();
+  }
+
+  // 获取已启用的AI引擎列表
+  List<Map<String, dynamic>> get enabledAIEngines {
+    return aiProviderConfigs.entries
+        .where((e) => e.value['enabled'] == true)
+        .map((e) => {
+              'key': e.key,
+              'name': e.value['name'] ?? e.key,
+              'apiKey': e.value['apiKey'] ?? '',
+              'baseUrl': e.value['baseUrl'] ?? '',
+              'model': e.value['model'] ?? '',
+              'category': e.value['category'] ?? 'chat',
+              'enabled': true,
+            })
+        .toList();
+  }
+
+  // 获取已启用的ASR(语音识别)引擎
+  List<Map<String, dynamic>> get enabledASREngines {
+    return enabledAIEngines.where((e) => e['category'] == 'asr').toList();
+  }
+
+  // 获取已启用的Chat(对话分析)引擎
+  List<Map<String, dynamic>> get enabledChatEngines {
+    return enabledAIEngines.where((e) => e['category'] == 'chat').toList();
+  }
+
+  // 保存单个AI配置到数据库
+  Future<void> _saveAIConfigToDb(String provider, Map<String, dynamic> config) async {
+    try {
+      final db = DatabaseHelper.instance;
+      final now = DateTime.now().toIso8601String();
+      final existing = await db.getAIConfigByKey(provider);
+      if (existing != null) {
+        await db.updateAIConfig(provider, {
+          'name': config['name'] ?? provider,
+          'api_key': config['apiKey'] ?? '',
+          'base_url': config['baseUrl'] ?? '',
+          'model': config['model'] ?? '',
+          'category': config['category'] ?? 'chat',
+          'enabled': (config['enabled'] == true) ? 1 : 0,
+          'updated_at': now,
+        });
+      } else {
+        await db.insertAIConfig({
+          'provider_key': provider,
+          'name': config['name'] ?? provider,
+          'api_key': config['apiKey'] ?? '',
+          'base_url': config['baseUrl'] ?? '',
+          'model': config['model'] ?? '',
+          'category': config['category'] ?? 'chat',
+          'enabled': (config['enabled'] == true) ? 1 : 0,
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
+    } catch (e) {
+      AppLogger.error('saving AI config to db: $e');
+    }
+  }
+
+  // 加载AI配置（优先从数据库，降级到SharedPreferences）
+  Future<void> _loadAIConfigs() async {
+    try {
+      if (!kIsWeb) {
+        final db = DatabaseHelper.instance;
+        final dbConfigs = await db.getAllAIConfigs();
+        if (dbConfigs.isNotEmpty) {
+          final Map<String, dynamic> loaded = {};
+          for (final row in dbConfigs) {
+            loaded[row['provider_key']?.toString() ?? ''] = {
+              'name': row['name'],
+              'apiKey': row['api_key'] ?? '',
+              'baseUrl': row['base_url'] ?? '',
+              'model': row['model'] ?? '',
+              'category': row['category'] ?? 'chat',
+              'enabled': row['enabled'] == 1,
+            };
+          }
+          aiProviderConfigs = loaded;
+          notifyListeners();
+          return;
+        }
+      }
+      // Fallback: load from SharedPreferences (legacy)
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = prefs.getString('ai_configs');
+      if (encoded != null && encoded.isNotEmpty) {
+        final Map<String, dynamic> loaded = {};
+        for (final entry in encoded.split(';;')) {
+          final parts = entry.split('::');
+          if (parts.length == 2) {
+            final key = parts[0];
+            final Map<String, dynamic> config = {};
+            for (final kv in parts[1].split('|')) {
+              final kvParts = kv.split('=');
+              if (kvParts.length == 2) {
+                config[kvParts[0]] = kvParts[1] == 'true'
+                    ? true
+                    : kvParts[1] == 'false'
+                        ? false
+                        : kvParts[1];
+              }
+            }
+            loaded[key] = config;
+          }
+        }
+        if (loaded.isNotEmpty) {
+          aiProviderConfigs = loaded;
+          notifyListeners();
+          // Migrate to database
+          for (final entry in loaded.entries) {
+            await _saveAIConfigToDb(entry.key, (entry.value is Map<String, dynamic>) ? entry.value as Map<String, dynamic> : <String, dynamic>{});
+          }
+          // Clear legacy SharedPreferences
+          await prefs.remove('ai_configs');
+        }
+      }
+    } catch (e) {
+      AppLogger.error('loading AI configs: $e');
+    }
   }
 
   // 更新同事信息
   Future<void> updateColleague(Colleague colleague) async {
     try {
-      final db = DatabaseHelper.instance;
-      await db.updateColleague(colleague.toMap());
-      await loadColleagues();
+      if (kIsWeb) {
+        final index = colleagues.indexWhere((c) => c.id == colleague.id);
+        if (index != -1) {
+          colleagues[index] = colleague;
+          _calculateInMemoryStatistics();
+          notifyListeners();
+        }
+      } else {
+        final db = DatabaseHelper.instance;
+        await db.updateColleague(colleague.toMap());
+        await Future.wait([
+          loadColleagues(),
+          loadStatistics(),
+        ]);
+      }
     } catch (e) {
       AppLogger.error('updating colleague: $e');
     }
@@ -2011,9 +2682,19 @@ class AppState extends ChangeNotifier {
   // 删除同事
   Future<void> deleteColleague(int id) async {
     try {
-      final db = DatabaseHelper.instance;
-      await db.deleteColleague(id);
-      await loadColleagues();
+      if (kIsWeb) {
+        colleagues.removeWhere((c) => c.id == id);
+        _calculateInMemoryStatistics();
+        notifyListeners();
+      } else {
+        final db = DatabaseHelper.instance;
+        await db.deleteColleague(id);
+        await Future.wait([
+          loadColleagues(),
+          loadSales(),
+          loadStatistics(),
+        ]);
+      }
     } catch (e) {
       AppLogger.error('deleting colleague: $e');
     }
@@ -2023,9 +2704,55 @@ class AppState extends ChangeNotifier {
 
   Future<void> updateVisit(Visit visit) async {
     try {
-      final db = DatabaseHelper.instance;
-      await db.updateVisit(visit.toMap()..['id'] = visit.id);
-      await loadCustomers();
+      if (kIsWeb) {
+        for (int i = 0; i < customers.length; i++) {
+          final customer = customers[i];
+          final vIdx = customer.visits.indexWhere((v) => v['id'] == visit.id);
+          if (vIdx != -1) {
+            final updatedVisits = List<Map<String, dynamic>>.from(customer.visits);
+            updatedVisits[vIdx] = visit.toMap()..['id'] = visit.id;
+            customers[i] = Customer(
+              id: customer.id,
+              name: customer.name,
+              alias: customer.alias,
+              age: customer.age,
+              gender: customer.gender,
+              rating: customer.rating,
+              latitude: customer.latitude,
+              longitude: customer.longitude,
+              address: customer.address,
+              phones: customer.phones,
+              addresses: customer.addresses,
+              visits: updatedVisits,
+              products: customer.products,
+              relationships: customer.relationships,
+              birthday: customer.birthday,
+              tags: customer.tags,
+              photos: customer.photos,
+              nextFollowUpDate: customer.nextFollowUpDate,
+              createdAt: customer.createdAt,
+              persistentTagList: customer.persistentTagList,
+              persistentPhotoList: customer.persistentPhotoList,
+              wechatId: customer.wechatId,
+              idCardNumber: customer.idCardNumber,
+              occupation: customer.occupation,
+              source: customer.source,
+              notes: customer.notes,
+              purchaseIntentionLevel: customer.purchaseIntentionLevel,
+            );
+            break;
+          }
+        }
+        _calculateInMemoryStatistics();
+        notifyListeners();
+      } else {
+        final db = DatabaseHelper.instance;
+        await db.updateVisit(visit.toMap()..['id'] = visit.id);
+        await Future.wait([
+          loadCustomers(),
+          loadStatistics(),
+        ]);
+      }
     } catch (e) {
       AppLogger.error('updating visit: $e');
     }
@@ -2033,9 +2760,55 @@ class AppState extends ChangeNotifier {
 
   Future<void> deleteVisit(int id) async {
     try {
-      final db = DatabaseHelper.instance;
-      await db.deleteVisit(id);
-      await loadCustomers();
+      if (kIsWeb) {
+        for (int i = 0; i < customers.length; i++) {
+          final customer = customers[i];
+          final hadVisit = customer.visits.any((v) => v['id'] == id);
+          if (hadVisit) {
+            final updatedVisits = List<Map<String, dynamic>>.from(customer.visits)
+              ..removeWhere((v) => v['id'] == id);
+            customers[i] = Customer(
+              id: customer.id,
+              name: customer.name,
+              alias: customer.alias,
+              age: customer.age,
+              gender: customer.gender,
+              rating: customer.rating,
+              latitude: customer.latitude,
+              longitude: customer.longitude,
+              address: customer.address,
+              phones: customer.phones,
+              addresses: customer.addresses,
+              visits: updatedVisits,
+              products: customer.products,
+              relationships: customer.relationships,
+              birthday: customer.birthday,
+              tags: customer.tags,
+              photos: customer.photos,
+              nextFollowUpDate: customer.nextFollowUpDate,
+              createdAt: customer.createdAt,
+              persistentTagList: customer.persistentTagList,
+              persistentPhotoList: customer.persistentPhotoList,
+              wechatId: customer.wechatId,
+              idCardNumber: customer.idCardNumber,
+              occupation: customer.occupation,
+              source: customer.source,
+              notes: customer.notes,
+              purchaseIntentionLevel: customer.purchaseIntentionLevel,
+            );
+            break;
+          }
+        }
+        _calculateInMemoryStatistics();
+        notifyListeners();
+      } else {
+        final db = DatabaseHelper.instance;
+        await db.deleteVisit(id);
+        await Future.wait([
+          loadCustomers(),
+          loadStatistics(),
+        ]);
+      }
     } catch (e) {
       AppLogger.error('deleting visit: $e');
     }
@@ -2046,15 +2819,23 @@ class AppState extends ChangeNotifier {
   Future<void> updateSale(Sale sale) async {
     try {
       if (kIsWeb) {
-        final index = sales.indexWhere((s) => s['id'] == sale.id);
+        final index = salesRecords.indexWhere((s) => s['id'] == sale.id);
         if (index != -1) {
-          sales[index] = {
-            ...sales[index],
+          salesRecords[index] = {
+            ...salesRecords[index],
+            'customer_id': sale.customerId,
             'product_id': sale.productId,
+            'amount': sale.amount ?? 0.0,
             'notes': sale.notes,
             'sale_date': sale.saleDate,
             'colleague_id': sale.colleagueId,
-            'commission_rate': sale.commissionRate,
+            'commission_rate': sale.commissionRate ?? 0.0,
+            'customer_name': customers
+                .firstWhere(
+                  (c) => c.id == sale.customerId,
+                  orElse: () => Customer(name: 'Unknown'),
+                )
+                .name,
             'product_name': products
                 .firstWhere(
                   (p) => p.id == sale.productId,
@@ -2070,12 +2851,16 @@ class AppState extends ChangeNotifier {
                       .name
                 : null,
           };
+          _calculateInMemoryStatistics();
           notifyListeners();
         }
       } else {
         final db = DatabaseHelper.instance;
         await db.updateSale(sale.toMap()..['id'] = sale.id);
-        await loadSales();
+        await Future.wait([
+          loadSales(),
+          loadStatistics(),
+        ]);
       }
     } catch (e) {
       AppLogger.error('updating sale: $e');
@@ -2085,12 +2870,16 @@ class AppState extends ChangeNotifier {
   Future<void> deleteSale(int id) async {
     try {
       if (kIsWeb) {
-        sales.removeWhere((s) => s['id'] == id);
+        salesRecords.removeWhere((s) => s['id'] == id);
+        _calculateInMemoryStatistics();
         notifyListeners();
       } else {
         final db = DatabaseHelper.instance;
         await db.deleteSale(id);
-        await loadSales();
+        await Future.wait([
+          loadSales(),
+          loadStatistics(),
+        ]);
       }
     } catch (e) {
       AppLogger.error('deleting sale: $e');
@@ -2102,14 +2891,53 @@ class AppState extends ChangeNotifier {
   Future<void> deleteCustomerRelationship(int id) async {
     try {
       if (kIsWeb) {
-        for (var customer in customers) {
-          customer.relationships.removeWhere((r) => r['id'] == id);
+        for (int i = 0; i < customers.length; i++) {
+          final customer = customers[i];
+          final hadRelationship = customer.relationships.any((r) => r['id'] == id);
+          if (hadRelationship) {
+            final updatedRelationships = List<Map<String, dynamic>>.from(customer.relationships)
+              ..removeWhere((r) => r['id'] == id);
+            customers[i] = Customer(
+              id: customer.id,
+              name: customer.name,
+              alias: customer.alias,
+              age: customer.age,
+              gender: customer.gender,
+              rating: customer.rating,
+              latitude: customer.latitude,
+              longitude: customer.longitude,
+              address: customer.address,
+              phones: customer.phones,
+              addresses: customer.addresses,
+              visits: customer.visits,
+              products: customer.products,
+              relationships: updatedRelationships,
+              birthday: customer.birthday,
+              tags: customer.tags,
+              photos: customer.photos,
+              nextFollowUpDate: customer.nextFollowUpDate,
+              createdAt: customer.createdAt,
+              persistentTagList: customer.persistentTagList,
+              persistentPhotoList: customer.persistentPhotoList,
+              wechatId: customer.wechatId,
+              idCardNumber: customer.idCardNumber,
+              occupation: customer.occupation,
+              source: customer.source,
+              notes: customer.notes,
+              purchaseIntentionLevel: customer.purchaseIntentionLevel,
+            );
+            break;
+          }
         }
+        _calculateInMemoryStatistics();
         notifyListeners();
       } else {
         final db = DatabaseHelper.instance;
         await db.deleteCustomerRelationship(id);
-        await loadCustomers();
+        await Future.wait([
+          loadCustomers(),
+          loadStatistics(),
+        ]);
       }
     } catch (e) {
       AppLogger.error('deleting customer relationship: $e');
@@ -2120,9 +2948,55 @@ class AppState extends ChangeNotifier {
 
   Future<void> deleteCustomerProduct(int id) async {
     try {
-      final db = DatabaseHelper.instance;
-      await db.deleteCustomerProduct(id);
-      await loadCustomers();
+      if (kIsWeb) {
+        for (int i = 0; i < customers.length; i++) {
+          final customer = customers[i];
+          final hadProduct = customer.products.any((p) => p['id'] == id);
+          if (hadProduct) {
+            final updatedProducts = List<Map<String, dynamic>>.from(customer.products)
+              ..removeWhere((p) => p['id'] == id);
+            customers[i] = Customer(
+              id: customer.id,
+              name: customer.name,
+              alias: customer.alias,
+              age: customer.age,
+              gender: customer.gender,
+              rating: customer.rating,
+              latitude: customer.latitude,
+              longitude: customer.longitude,
+              address: customer.address,
+              phones: customer.phones,
+              addresses: customer.addresses,
+              visits: customer.visits,
+              products: updatedProducts,
+              relationships: customer.relationships,
+              birthday: customer.birthday,
+              tags: customer.tags,
+              photos: customer.photos,
+              nextFollowUpDate: customer.nextFollowUpDate,
+              createdAt: customer.createdAt,
+              persistentTagList: customer.persistentTagList,
+              persistentPhotoList: customer.persistentPhotoList,
+              wechatId: customer.wechatId,
+              idCardNumber: customer.idCardNumber,
+              occupation: customer.occupation,
+              source: customer.source,
+              notes: customer.notes,
+              purchaseIntentionLevel: customer.purchaseIntentionLevel,
+            );
+            break;
+          }
+        }
+        _calculateInMemoryStatistics();
+        notifyListeners();
+      } else {
+        final db = DatabaseHelper.instance;
+        await db.deleteCustomerProduct(id);
+        await Future.wait([
+          loadCustomers(),
+          loadStatistics(),
+        ]);
+      }
     } catch (e) {
       AppLogger.error('deleting customer product: $e');
     }
@@ -2151,15 +3025,118 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> addTag(String tag) async {
+    if (!allTags.contains(tag)) {
+      if (!kIsWeb) {
+        try {
+          await DatabaseHelper.instance.insertTag(tag);
+        } catch (e) {
+          AppLogger.error('insertTag failed: $e');
+          return;
+        }
+      }
+      allTags.add(tag);
+      allTags.sort();
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeTag(String tag) async {
+    // Clean up customer_tags associations and tag definition in the database
+    if (!kIsWeb) {
+      try {
+        // deleteTag already removes both customer_tags and tags table
+        await DatabaseHelper.instance.deleteTag(tag);
+        // Refresh customers to update persistentTagList
+        await loadCustomers();
+        await Future.wait([
+          loadTags(),
+          loadStatistics(),
+        ]);
+      } catch (e) {
+        AppLogger.error('removeTag failed: $e');
+        return;
+      }
+    } else {
+      // Web: update customer objects' persistentTagList in memory
+      allTags.remove(tag);
+      for (int i = 0; i < customers.length; i++) {
+        if (customers[i].persistentTagList.contains(tag)) {
+          final updatedTags = List<String>.from(customers[i].persistentTagList)..remove(tag);
+          customers[i] = Customer(
+            id: customers[i].id,
+            name: customers[i].name,
+            alias: customers[i].alias,
+            age: customers[i].age,
+            gender: customers[i].gender,
+            rating: customers[i].rating,
+            latitude: customers[i].latitude,
+            longitude: customers[i].longitude,
+            address: customers[i].address,
+            phones: customers[i].phones,
+            addresses: customers[i].addresses,
+            visits: customers[i].visits,
+            products: customers[i].products,
+            relationships: customers[i].relationships,
+            birthday: customers[i].birthday,
+            tags: updatedTags.join(','),
+            photos: customers[i].photos,
+            nextFollowUpDate: customers[i].nextFollowUpDate,
+            createdAt: customers[i].createdAt,
+            persistentTagList: updatedTags,
+            persistentPhotoList: customers[i].persistentPhotoList,
+            wechatId: customers[i].wechatId,
+            idCardNumber: customers[i].idCardNumber,
+            occupation: customers[i].occupation,
+            source: customers[i].source,
+            notes: customers[i].notes,
+            purchaseIntentionLevel: customers[i].purchaseIntentionLevel,
+          );
+        }
+      }
+      _calculateInMemoryStatistics();
+    }
+    notifyListeners();
+  }
+
   Future<void> addCustomerTag(int customerId, String tag) async {
     try {
       if (kIsWeb) {
-        final customer = customers.firstWhere((c) => c.id == customerId);
+        final idx = customers.indexWhere((c) => c.id == customerId);
+        if (idx == -1) return;
+        final customer = customers[idx];
         if (!customer.tagList.contains(tag)) {
-          // Update the tags string for web
-          final currentTags = customer.tagList;
-          currentTags.add(tag);
-          customer.tags = currentTags.join(',');
+          // Create a new Customer object with updated tags (immutable update pattern)
+          final currentTags = List<String>.from(customer.tagList)..add(tag);
+          customers[idx] = Customer(
+            id: customer.id,
+            name: customer.name,
+            alias: customer.alias,
+            age: customer.age,
+            gender: customer.gender,
+            rating: customer.rating,
+            latitude: customer.latitude,
+            longitude: customer.longitude,
+            address: customer.address,
+            phones: customer.phones,
+            addresses: customer.addresses,
+            visits: customer.visits,
+            products: customer.products,
+            relationships: customer.relationships,
+            birthday: customer.birthday,
+            tags: currentTags.join(','),
+            photos: customer.photos,
+            nextFollowUpDate: customer.nextFollowUpDate,
+            createdAt: customer.createdAt,
+            persistentTagList: currentTags,
+            persistentPhotoList: customer.persistentPhotoList,
+            wechatId: customer.wechatId,
+            idCardNumber: customer.idCardNumber,
+            occupation: customer.occupation,
+            source: customer.source,
+            notes: customer.notes,
+            purchaseIntentionLevel: customer.purchaseIntentionLevel,
+          );
         }
         if (!allTags.contains(tag)) {
           allTags.add(tag);
@@ -2180,10 +3157,43 @@ class AppState extends ChangeNotifier {
   Future<void> removeCustomerTag(int customerId, String tag) async {
     try {
       if (kIsWeb) {
-        final customer = customers.firstWhere((c) => c.id == customerId);
-        final currentTags = customer.tagList;
-        currentTags.remove(tag);
-        customer.tags = currentTags.join(',');
+        final idx = customers.indexWhere((c) => c.id == customerId);
+        if (idx == -1) return;
+        final customer = customers[idx];
+        final currentTags = List<String>.from(customer.tagList)..remove(tag);
+        // Create a new Customer object with updated tags (immutable update pattern)
+        customers[idx] = Customer(
+          id: customer.id,
+          name: customer.name,
+          alias: customer.alias,
+          age: customer.age,
+          gender: customer.gender,
+          rating: customer.rating,
+          latitude: customer.latitude,
+          longitude: customer.longitude,
+          address: customer.address,
+          phones: customer.phones,
+          addresses: customer.addresses,
+          visits: customer.visits,
+          products: customer.products,
+          relationships: customer.relationships,
+          birthday: customer.birthday,
+          tags: currentTags.join(','),
+          photos: customer.photos,
+          nextFollowUpDate: customer.nextFollowUpDate,
+          createdAt: customer.createdAt ?? DateTime.now().toIso8601String(),
+          persistentTagList: currentTags,
+          persistentPhotoList: customer.persistentPhotoList,
+          wechatId: customer.wechatId,
+          idCardNumber: customer.idCardNumber,
+          occupation: customer.occupation,
+          source: customer.source,
+          notes: customer.notes,
+          purchaseIntentionLevel: customer.purchaseIntentionLevel,
+        );
+        // Don't auto-remove from allTags just because no customer uses it;
+        // the tag should remain available for future use as a definition.
+        _calculateInMemoryStatistics();
         notifyListeners();
       } else {
         final db = DatabaseHelper.instance;
@@ -2200,11 +3210,12 @@ class AppState extends ChangeNotifier {
     return customers.where((c) => c.tagList.contains(tag)).toList();
   }
 
-  // Search customers by tag
+  // Search customers by tag - O(N*M*K) where N=customers, M=search tags, K=customer tags
   List<Customer> searchCustomersWithTags(List<String> tags) {
-    if (tags.isEmpty) return customers;
+    if (tags.isEmpty) return [];
     return customers.where((c) {
-      return tags.every((tag) => c.tagList.contains(tag));
+      final cTags = c.tagList;
+      return tags.every((tag) => cTags.contains(tag));
     }).toList();
   }
 }

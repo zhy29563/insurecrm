@@ -1,13 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:insurecrm/providers/app_state.dart';
+import 'package:insurance_manager/providers/app_state.dart';
+import 'package:insurance_manager/widgets/app_components.dart';
 
 class NotificationCenterPage extends StatefulWidget {
+  const NotificationCenterPage({super.key});
+
   @override
   _NotificationCenterPageState createState() => _NotificationCenterPageState();
 }
 
 class _NotificationCenterPageState extends State<NotificationCenterPage> {
+  // Reminder type labels - using AppDesign.reminderTypeLabel()
+
+  // Cached filtered results to avoid recomputing on every build
+  List<Map<String, dynamic>> _cachedOverdue = [];
+  List<Map<String, dynamic>> _cachedToday = [];
+  List<Map<String, dynamic>> _cachedUpcoming = [];
+  List<Map<String, dynamic>> _cachedFollowUp = [];
+  List<Map<String, dynamic>> _cachedPolicyExpiry = [];
+  List<Map<String, dynamic>> _cachedBirthday = [];
+  int _cachedTotalUnread = 0;
+
   @override
   void initState() {
     super.initState();
@@ -17,32 +31,46 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateCachedNotifications();
+  }
+
+  void _updateCachedNotifications() {
     final appState = Provider.of<AppState>(context);
+    _cachedOverdue = appState.overdueReminders;
+    _cachedToday = appState.todayReminders.where((r) => r['status'] == 'pending').toList();
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+    _cachedUpcoming = appState.reminders.where((r) {
+      final date = r['reminder_date'] as String?;
+      if (date == null) return false;
+      return date.compareTo(todayStr) > 0 && r['status'] == 'pending';
+    }).toList()..sort((a, b) {
+      final aDate = a['reminder_date'] as String? ?? '';
+      final bDate = b['reminder_date'] as String? ?? '';
+      return aDate.compareTo(bDate);
+    });
+
+    final sysNotifs = appState.systemNotifications;
+    _cachedFollowUp = sysNotifs.where((n) => n['type'] == 'follow_up').toList();
+    _cachedPolicyExpiry = sysNotifs.where((n) => n['type'] == 'policy_expiry').toList();
+    _cachedBirthday = sysNotifs.where((n) => n['type'] == 'birthday').toList();
+    _cachedTotalUnread = _cachedOverdue.length + sysNotifs.where((n) => n['isRead'] != true).length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).primaryColor;
 
-    final overdue = appState.overdueReminders;
-    final today = appState.todayReminders;
-    final upcoming = appState.reminders.where((r) {
-      final date = r['reminder_date'] as String?;
-      if (date == null) return false;
-      final todayStr = DateTime.now().toIso8601String().substring(0, 10);
-      return date.compareTo(todayStr) > 0 && r['status'] == 'pending';
-    }).toList()
-      ..sort(
-        (a, b) => (a['reminder_date'] as String).compareTo(b['reminder_date'] as String),
-      );
-
-    final sysNotifs = appState.systemNotifications;
-
-    // Group system notifications by type
-    final followUpNotifs = sysNotifs.where((n) => n['type'] == 'follow_up').toList();
-    final policyExpiryNotifs = sysNotifs.where((n) => n['type'] == 'policy_expiry').toList();
-    final birthdayNotifs = sysNotifs.where((n) => n['type'] == 'birthday').toList();
-
-    // Total unread count for badge
-    final totalUnread = overdue.length + sysNotifs.where((n) => n['isUrgent'] == true).length;
+    // Use cached values instead of recomputing on every build
+    final overdue = _cachedOverdue;
+    final today = _cachedToday;
+    final upcoming = _cachedUpcoming;
+    final followUpNotifs = _cachedFollowUp;
+    final policyExpiryNotifs = _cachedPolicyExpiry;
+    final birthdayNotifs = _cachedBirthday;
+    final totalUnread = _cachedTotalUnread;
 
     return Scaffold(
       appBar: AppBar(
@@ -60,7 +88,11 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                   ),
                   child: Text(
                     '$totalUnread',
-                    style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -69,8 +101,13 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await appState.loadReminders();
-          await appState.loadSystemNotifications();
+          final appState = Provider.of<AppState>(context, listen: false);
+          await Future.wait([
+            appState.loadReminders(),
+            appState.loadSystemNotifications(),
+          ]);
+          _updateCachedNotifications();
+          if (mounted) setState(() {});
         },
         child: ListView(
           padding: EdgeInsets.all(16),
@@ -84,7 +121,9 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                 count: followUpNotifs.length,
               ),
               SizedBox(height: 12),
-              ...followUpNotifs.map((n) => _buildSystemNotificationCard(n, isDark)),
+              ...followUpNotifs.map<Widget>(
+                (n) => _buildSystemNotificationCard(n, isDark),
+              ),
               SizedBox(height: 24),
             ],
 
@@ -96,7 +135,9 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                 count: policyExpiryNotifs.length,
               ),
               SizedBox(height: 12),
-              ...policyExpiryNotifs.map((n) => _buildSystemNotificationCard(n, isDark)),
+              ...policyExpiryNotifs.map<Widget>(
+                (n) => _buildSystemNotificationCard(n, isDark),
+              ),
               SizedBox(height: 24),
             ],
 
@@ -108,7 +149,9 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                 count: birthdayNotifs.length,
               ),
               SizedBox(height: 12),
-              ...birthdayNotifs.map((n) => _buildSystemNotificationCard(n, isDark)),
+              ...birthdayNotifs.map<Widget>(
+                (n) => _buildSystemNotificationCard(n, isDark),
+              ),
               SizedBox(height: 24),
             ],
 
@@ -121,7 +164,14 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                 count: overdue.length,
               ),
               SizedBox(height: 12),
-              ...overdue.map((r) => _buildReminderCard(r, isDark, primaryColor, isOverdue: true)),
+              ...overdue.map<Widget>(
+                (r) => _buildReminderCard(
+                  r,
+                  isDark,
+                  primaryColor,
+                  isOverdue: true,
+                ),
+              ),
               SizedBox(height: 24),
             ],
 
@@ -134,7 +184,7 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                 count: today.length,
               ),
               SizedBox(height: 12),
-              ...today.map((r) => _buildReminderCard(r, isDark, primaryColor)),
+              ...today.map<Widget>((r) => _buildReminderCard(r, isDark, primaryColor)),
               SizedBox(height: 24),
             ],
 
@@ -147,27 +197,23 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                 count: upcoming.length,
               ),
               SizedBox(height: 12),
-              ...upcoming.take(10).map((r) => _buildReminderCard(r, isDark, primaryColor)),
+              ...upcoming
+                  .take(10)
+                  .map<Widget>((r) => _buildReminderCard(r, isDark, primaryColor)),
             ],
 
             // ====== 空状态 ======
-            if (overdue.isEmpty && today.isEmpty && upcoming.isEmpty &&
-                followUpNotifs.isEmpty && policyExpiryNotifs.isEmpty && birthdayNotifs.isEmpty)
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 60),
-                  child: Column(
-                    children: [
-                      Icon(Icons.notifications_none_rounded, size: 64, color: Colors.grey.shade300),
-                      SizedBox(height: 16),
-                      Text('暂无通知', style: TextStyle(fontSize: 16, color: Colors.grey.shade400)),
-                      SizedBox(height: 8),
-                      Text('所有待办和系统通知将在这里显示',
-                          style: TextStyle(fontSize: 13, color: Colors.grey.shade300)),
-                    ],
-                  ),
+            if (overdue.isEmpty &&
+                today.isEmpty &&
+                upcoming.isEmpty &&
+                followUpNotifs.isEmpty &&
+                policyExpiryNotifs.isEmpty &&
+                birthdayNotifs.isEmpty)
+              const EmptyStatePlaceholder(
+                  icon: Icons.notifications_none_rounded,
+                  message: '暂无通知',
+                  actionHint: '所有待办和系统通知将在这里显示',
                 ),
-              ),
           ],
         ),
       ),
@@ -186,16 +232,32 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
       children: [
         Container(
           padding: EdgeInsets.all(6),
-          decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: Icon(icon, size: 18, color: color),
         ),
         SizedBox(width: 10),
-        Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        Text(
+          title,
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
         SizedBox(width: 8),
         Container(
           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
-          child: Text('$count', style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ],
     );
@@ -210,18 +272,27 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
       margin: EdgeInsets.only(bottom: 10),
       padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? Color(0xFF2C2C2C) : Colors.white,
+        color: AppDesign.cardBg(isDark),
         borderRadius: BorderRadius.circular(12),
-        border: isUrgent ? Border.all(color: (color as Color).withOpacity(0.3)) : null,
+        border: isUrgent
+            ? Border.all(color: color.withValues(alpha: 0.3))
+            : null,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: Offset(0, 1)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: Offset(0, 1),
+          ),
         ],
       ),
       child: Row(
         children: [
           Container(
             padding: EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Icon(icon, size: 20, color: color),
           ),
           SizedBox(width: 12),
@@ -233,8 +304,11 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        notif['title'] ?? '',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                        (notif['title'] as String?) ?? '',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -242,21 +316,38 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                     if (isUrgent)
                       Container(
                         margin: EdgeInsets.only(left: 8),
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(color: Color(0xFFE53935).withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                        child: Text('紧急', style: TextStyle(fontSize: 10, color: Color(0xFFE53935), fontWeight: FontWeight.w600)),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Color(0xFFE53935).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '紧急',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFE53935),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                   ],
                 ),
                 SizedBox(height: 4),
                 Text(
-                  notif['subtitle'] ?? '',
+                  (notif['subtitle'] as String?) ?? '',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                 ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey.shade400),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: Colors.grey.shade400,
+          ),
         ],
       ),
     );
@@ -274,16 +365,32 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
       children: [
         Container(
           padding: EdgeInsets.all(6),
-          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: Icon(icon, size: 18, color: color),
         ),
         SizedBox(width: 10),
-        Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        Text(
+          title,
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
         SizedBox(width: 8),
         Container(
           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-          child: Text('$count', style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ],
     );
@@ -296,77 +403,85 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
     bool isOverdue = false,
   }) {
     final isCompleted = reminder['status'] == 'completed';
-    final typeIcon = {
-      'follow_up': Icons.phone_rounded,
-      'visit': Icons.directions_walk_rounded,
-      'renewal': Icons.autorenew_rounded,
-      'birthday': Icons.cake_rounded,
-      'other': Icons.event_rounded,
-    };
-    final typeColor = {
-      'follow_up': Color(0xFF1E88E5),
-      'visit': Color(0xFF43A047),
-      'renewal': Color(0xFFFF9800),
-      'birthday': Color(0xFFAB47BC),
-      'other': Color(0xFF78909C),
-    };
-    final typeLabel = {
-      'follow_up': '跟进',
-      'visit': '拜访',
-      'renewal': '续期',
-      'birthday': '生日',
-      'other': '其他',
-    };
-
     final rType = reminder['type'] as String? ?? 'follow_up';
-    final color = typeColor[rType] ?? Color(0xFF78909C);
+    final color = AppDesign.reminderTypeColors[rType] ?? Color(0xFF78909C);
 
     return Dismissible(
-      key: ValueKey(reminder['id']),
+      key: ValueKey('notif_reminder_${reminder['id'] ?? reminder.hashCode}'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
         padding: EdgeInsets.only(right: 20),
         margin: EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(color: Color(0xFFE53935), borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: Color(0xFFE53935),
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Icon(Icons.delete_rounded, color: Colors.white),
       ),
       onDismissed: (direction) {
+        if (!mounted) return;
         final appState = Provider.of<AppState>(context, listen: false);
-        appState.deleteReminder(reminder['id'] as int);
+        appState.deleteReminder((reminder['id'] as num?)?.toInt() ?? -1);
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 10),
         padding: EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isDark ? Color(0xFF2C2C2C) : Colors.white,
+          color: AppDesign.cardBg(isDark),
           borderRadius: BorderRadius.circular(12),
-          border: isOverdue && !isCompleted ? Border.all(color: Color(0xFFE53935).withOpacity(0.3)) : null,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: Offset(0, 1))],
+          border: isOverdue && !isCompleted
+              ? Border.all(color: Color(0xFFE53935).withValues(alpha: 0.3))
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: Offset(0, 1),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            GestureDetector(
+            InkWell(
               onTap: () {
                 final appState = Provider.of<AppState>(context, listen: false);
-                appState.updateReminderStatus(reminder['id'] as int, isCompleted ? 'pending' : 'completed');
+                appState.updateReminderStatus(
+                  (reminder['id'] as num?)?.toInt() ?? -1,
+                  isCompleted ? 'pending' : 'completed',
+                );
               },
+              borderRadius: BorderRadius.circular(6),
               child: Container(
                 width: 22,
                 height: 22,
                 decoration: BoxDecoration(
                   color: isCompleted ? Color(0xFF43A047) : Colors.transparent,
-                  border: Border.all(color: isCompleted ? Color(0xFF43A047) : Colors.grey.shade400, width: 1.5),
+                  border: Border.all(
+                    color: isCompleted
+                        ? Color(0xFF43A047)
+                        : Colors.grey.shade400,
+                    width: 1.5,
+                  ),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: isCompleted ? Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
+                child: isCompleted
+                    ? Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                    : null,
               ),
             ),
             SizedBox(width: 12),
             Container(
               padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-              child: Icon(typeIcon[rType] ?? Icons.event_rounded, size: 18, color: color),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                AppDesign.reminderTypeIcons[rType] ?? Icons.event_rounded,
+                size: 18,
+                color: color,
+              ),
             ),
             SizedBox(width: 12),
             Expanded(
@@ -374,11 +489,13 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    reminder['title'] ?? '',
+                    (reminder['title'] as String?) ?? '',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      decoration: isCompleted ? TextDecoration.lineThrough : null,
+                      decoration: isCompleted
+                          ? TextDecoration.lineThrough
+                          : null,
                       color: isCompleted ? Colors.grey : null,
                     ),
                   ),
@@ -386,27 +503,58 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                   Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(4)),
-                        child: Text(typeLabel[rType] ?? '其他', style: TextStyle(fontSize: 10, color: color)),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          AppDesign.reminderTypeLabel(rType),
+                          style: TextStyle(fontSize: 10, color: color),
+                        ),
                       ),
                       SizedBox(width: 8),
                       if (reminder['customer_name'] != null)
-                        Text(reminder['customer_name'], style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+                        Text(
+                          reminder['customer_name'] as String? ?? '',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
                     ],
                   ),
                   SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.access_time_rounded, size: 12, color: Colors.grey.shade400),
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 12,
+                        color: Colors.grey.shade400,
+                      ),
                       SizedBox(width: 4),
                       Text(
-                        '${reminder['reminder_date'] ?? ''}${reminder['reminder_time'] != null ? " ${reminder['reminder_time']}" : ""}',
-                        style: TextStyle(fontSize: 12, color: isOverdue && !isCompleted ? Color(0xFFE53935) : Colors.grey.shade400),
+                        '${(reminder['reminder_date'] as String?) ?? ''}${reminder['reminder_time'] != null ? " ${reminder['reminder_time']}" : ""}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isOverdue && !isCompleted
+                              ? Color(0xFFE53935)
+                              : Colors.grey.shade400,
+                        ),
                       ),
                       if (isOverdue && !isCompleted) ...[
                         SizedBox(width: 8),
-                        Text('超期', style: TextStyle(fontSize: 11, color: Color(0xFFE53935), fontWeight: FontWeight.w600)),
+                        Text(
+                          '超期',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFE53935),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ],
                   ),

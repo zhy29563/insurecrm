@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 /// - Debug 模式：输出到控制台 + developer.log
 /// - Release 模式：仅记录到 developer.log（不输出到控制台）
 class AppLogger {
-  static const String _defaultTag = 'InsureCRM';
+  static const String _defaultTag = 'InsuranceManager';
 
   /// 调试日志
   static void debug(String message, {String tag = _defaultTag, Object? error}) {
@@ -35,15 +35,10 @@ class AppLogger {
     // Always log to developer.log
     developer.log(fullMessage, name: tag, level: level.value, error: error, stackTrace: stackTrace);
 
-    // In debug mode, also print to console
+    // In debug mode, also print to console for visibility
     if (kDebugMode) {
-      switch (level) {
-        case LogLevel.error:
-          developer.log(fullMessage, name: tag, level: 1000, error: error, stackTrace: stackTrace);
-          break;
-        default:
-          break;
-      }
+      // ignore: avoid_print
+      print(fullMessage);
     }
   }
 }

@@ -29,12 +29,12 @@ class Tag {
 
   factory Tag.fromMap(Map<String, dynamic> map) {
     return Tag(
-      id: map['id'],
-      name: map['name'],
-      color: map['color'],
-      description: map['description'],
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
+      id: (map['id'] as num?)?.toInt(),
+      name: map['name'] as String? ?? '',
+      color: map['color'] as String? ?? '#1565C0',
+      description: map['description'] as String?,
+      createdAt: DateTime.tryParse(map['created_at'] as String? ?? '') ?? DateTime(2000),
+      updatedAt: DateTime.tryParse(map['updated_at'] as String? ?? '') ?? DateTime(2000),
     );
   }
 }

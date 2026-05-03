@@ -15,6 +15,21 @@ subprojects {
     layout.buildDirectory.set(newSubprojectBuildDir)
 }
 
+// 为缺少 namespace 的旧版插件自动设置 namespace，并统一 compileSdk
+subprojects {
+    afterEvaluate {
+        if (project.hasProperty("android")) {
+            val android = project.extensions.getByName("android")
+            if (android is com.android.build.gradle.LibraryExtension) {
+                if (android.namespace == null) {
+                    android.namespace = project.group.toString()
+                }
+                android.compileSdkVersion(36)
+            }
+        }
+    }
+}
+
 subprojects {
     project.evaluationDependsOn(":app")
 }

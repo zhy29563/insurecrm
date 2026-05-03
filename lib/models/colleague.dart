@@ -3,14 +3,14 @@ class Colleague {
   String name;
   String? phone;
   String? email;
-  String? specialty;
+  String? departmentAndRole; // 部门与职务 (Department and role, e.g. "销售经理", "市场专员")
 
   Colleague({
     this.id,
     required this.name,
     this.phone,
     this.email,
-    this.specialty,
+    this.departmentAndRole,
   });
 
   Map<String, dynamic> toMap() {
@@ -19,17 +19,17 @@ class Colleague {
       'name': name,
       'phone': phone,
       'email': email,
-      'specialty': specialty,
+      'specialty': departmentAndRole,
     };
   }
 
   factory Colleague.fromMap(Map<String, dynamic> map) {
     return Colleague(
-      id: map['id'],
-      name: map['name'],
-      phone: map['phone'],
-      email: map['email'],
-      specialty: map['specialty'],
+      id: (map['id'] as num?)?.toInt(),
+      name: map['name'] as String? ?? '',
+      phone: map['phone'] as String?,
+      email: map['email'] as String?,
+      departmentAndRole: map['specialty'] as String?,
     );
   }
 }

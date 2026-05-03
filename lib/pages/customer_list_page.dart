@@ -1,15 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:insurecrm/providers/app_state.dart';
-import 'package:insurecrm/models/customer.dart';
-import 'package:insurecrm/pages/customer_detail_page.dart';
-import 'package:insurecrm/pages/customer_map_page.dart';
+import 'package:insurance_manager/providers/app_state.dart';
+import 'package:insurance_manager/models/customer.dart';
+import 'package:insurance_manager/pages/customer_detail_page.dart';
+import 'package:insurance_manager/pages/customer_map_page.dart';
+import 'package:insurance_manager/widgets/app_components.dart';
 
 class CustomerListPage extends StatefulWidget {
   final bool addMode;
   final bool visitMode;
 
-  CustomerListPage({this.addMode = false, this.visitMode = false});
+  const CustomerListPage({super.key, this.addMode = false, this.visitMode = false});
 
   @override
   _CustomerListPageState createState() => _CustomerListPageState();
@@ -21,13 +23,16 @@ class _CustomerListPageState extends State<CustomerListPage>
   String _searchQuery = '';
   List<Customer> _filteredCustomers = [];
   String? _selectedTag;
-  List<String> _alphabet = [];
-  Map<String, List<Customer>> _groupedCustomers = {};
+  final List<String> _alphabet = [];
+  final Map<String, List<Customer>> _groupedCustomers = {};
   final ScrollController _scrollController = ScrollController();
-  Map<String, GlobalKey> _sectionKeys = {};
+  final Map<String, GlobalKey> _sectionKeys = {};
 
   late AnimationController _animationController;
   late Animation<double> animation;
+
+  // Search debounce timer
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -43,10 +48,11 @@ class _CustomerListPageState extends State<CustomerListPage>
 
     if (widget.addMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _navigateToCustomerDetail();
+        if (mounted) _navigateToCustomerDetail();
       });
     } else if (widget.visitMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('请选择要拜访的客户'), duration: Duration(seconds: 2)),
         );
@@ -60,6 +66,11 @@ class _CustomerListPageState extends State<CustomerListPage>
   }
 
   void _navigateToCustomerDetail([Customer? customer]) {
+    if (!mounted) return;
+    if (widget.visitMode && customer != null) {
+      Navigator.pop(context, customer);
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -70,6 +81,9 @@ class _CustomerListPageState extends State<CustomerListPage>
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    _scrollController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -80,20 +94,25 @@ class _CustomerListPageState extends State<CustomerListPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).primaryColor;
 
+    // Compute filtered customers without side effects in build
+    List<Customer> filtered;
     if (_searchQuery.isEmpty) {
-      _filteredCustomers = appState.customers;
-      _groupCustomers();
+      filtered = appState.customers;
     } else {
-      _filteredCustomers = appState.searchCustomers(_searchQuery);
-      _groupCustomers();
+      filtered = appState.searchCustomers(_searchQuery);
     }
 
     // Apply tag filter
     if (_selectedTag != null) {
-      _filteredCustomers = _filteredCustomers
+      filtered = filtered
           .where((c) => c.tagList.contains(_selectedTag))
           .toList();
-      _groupCustomers();
+    }
+
+    // Only regroup if filtered results actually changed
+    if (!_listEquals(filtered, _filteredCustomers)) {
+      _filteredCustomers = filtered;
+      _groupCustomersSafe();
     }
 
     return Scaffold(
@@ -104,7 +123,7 @@ class _CustomerListPageState extends State<CustomerListPage>
             icon: Container(
               padding: EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(Icons.map_rounded, size: 20),
@@ -120,7 +139,7 @@ class _CustomerListPageState extends State<CustomerListPage>
             icon: Container(
               padding: EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(Icons.person_add_rounded, size: 20),
@@ -142,52 +161,24 @@ class _CustomerListPageState extends State<CustomerListPage>
               // 搜索框
               Padding(
                 padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? Color(0xFF2C2C2C) : Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: '搜索客户（姓名、电话、地址）',
-                      hintStyle: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade400,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        color: primaryColor,
-                        size: 22,
-                      ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.clear_rounded, size: 20),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                    ),
-                  ),
+                child: AppSearchBar(
+                  controller: _searchController,
+                  hintText: '搜索客户（姓名、电话、地址）',
+                  onChanged: (value) {
+                    _debounceTimer?.cancel();
+                    _debounceTimer = Timer(Duration(milliseconds: 300), () {
+                      if (mounted) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      }
+                    });
+                  },
+                  onClear: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                  searchQuery: _searchQuery,
                 ),
               ),
               // 标签筛选
@@ -214,11 +205,11 @@ class _CustomerListPageState extends State<CustomerListPage>
                               onSelected: (_) {
                                 setState(() => _selectedTag = null);
                               },
-                              selectedColor: primaryColor.withOpacity(0.2),
+                              selectedColor: primaryColor.withValues(alpha: 0.2),
                               checkmarkColor: primaryColor,
                             ),
                           ),
-                          ...appState.allTags.map(
+                          ...appState.allTags.map<Widget>(
                             (tag) => Padding(
                               padding: EdgeInsets.only(right: 8),
                               child: FilterChip(
@@ -231,7 +222,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                                         : tag;
                                   });
                                 },
-                                selectedColor: primaryColor.withOpacity(0.2),
+                                selectedColor: primaryColor.withValues(alpha: 0.2),
                                 checkmarkColor: primaryColor,
                               ),
                             ),
@@ -242,7 +233,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                   ),
                 ),
               Expanded(
-                child: appState.isLoading
+                child: appState.isDataLoading
                     ? Center(child: CircularProgressIndicator())
                     : _filteredCustomers.isEmpty
                     ? FadeTransition(
@@ -252,33 +243,10 @@ class _CustomerListPageState extends State<CustomerListPage>
                             begin: Offset(0, 0.05),
                             end: Offset(0, 0),
                           ).animate(animation),
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.people_outline_rounded,
-                                  size: 72,
-                                  color: Colors.grey.shade300,
-                                ),
-                                SizedBox(height: 16),
-                                Text(
-                                  '暂无客户数据',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  '点击右上角添加客户',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: const EmptyStatePlaceholder(
+                            icon: Icons.people_outline_rounded,
+                            message: '暂无客户数据',
+                            actionHint: '点击右上角添加客户',
                           ),
                         ),
                       )
@@ -331,7 +299,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                                         ),
                                       ),
                                       ...customers
-                                          .map(
+                                          .map<Widget>(
                                             (customer) => FadeTransition(
                                               opacity: animation,
                                               child: SlideTransition(
@@ -352,8 +320,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                                                 ),
                                               ),
                                             ),
-                                          )
-                                          .toList(),
+                                          ),
                                     ],
                                   );
                                 },
@@ -368,7 +335,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                                     padding: EdgeInsets.symmetric(vertical: 8),
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
-                                      children: _alphabet.map((letter) {
+                                      children: _alphabet.map<Widget>((letter) {
                                         return FadeTransition(
                                           opacity: animation,
                                           child: SlideTransition(
@@ -376,9 +343,10 @@ class _CustomerListPageState extends State<CustomerListPage>
                                               begin: Offset(0, 0.05),
                                               end: Offset(0, 0),
                                             ).animate(animation),
-                                            child: GestureDetector(
+                                            child: InkWell(
                                               onTap: () =>
                                                   _scrollToSection(letter),
+                                              borderRadius: BorderRadius.circular(4),
                                               child: Container(
                                                 width: 24,
                                                 height: 20,
@@ -417,111 +385,50 @@ class _CustomerListPageState extends State<CustomerListPage>
     Customer customer,
     bool isDark,
   ) {
-    return GestureDetector(
+    return AppCard(
+      padding: const EdgeInsets.all(14),
       onTap: () => _navigateToCustomerDetail(customer),
-      child: Container(
-        padding: EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isDark ? Color(0xFF2C2C2C) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: Color(0xFF1565C0).withOpacity(0.1),
-              child: Text(
-                customer.name.substring(0, 1),
-                style: TextStyle(
-                  color: Color(0xFF1565C0),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+      child: Row(
+        children: [
+          CustomerAvatar(name: customer.name),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  customer.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
-              ),
-            ),
-            SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    customer.name,
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    customer.phones.isNotEmpty ? customer.phones[0] : '暂无电话',
-                    style: TextStyle(fontSize: 13, color: Colors.grey),
-                  ),
-                  if (customer.tagList.isNotEmpty) ...[
-                    SizedBox(height: 6),
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 2,
-                      children: customer.tagList
-                          .take(3)
-                          .map<Widget>(
-                            (tag) => Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Color(0xFF1565C0).withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                tag,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Color(0xFF1565C0),
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
+                const SizedBox(height: 3),
+                Text(
+                  customer.phones.isNotEmpty ? customer.phones[0] : '暂无电话',
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+                if (customer.tagList.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  TagList(tags: customer.tagList),
                 ],
-              ),
+              ],
             ),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: _getRatingColor(customer.rating).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _getRatingText(customer.rating),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: _getRatingColor(customer.rating),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            SizedBox(width: 6),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: Colors.grey.shade300,
-            ),
-          ],
-        ),
+          ),
+          RatingBadge(rating: customer.rating),
+          const SizedBox(width: 6),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 20,
+            color: Colors.grey.shade300,
+          ),
+        ],
       ),
     );
   }
 
-  void _groupCustomers() {
+  void _groupCustomersSafe() {
     _groupedCustomers.clear();
     _alphabet.clear();
+    // 保留已有的 sectionKeys，只为新出现的字母创建 GlobalKey
+    final oldSectionKeys = Map<String, GlobalKey>.from(_sectionKeys);
     _sectionKeys.clear();
 
     for (var customer in _filteredCustomers) {
@@ -532,7 +439,8 @@ class _CustomerListPageState extends State<CustomerListPage>
       if (!_groupedCustomers.containsKey(firstLetter)) {
         _groupedCustomers[firstLetter] = [];
         _alphabet.add(firstLetter);
-        _sectionKeys[firstLetter] = GlobalKey();
+        // 复用已有的 key，避免 GlobalKey 冲突
+        _sectionKeys[firstLetter] = oldSectionKeys[firstLetter] ?? GlobalKey();
       }
 
       _groupedCustomers[firstLetter]!.add(customer);
@@ -542,6 +450,15 @@ class _CustomerListPageState extends State<CustomerListPage>
     _groupedCustomers.forEach((key, value) {
       value.sort((a, b) => a.name.compareTo(b.name));
     });
+  }
+
+  /// Quick equality check for customer lists by comparing IDs
+  bool _listEquals(List<Customer> a, List<Customer> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+    }
+    return true;
   }
 
   void _scrollToSection(String letter) {
@@ -558,37 +475,4 @@ class _CustomerListPageState extends State<CustomerListPage>
     }
   }
 
-  Color _getRatingColor(int? rating) {
-    switch (rating) {
-      case 5:
-        return Color(0xFFE53935);
-      case 4:
-        return Color(0xFFFF9800);
-      case 3:
-        return Color(0xFFFDD835);
-      case 2:
-        return Color(0xFF43A047);
-      case 1:
-        return Color(0xFF42A5F5);
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getRatingText(int? rating) {
-    switch (rating) {
-      case 5:
-        return '高意向';
-      case 4:
-        return '中高意向';
-      case 3:
-        return '中等意向';
-      case 2:
-        return '低意向';
-      case 1:
-        return '无意向';
-      default:
-        return '未评级';
-    }
-  }
 }

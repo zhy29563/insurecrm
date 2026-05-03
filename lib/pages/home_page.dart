@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:insurecrm/pages/customer_list_page.dart';
-import 'package:insurecrm/pages/product_list_page.dart';
-import 'package:insurecrm/pages/settings_page.dart';
-import 'package:insurecrm/pages/product_recommendation_page.dart';
-import 'package:insurecrm/pages/statistics_dashboard_page.dart';
-import 'package:insurecrm/pages/calendar_page.dart';
-import 'package:insurecrm/pages/customer_map_page.dart';
-import 'package:insurecrm/pages/notification_center_page.dart';
+import 'package:insurance_manager/pages/customer_detail_page.dart';
+import 'package:insurance_manager/pages/customer_list_page.dart';
+import 'package:insurance_manager/pages/product_list_page.dart';
+import 'package:insurance_manager/pages/settings_page.dart';
+import 'package:insurance_manager/pages/product_recommendation_page.dart';
+import 'package:insurance_manager/pages/statistics_dashboard_page.dart';
+import 'package:insurance_manager/pages/calendar_page.dart';
+import 'package:insurance_manager/pages/customer_map_page.dart';
+import 'package:insurance_manager/pages/notification_center_page.dart';
 import 'package:provider/provider.dart';
-import 'package:insurecrm/providers/app_state.dart';
+import 'package:insurance_manager/providers/app_state.dart';
+import 'package:insurance_manager/models/customer.dart';
+import 'package:insurance_manager/widgets/app_components.dart';
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -30,15 +35,10 @@ class _HomePageState extends State<HomePage> {
     ];
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final appState = Provider.of<AppState>(context, listen: false);
-      appState.loadCustomers();
-      appState.loadProducts();
-      appState.loadColleagues();
-      appState.loadSales();
-      appState.loadStatistics();
-      appState.loadReminders();
+      // loadTags is not called in initializeApp, ensure it's loaded
       appState.loadTags();
-      appState.loadSystemNotifications();
     });
   }
 
@@ -47,13 +47,21 @@ class _HomePageState extends State<HomePage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: _pages[_currentIndex],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        switchInCurve: Curves.easeInOut,
+        switchOutCurve: Curves.easeInOut,
+        child: KeyedSubtree(
+          key: ValueKey(_currentIndex),
+          child: _pages[_currentIndex],
+        ),
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDark ? Color(0xFF1E1E1E) : Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: Offset(0, -2),
             ),
@@ -81,16 +89,18 @@ class _HomePageState extends State<HomePage> {
     final isSelected = _currentIndex == index;
     final primaryColor = Theme.of(context).primaryColor;
 
-    return GestureDetector(
+    return InkWell(
       onTap: () => setState(() => _currentIndex = index),
-      behavior: HitTestBehavior.opaque,
+      borderRadius: BorderRadius.circular(20),
+      splashColor: primaryColor.withValues(alpha: 0.1),
+      highlightColor: primaryColor.withValues(alpha: 0.05),
       child: AnimatedContainer(
         duration: Duration(milliseconds: 250),
         curve: Curves.easeInOut,
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? primaryColor.withOpacity(0.1)
+              ? primaryColor.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
@@ -120,18 +130,60 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class _HomeContent extends StatefulWidget {
-  @override
-  __HomeContentState createState() => __HomeContentState();
+
+
+class _HomeData {
+  final int customerCount;
+  final int productCount;
+  final int colleagueCount;
+  final int currentMonthNewCustomerCount;
+  final List<Map<String, dynamic>> overdueReminders;
+  final List<Map<String, dynamic>> systemNotifications;
+  final List<Map<String, dynamic>> todayReminders;
+  final List<Customer> customers;
+
+  _HomeData({
+    required this.customerCount,
+    required this.productCount,
+    required this.colleagueCount,
+    required this.currentMonthNewCustomerCount,
+    required this.overdueReminders,
+    required this.systemNotifications,
+    required this.todayReminders,
+    required this.customers,
+  });
 }
 
-class __HomeContentState extends State<_HomeContent> {
+class _HomeContent extends StatefulWidget {
+  @override
+  _HomeContentState createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
   @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
-    final primaryColor = Theme.of(context).primaryColor;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Use Selector to only rebuild when specific fields used by this widget change
+    // This prevents unnecessary rebuilds when unrelated AppState properties change
+    return Selector<AppState, _HomeData>(
+      selector: (_, appState) => _HomeData(
+        customerCount: appState.customers.length,
+        productCount: appState.products.length,
+        colleagueCount: appState.colleagues.length,
+        currentMonthNewCustomerCount: appState.currentMonthNewCustomerCount,
+        overdueReminders: appState.overdueReminders,
+        systemNotifications: appState.systemNotifications,
+        todayReminders: appState.todayReminders,
+        customers: appState.customers,
+      ),
+      builder: (context, data, _) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return _buildContent(context, data, isDark);
+      },
+    );
+  }
 
+  Widget _buildContent(BuildContext context, _HomeData data, bool isDark) {
+    final appState = Provider.of<AppState>(context, listen: false);
     return CustomScrollView(
       slivers: [
         SliverAppBar(
@@ -139,12 +191,12 @@ class __HomeContentState extends State<_HomeContent> {
           floating: false,
           pinned: true,
           elevation: 0,
-          backgroundColor: Color(0xFF0D47A1),
+          backgroundColor: isDark ? Color(0xFF1E1E1E) : Color(0xFF0D47A1),
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '保险管理系统',
+                '保险经纪人',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -154,27 +206,28 @@ class __HomeContentState extends State<_HomeContent> {
               Container(
                 padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => NotificationCenterPage(),
-                      ),
-                    );
-                  },
-                  child: Stack(
+                child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => NotificationCenterPage(),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
                     children: [
                       Icon(
                         Icons.notifications_none_rounded,
                         color: Colors.white,
                         size: 22,
                       ),
-                      if (appState.overdueReminders.isNotEmpty ||
-                          appState.systemNotifications.isNotEmpty)
+                      if (data.overdueReminders.isNotEmpty ||
+                          data.systemNotifications.isNotEmpty)
                         Positioned(
                           right: 0,
                           top: 0,
@@ -189,7 +242,7 @@ class __HomeContentState extends State<_HomeContent> {
                               minHeight: 8,
                             ),
                             child: Text(
-                              '${(appState.overdueReminders.length + appState.systemNotifications.length).clamp(1, 99)}',
+                              '${(data.overdueReminders.length + data.systemNotifications.length).clamp(1, 99)}',
                               style: TextStyle(
                                 fontSize: 8,
                                 color: Colors.white,
@@ -211,11 +264,9 @@ class __HomeContentState extends State<_HomeContent> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF0D47A1),
-                    Color(0xFF1565C0),
-                    Color(0xFF1E88E5),
-                  ],
+                  colors: isDark
+                      ? [Color(0xFF1E1E1E), Color(0xFF2C2C2C), Color(0xFF37474F)]
+                      : [Color(0xFF0D47A1), Color(0xFF1565C0), Color(0xFF1E88E5)],
                 ),
               ),
             ),
@@ -227,11 +278,9 @@ class __HomeContentState extends State<_HomeContent> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF1976D2),
-                  Color(0xFFE3F2FD),
-                  Color(0xFFF8FAFE),
-                ],
+                colors: isDark
+                    ? [Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212)]
+                    : [Color(0xFF1976D2), Color(0xFFE3F2FD), Color(0xFFF8FAFE)],
                 stops: [0.0, 0.6, 1.0],
               ),
             ),
@@ -243,7 +292,7 @@ class __HomeContentState extends State<_HomeContent> {
                     context,
                     icon: Icons.people_rounded,
                     title: '客户总数',
-                    value: '${appState.customers.length}',
+                    value: '${data.customerCount}',
                     gradient: LinearGradient(
                       colors: [Color(0xFF42A5F5), Color(0xFF1E88E5)],
                     ),
@@ -255,7 +304,7 @@ class __HomeContentState extends State<_HomeContent> {
                     context,
                     icon: Icons.auto_stories_rounded,
                     title: '产品总数',
-                    value: '${appState.products.length}',
+                    value: '${data.productCount}',
                     gradient: LinearGradient(
                       colors: [Color(0xFF26A69A), Color(0xFF00897B)],
                     ),
@@ -280,7 +329,7 @@ class __HomeContentState extends State<_HomeContent> {
                         context,
                         icon: Icons.handshake_rounded,
                         title: '同事数量',
-                        value: '${appState.colleagues.length}',
+                        value: '${data.colleagueCount}',
                         gradient: LinearGradient(
                           colors: [Color(0xFFAB47BC), Color(0xFF8E24AA)],
                         ),
@@ -292,7 +341,7 @@ class __HomeContentState extends State<_HomeContent> {
                         context,
                         icon: Icons.trending_up_rounded,
                         title: '本月新增',
-                        value: '${appState.thisMonthNewCustomers}',
+                        value: '${data.currentMonthNewCustomerCount}',
                         gradient: LinearGradient(
                           colors: [Color(0xFFFF7043), Color(0xFFE64A19)],
                         ),
@@ -300,7 +349,7 @@ class __HomeContentState extends State<_HomeContent> {
                     ),
                   ],
                 ),
-                SizedBox(height: 32),
+                SizedBox(height: 16),
                 // 快捷操作
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -373,7 +422,11 @@ class __HomeContentState extends State<_HomeContent> {
                 ),
                 SizedBox(height: 32),
                 // 数据看板入口
-                GestureDetector(
+                Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -389,7 +442,7 @@ class __HomeContentState extends State<_HomeContent> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xFF1565C0).withOpacity(0.3),
+                          color: Color(0xFF1565C0).withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: Offset(0, 4),
                         ),
@@ -400,7 +453,7 @@ class __HomeContentState extends State<_HomeContent> {
                         Container(
                           padding: EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
@@ -427,7 +480,7 @@ class __HomeContentState extends State<_HomeContent> {
                                 '销售业绩 · 客户分析 · 拜访统计',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                 ),
                               ),
                             ],
@@ -435,11 +488,12 @@ class __HomeContentState extends State<_HomeContent> {
                         ),
                         Icon(
                           Icons.arrow_forward_ios_rounded,
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                           size: 18,
                         ),
                       ],
                     ),
+                  ),
                   ),
                 ),
                 SizedBox(height: 28),
@@ -456,7 +510,7 @@ class __HomeContentState extends State<_HomeContent> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        if (appState.todayReminders.isNotEmpty)
+                        if (data.todayReminders.isNotEmpty)
                           Container(
                             margin: EdgeInsets.only(left: 8),
                             padding: EdgeInsets.symmetric(
@@ -468,7 +522,7 @@ class __HomeContentState extends State<_HomeContent> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              '${appState.todayReminders.where((r) => r['status'] == 'pending').length}',
+                              '${data.todayReminders.where((r) => r['status'] == 'pending').length}',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.white,
@@ -478,24 +532,25 @@ class __HomeContentState extends State<_HomeContent> {
                           ),
                       ],
                     ),
-                    GestureDetector(
+                    InkWell(
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => CalendarPage()),
                       ),
+                      borderRadius: BorderRadius.circular(8),
                       child: Row(
                         children: [
                           Text(
                             '日历',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF1565C0),
+                              color: Theme.of(context).primaryColor,
                             ),
                           ),
                           Icon(
                             Icons.arrow_forward_ios_rounded,
                             size: 14,
-                            color: Color(0xFF1565C0),
+                            color: Theme.of(context).primaryColor,
                           ),
                         ],
                       ),
@@ -504,15 +559,15 @@ class __HomeContentState extends State<_HomeContent> {
                 ),
                 SizedBox(height: 12),
                 // 超期提醒
-                if (appState.overdueReminders.isNotEmpty)
+                if (data.overdueReminders.isNotEmpty)
                   Container(
                     margin: EdgeInsets.only(bottom: 10),
                     padding: EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Color(0xFFE53935).withOpacity(0.08),
+                      color: Color(0xFFE53935).withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: Color(0xFFE53935).withOpacity(0.2),
+                        color: Color(0xFFE53935).withValues(alpha: 0.2),
                       ),
                     ),
                     child: Row(
@@ -520,7 +575,7 @@ class __HomeContentState extends State<_HomeContent> {
                         Container(
                           padding: EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Color(0xFFE53935).withOpacity(0.15),
+                            color: Color(0xFFE53935).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -535,7 +590,7 @@ class __HomeContentState extends State<_HomeContent> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${appState.overdueReminders.length}个超期未跟进',
+                                '${data.overdueReminders.length}个超期未跟进',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -547,7 +602,7 @@ class __HomeContentState extends State<_HomeContent> {
                                 '请尽快处理超期提醒',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFFE53935).withOpacity(0.7),
+                                  color: Color(0xFFE53935).withValues(alpha: 0.7),
                                 ),
                               ),
                             ],
@@ -557,36 +612,16 @@ class __HomeContentState extends State<_HomeContent> {
                     ),
                   ),
                 // 今日待办列表
-                if (appState.todayReminders.isEmpty)
-                  Container(
-                    padding: EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: isDark ? Color(0xFF2C2C2C) : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline_rounded,
-                          size: 20,
-                          color: Colors.grey.shade400,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          '今天暂无待办',
-                          style: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
+                if (data.todayReminders.isEmpty)
+                  EmptyStatePlaceholder(
+                    icon: Icons.check_circle_outline_rounded,
+                    message: '今天暂无待办',
+                    iconSize: 48,
                   )
                 else
-                  ...appState.todayReminders
+                  ...data.todayReminders
                       .take(3)
-                      .map((r) => _buildReminderItem(context, r, isDark)),
+                      .map<Widget>((r) => _buildReminderItem(context, r, isDark)),
                 SizedBox(height: 32),
                 // 最近客户
                 Text(
@@ -594,37 +629,17 @@ class __HomeContentState extends State<_HomeContent> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 16),
-                if (appState.customers.isEmpty)
-                  Container(
-                    padding: EdgeInsets.all(40),
-                    decoration: BoxDecoration(
-                      color: isDark ? Color(0xFF2C2C2C) : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.people_outline_rounded,
-                          size: 48,
-                          color: Colors.grey.shade400,
-                        ),
-                        SizedBox(height: 12),
-                        Text('暂无客户数据', style: TextStyle(color: Colors.grey)),
-                        SizedBox(height: 8),
-                        Text(
-                          '点击上方"添加客户"开始',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                      ],
-                    ),
+                if (data.customers.isEmpty)
+                  EmptyStatePlaceholder(
+                    icon: Icons.people_outline_rounded,
+                    message: '暂无客户数据',
+                    actionHint: '点击上方"添加客户"开始',
+                    iconSize: 48,
                   )
                 else
-                  ...appState.customers
+                  ...data.customers
                       .take(3)
-                      .map((c) => _buildRecentCustomerItem(context, c)),
+                      .map<Widget>((c) => _buildRecentCustomerItem(context, c)),
                 SizedBox(height: 24),
               ],
             ),
@@ -648,7 +663,7 @@ class __HomeContentState extends State<_HomeContent> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: gradient.colors.first.withOpacity(0.3),
+            color: gradient.colors.first.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -663,7 +678,7 @@ class __HomeContentState extends State<_HomeContent> {
               Container(
                 padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 20, color: Colors.white),
@@ -684,7 +699,7 @@ class __HomeContentState extends State<_HomeContent> {
             title,
             style: TextStyle(
               fontSize: 13,
-              color: Colors.white.withOpacity(0.85),
+              color: Colors.white.withValues(alpha: 0.85),
             ),
           ),
         ],
@@ -701,15 +716,20 @@ class __HomeContentState extends State<_HomeContent> {
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: isDark ? Color(0xFF2C2C2C) : Colors.white,
+          color: AppDesign.cardBg(isDark),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: Offset(0, 2),
             ),
@@ -721,7 +741,7 @@ class __HomeContentState extends State<_HomeContent> {
             Container(
               padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, size: 24, color: color),
@@ -739,102 +759,45 @@ class __HomeContentState extends State<_HomeContent> {
           ],
         ),
       ),
+      ),
     );
   }
 
-  Widget _buildRecentCustomerItem(BuildContext context, customer) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 10),
-      padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? Color(0xFF2C2C2C) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+  Widget _buildRecentCustomerItem(BuildContext context, Customer customer) {
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CustomerDetailPage(customer: customer),
+        ),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: Color(0xFF1565C0).withOpacity(0.1),
-            child: Text(
-              customer.name.substring(0, 1),
-              style: TextStyle(
-                color: Color(0xFF1565C0),
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          SizedBox(width: 14),
+          CustomerAvatar(name: customer.name),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   customer.name,
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
                   customer.phones.isNotEmpty ? customer.phones[0] : '暂无电话',
                   style: TextStyle(fontSize: 13, color: Colors.grey),
                 ),
                 if (customer.tagList.isNotEmpty) ...[
-                  SizedBox(height: 6),
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 2,
-                    children: customer.tagList
-                        .take(3)
-                        .map<Widget>(
-                          (tag) => Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Color(0xFF1565C0).withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              tag,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFF1565C0),
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
+                  const SizedBox(height: 6),
+                  TagList(tags: customer.tagList),
                 ],
               ],
             ),
           ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _getRatingColor(customer.rating).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              _getRatingText(customer.rating),
-              style: TextStyle(
-                fontSize: 12,
-                color: _getRatingColor(customer.rating),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          SizedBox(width: 6),
+          RatingBadge(rating: customer.rating),
+          const SizedBox(width: 6),
           Icon(
             Icons.chevron_right_rounded,
             size: 20,
@@ -845,72 +808,23 @@ class __HomeContentState extends State<_HomeContent> {
     );
   }
 
-  Color _getRatingColor(int? rating) {
-    switch (rating) {
-      case 5:
-        return Color(0xFFE53935);
-      case 4:
-        return Color(0xFFFF9800);
-      case 3:
-        return Color(0xFFFDD835);
-      case 2:
-        return Color(0xFF43A047);
-      case 1:
-        return Color(0xFF42A5F5);
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getRatingText(int? rating) {
-    switch (rating) {
-      case 5:
-        return '高意向';
-      case 4:
-        return '中高意向';
-      case 3:
-        return '中等意向';
-      case 2:
-        return '低意向';
-      case 1:
-        return '无意向';
-      default:
-        return '未评级';
-    }
-  }
-
   Widget _buildReminderItem(
     BuildContext context,
     Map<String, dynamic> reminder,
     bool isDark,
   ) {
     final isCompleted = reminder['status'] == 'completed';
-    final typeIcon = {
-      'follow_up': Icons.phone_rounded,
-      'visit': Icons.directions_walk_rounded,
-      'renewal': Icons.autorenew_rounded,
-      'birthday': Icons.cake_rounded,
-      'other': Icons.event_rounded,
-    };
-    final typeColor = {
-      'follow_up': Color(0xFF1E88E5),
-      'visit': Color(0xFF43A047),
-      'renewal': Color(0xFFFF9800),
-      'birthday': Color(0xFFAB47BC),
-      'other': Color(0xFF78909C),
-    };
-
     final rType = reminder['type'] as String? ?? 'follow_up';
 
     return Container(
       margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? Color(0xFF2C2C2C) : Colors.white,
+        color: AppDesign.cardBg(isDark),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 6,
             offset: Offset(0, 1),
           ),
@@ -918,14 +832,15 @@ class __HomeContentState extends State<_HomeContent> {
       ),
       child: Row(
         children: [
-          GestureDetector(
+          InkWell(
             onTap: () {
               final appState = Provider.of<AppState>(context, listen: false);
               appState.updateReminderStatus(
-                reminder['id'] as int,
+                (reminder['id'] as num?)?.toInt() ?? -1,
                 isCompleted ? 'pending' : 'completed',
               );
             },
+            borderRadius: BorderRadius.circular(6),
             child: Container(
               width: 22,
               height: 22,
@@ -946,13 +861,13 @@ class __HomeContentState extends State<_HomeContent> {
           Container(
             padding: EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: (typeColor[rType] ?? Color(0xFF78909C)).withOpacity(0.1),
+              color: (AppDesign.reminderTypeColors[rType] ?? Color(0xFF78909C)).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              typeIcon[rType] ?? Icons.event_rounded,
+              AppDesign.reminderTypeIcons[rType] ?? Icons.event_rounded,
               size: 16,
-              color: typeColor[rType] ?? Color(0xFF78909C),
+              color: AppDesign.reminderTypeColors[rType] ?? Color(0xFF78909C),
             ),
           ),
           SizedBox(width: 10),
@@ -982,3 +897,5 @@ class __HomeContentState extends State<_HomeContent> {
     );
   }
 }
+
+

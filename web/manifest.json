@@ -1,11 +1,11 @@
 {
-    "name": "insurance_app",
-    "short_name": "insurance_app",
+    "name": "InsuranceManager",
+    "short_name": "InsuranceManager",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1565C0",
+    "theme_color": "#1565C0",
+    "description": "保险经纪人助手 - 客户管理、产品推荐、拜访记录、销售统计",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

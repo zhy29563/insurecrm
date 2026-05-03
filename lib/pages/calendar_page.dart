@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:insurecrm/providers/app_state.dart';
+import 'package:insurance_manager/providers/app_state.dart';
+import 'package:insurance_manager/widgets/app_components.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class CalendarPage extends StatefulWidget {
+  const CalendarPage({super.key});
+
   @override
   _CalendarPageState createState() => _CalendarPageState();
 }
@@ -12,6 +15,8 @@ class _CalendarPageState extends State<CalendarPage> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+
+  // Reminder type label map removed - using AppDesign.reminderTypeLabel()
 
   @override
   void initState() {
@@ -23,7 +28,7 @@ class _CalendarPageState extends State<CalendarPage> {
     final appState = Provider.of<AppState>(context, listen: false);
     final dateStr = day.toIso8601String().substring(0, 10);
     return appState.reminders
-        .where((r) => r['reminder_date'] == dateStr)
+        .where((r) => r['reminder_date'] == dateStr && r['status'] != 'completed' && r['status'] != 'dismissed')
         .toList();
   }
 
@@ -55,7 +60,9 @@ class _CalendarPageState extends State<CalendarPage> {
               });
             },
             onPageChanged: (focusedDay) {
-              _focusedDay = focusedDay;
+              setState(() {
+                _focusedDay = focusedDay;
+              });
             },
             eventLoader: _getEventsForDay,
             calendarStyle: CalendarStyle(
@@ -64,7 +71,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 shape: BoxShape.circle,
               ),
               todayDecoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.3),
+                color: primaryColor.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
               selectedDecoration: BoxDecoration(
@@ -75,7 +82,7 @@ class _CalendarPageState extends State<CalendarPage> {
             headerStyle: HeaderStyle(
               formatButtonVisible: true,
               formatButtonDecoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               formatButtonTextStyle: TextStyle(color: primaryColor),
@@ -120,7 +127,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
+                    color: primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -137,22 +144,10 @@ class _CalendarPageState extends State<CalendarPage> {
         ),
         Expanded(
           child: events.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.event_available_rounded,
-                        size: 48,
-                        color: Colors.grey.shade300,
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        '当日暂无待办',
-                        style: TextStyle(color: Colors.grey.shade400),
-                      ),
-                    ],
-                  ),
+              ? const EmptyStatePlaceholder(
+                  icon: Icons.event_available_rounded,
+                  message: '当日暂无待办',
+                  iconSize: 48,
                 )
               : ListView.builder(
                   padding: EdgeInsets.symmetric(horizontal: 16),
@@ -172,33 +167,11 @@ class _CalendarPageState extends State<CalendarPage> {
     Color primaryColor,
   ) {
     final isCompleted = reminder['status'] == 'completed';
-    final typeIcon = {
-      'follow_up': Icons.phone_rounded,
-      'visit': Icons.directions_walk_rounded,
-      'renewal': Icons.autorenew_rounded,
-      'birthday': Icons.cake_rounded,
-      'other': Icons.event_rounded,
-    };
-    final typeColor = {
-      'follow_up': Color(0xFF1E88E5),
-      'visit': Color(0xFF43A047),
-      'renewal': Color(0xFFFF9800),
-      'birthday': Color(0xFFAB47BC),
-      'other': Color(0xFF78909C),
-    };
-    final typeLabel = {
-      'follow_up': '跟进',
-      'visit': '拜访',
-      'renewal': '续期',
-      'birthday': '生日',
-      'other': '其他',
-    };
-
     final rType = reminder['type'] as String? ?? 'follow_up';
-    final color = typeColor[rType] ?? Color(0xFF78909C);
+    final color = AppDesign.reminderTypeColors[rType] ?? Color(0xFF78909C);
 
     return Dismissible(
-      key: ValueKey(reminder['id']),
+      key: ValueKey('reminder_${reminder['id'] ?? reminder.hashCode}'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -208,17 +181,18 @@ class _CalendarPageState extends State<CalendarPage> {
       ),
       onDismissed: (direction) {
         final appState = Provider.of<AppState>(context, listen: false);
-        appState.deleteReminder(reminder['id'] as int);
+        final id = (reminder['id'] as num?)?.toInt();
+        if (id != null) appState.deleteReminder(id);
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 10),
         padding: EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isDark ? Color(0xFF2C2C2C) : Colors.white,
+          color: AppDesign.cardBg(isDark),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: Offset(0, 1),
             ),
@@ -226,14 +200,17 @@ class _CalendarPageState extends State<CalendarPage> {
         ),
         child: Row(
           children: [
-            GestureDetector(
+            InkWell(
               onTap: () {
+                final id = (reminder['id'] as num?)?.toInt();
+                if (id == null) return;
                 final appState = Provider.of<AppState>(context, listen: false);
                 appState.updateReminderStatus(
-                  reminder['id'] as int,
+                  id,
                   isCompleted ? 'pending' : 'completed',
                 );
               },
+              borderRadius: BorderRadius.circular(6),
               child: Container(
                 width: 22,
                 height: 22,
@@ -256,11 +233,11 @@ class _CalendarPageState extends State<CalendarPage> {
             Container(
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
-                typeIcon[rType] ?? Icons.event_rounded,
+                AppDesign.reminderTypeIcons[rType] ?? Icons.event_rounded,
                 size: 18,
                 color: color,
               ),
@@ -290,11 +267,11 @@ class _CalendarPageState extends State<CalendarPage> {
                           vertical: 1,
                         ),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.08),
+                          color: color.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          typeLabel[rType] ?? '其他',
+                          AppDesign.reminderTypeLabel(rType),
                           style: TextStyle(fontSize: 10, color: color),
                         ),
                       ),
@@ -331,7 +308,7 @@ class _CalendarPageState extends State<CalendarPage> {
   void _showAddReminderDialog(BuildContext context) {
     final appState = Provider.of<AppState>(context, listen: false);
     final titleController = TextEditingController();
-    final descController = TextEditingController();
+    final descriptionController = TextEditingController();
     final dateController = TextEditingController(
       text: _selectedDay != null
           ? '${_selectedDay!.year}-${_selectedDay!.month.toString().padLeft(2, '0')}-${_selectedDay!.day.toString().padLeft(2, '0')}'
@@ -371,7 +348,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
                 SizedBox(height: 12),
                 TextField(
-                  controller: descController,
+                  controller: descriptionController,
                   decoration: InputDecoration(
                     labelText: '描述',
                     prefixIcon: Icon(Icons.description_rounded),
@@ -388,12 +365,12 @@ class _CalendarPageState extends State<CalendarPage> {
                   readOnly: true,
                   onTap: () async {
                     final picked = await showDatePicker(
-                      context: context,
+                      context: ctx,
                       initialDate: _selectedDay ?? DateTime.now(),
                       firstDate: DateTime(2020),
                       lastDate: DateTime(2030),
                     );
-                    if (picked != null) {
+                    if (picked != null && ctx.mounted) {
                       dateController.text =
                           '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
                     }
@@ -432,6 +409,7 @@ class _CalendarPageState extends State<CalendarPage> {
                     labelText: '关联客户',
                     prefixIcon: Icon(Icons.person_rounded),
                   ),
+                  hint: Text('请选择客户'),
                   items: appState.customers
                       .map(
                         (c) =>
@@ -445,26 +423,31 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('取消')),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+              },
+              child: Text('取消'),
+            ),
             ElevatedButton(
               onPressed: () async {
                 if (titleController.text.isEmpty) {
                   ScaffoldMessenger.of(
-                    context,
+                    ctx,
                   ).showSnackBar(SnackBar(content: Text('请输入标题')));
                   return;
                 }
                 if (selectedCustomerId == null) {
                   ScaffoldMessenger.of(
-                    context,
+                    ctx,
                   ).showSnackBar(SnackBar(content: Text('请选择关联客户')));
                   return;
                 }
                 await appState.addReminder(
                   customerId: selectedCustomerId!,
                   title: titleController.text,
-                  description: descController.text.isNotEmpty
-                      ? descController.text
+                  description: descriptionController.text.isNotEmpty
+                      ? descriptionController.text
                       : null,
                   reminderDate: dateController.text,
                   reminderTime: timeController.text.isNotEmpty
@@ -472,9 +455,11 @@ class _CalendarPageState extends State<CalendarPage> {
                       : null,
                   type: selectedType,
                 );
+                if (!context.mounted) return;
                 Navigator.pop(ctx);
+                if (!mounted) return;
                 ScaffoldMessenger.of(
-                  context,
+                  this.context,
                 ).showSnackBar(SnackBar(content: Text('待办已添加')));
               },
               child: Text('添加'),
@@ -482,6 +467,11 @@ class _CalendarPageState extends State<CalendarPage> {
           ],
         ),
       ),
-    );
+    ).whenComplete(() {
+      titleController.dispose();
+      descriptionController.dispose();
+      dateController.dispose();
+      timeController.dispose();
+    });
   }
 }

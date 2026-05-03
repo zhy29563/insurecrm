@@ -1,11 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:insurecrm/providers/app_state.dart';
-import 'package:insurecrm/pages/home_page.dart';
-import 'package:insurecrm/pages/register_page.dart';
-import 'package:insurecrm/pages/forgot_password_page.dart';
+import 'package:insurance_manager/providers/app_state.dart';
+import 'package:insurance_manager/pages/home_page.dart';
+import 'package:insurance_manager/pages/register_page.dart';
+import 'package:insurance_manager/pages/forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
   @override
   _LoginPageState createState() => _LoginPageState();
 }
@@ -13,7 +16,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController(text: 'admin');
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -33,8 +36,11 @@ class _LoginPageState extends State<LoginPage>
     );
     _animationController.forward();
 
-    // Pre-fill password for debug convenience (user can clear it)
-    _passwordController.text = '123456';
+    // 仅在 Debug 模式下预填凭据
+    if (kDebugMode) {
+      _usernameController.text = 'admin';
+      _passwordController.text = '123456';
+    }
   }
 
   @override
@@ -46,7 +52,7 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState?.validate() ?? false) {
       setState(() => _isLoading = true);
 
       final appState = Provider.of<AppState>(context, listen: false);
@@ -81,13 +87,17 @@ class _LoginPageState extends State<LoginPage>
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0D47A1), Color(0xFF1565C0), Color(0xFF1E88E5)],
+            colors: isDark
+                ? [Color(0xFF0A1929), Color(0xFF0D2137), Color(0xFF112A45)]
+                : [Color(0xFF0D47A1), Color(0xFF1565C0), Color(0xFF1E88E5)],
           ),
         ),
         child: SafeArea(
@@ -105,10 +115,10 @@ class _LoginPageState extends State<LoginPage>
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           width: 1.5,
                         ),
                       ),
@@ -120,7 +130,7 @@ class _LoginPageState extends State<LoginPage>
                     ),
                     SizedBox(height: 20),
                     Text(
-                      '保险管理系统',
+                      '保险经纪人',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -133,14 +143,14 @@ class _LoginPageState extends State<LoginPage>
                       '专业 · 高效 · 智能',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         letterSpacing: 4,
                       ),
                     ),
                     SizedBox(height: 40),
                     Card(
                       elevation: 12,
-                      shadowColor: Colors.black.withOpacity(0.2),
+                      shadowColor: Colors.black.withValues(alpha: 0.2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
@@ -156,7 +166,7 @@ class _LoginPageState extends State<LoginPage>
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1565C0),
+                                  color: primaryColor,
                                 ),
                               ),
                               SizedBox(height: 6),
@@ -164,7 +174,7 @@ class _LoginPageState extends State<LoginPage>
                                 '请输入您的账号信息',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Colors.grey.shade500,
+                                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade500,
                                 ),
                               ),
                               SizedBox(height: 24),
@@ -172,7 +182,7 @@ class _LoginPageState extends State<LoginPage>
                                 controller: _usernameController,
                                 decoration: InputDecoration(
                                   labelText: '用户名',
-                                  prefixIcon: Icon(Icons.person_outline, color: Color(0xFF1565C0)),
+                                  prefixIcon: Icon(Icons.person_outline, color: primaryColor),
                                   hintText: '请输入用户名',
                                 ),
                                 validator: (value) {
@@ -188,7 +198,7 @@ class _LoginPageState extends State<LoginPage>
                                 controller: _passwordController,
                                 decoration: InputDecoration(
                                   labelText: '密码',
-                                  prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF1565C0)),
+                                  prefixIcon: Icon(Icons.lock_outline, color: primaryColor),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePassword
@@ -221,7 +231,7 @@ class _LoginPageState extends State<LoginPage>
                                       MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
                                     );
                                   },
-                                  child: Text('忘记密码？', style: TextStyle(color: Color(0xFF1565C0), fontSize: 13)),
+                                  child: Text('忘记密码？', style: TextStyle(color: primaryColor, fontSize: 13)),
                                 ),
                               ),
                               SizedBox(height: 12),
@@ -230,7 +240,7 @@ class _LoginPageState extends State<LoginPage>
                                       height: 50,
                                       child: Center(
                                         child: CircularProgressIndicator(
-                                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1565C0)),
+                                          valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
                                         ),
                                       ),
                                     )
@@ -240,7 +250,7 @@ class _LoginPageState extends State<LoginPage>
                                       child: ElevatedButton(
                                         onPressed: _login,
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: Color(0xFF1565C0),
+                                          backgroundColor: primaryColor,
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                         ),
                                         child: Text('登 录', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 4)),
@@ -249,9 +259,9 @@ class _LoginPageState extends State<LoginPage>
                               SizedBox(height: 20),
                               Row(
                                 children: [
-                                  Expanded(child: Divider(color: Colors.grey.shade300)),
-                                  Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('还没有账号？', style: TextStyle(fontSize: 13, color: Colors.grey))),
-                                  Expanded(child: Divider(color: Colors.grey.shade300)),
+                                  Expanded(child: Divider(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300)),
+                                  Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('还没有账号？', style: TextStyle(fontSize: 13, color: isDark ? Colors.grey.shade400 : Colors.grey))),
+                                  Expanded(child: Divider(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300)),
                                 ],
                               ),
                               SizedBox(height: 14),
@@ -265,10 +275,10 @@ class _LoginPageState extends State<LoginPage>
                                       MaterialPageRoute(builder: (context) => RegisterPage()),
                                     ).then((_) => _usernameController.clear());
                                   },
-                                  icon: Icon(Icons.person_add_outlined, size: 18, color: Color(0xFF1565C0)),
-                                  label: Text('注册新账号', style: TextStyle(fontSize: 14, color: Color(0xFF1565C0), fontWeight: FontWeight.w500)),
+                                  icon: Icon(Icons.person_add_outlined, size: 18, color: primaryColor),
+                                  label: Text('注册新账号', style: TextStyle(fontSize: 14, color: primaryColor, fontWeight: FontWeight.w500)),
                                   style: OutlinedButton.styleFrom(
-                                    side: BorderSide(color: Color(0xFF1565C0).withOpacity(0.4)),
+                                    side: BorderSide(color: primaryColor.withValues(alpha: 0.4)),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
                                 ),
@@ -281,7 +291,7 @@ class _LoginPageState extends State<LoginPage>
                     SizedBox(height: 24),
                     Text(
                       '\u00a9 2026 \u4fdd\u9669\u7ba1\u7406\u7cfb\u7edf',
-                      style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.5)),
+                      style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
                     ),
                     SizedBox(height: 20),
                   ],

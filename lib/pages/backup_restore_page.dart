@@ -1,20 +1,21 @@
-import 'package:insurecrm/utils/app_logger.dart';
-import 'dart:io';
+import 'package:insurance_manager/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:provider/provider.dart';
-import 'package:insurecrm/services/backup_service.dart';
-import 'package:insurecrm/providers/app_state.dart';
-import 'package:insurecrm/database/database_helper.dart';
+import 'package:insurance_manager/services/backup_service.dart';
+import 'package:insurance_manager/widgets/app_components.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:provider/provider.dart';
+import 'package:insurance_manager/providers/app_state.dart';
 
 class BackupRestorePage extends StatefulWidget {
+  const BackupRestorePage({super.key});
+
   @override
   _BackupRestorePageState createState() => _BackupRestorePageState();
 }
 
 class _BackupRestorePageState extends State<BackupRestorePage> {
-  final BackupService _backup = BackupService.instance;
+  final BackupService _backupService = BackupService.instance;
   List<BackupInfo> _backups = [];
   bool _isLoading = false;
   bool _autoBackupEnabled = false;
@@ -30,17 +31,23 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   }
 
   Future<void> _loadSettings() async {
-    _autoBackupEnabled = await _backup.isAutoBackupEnabled();
-    _intervalHours = await _backup.getBackupIntervalHours();
-    _maxBackups = await _backup.getMaxBackupsCount();
-    setState(() {});
+    final autoEnabled = await _backupService.isAutoBackupEnabled();
+    final interval = await _backupService.getBackupIntervalHours();
+    final maxBk = await _backupService.getMaxBackupsCount();
+    if (!mounted) return;
+    setState(() {
+      _autoBackupEnabled = autoEnabled;
+      _intervalHours = [1, 6, 12, 24, 48, 72].contains(interval) ? interval : 24;
+      _maxBackups = [3, 5, 10, 20].contains(maxBk) ? maxBk : 5;
+    });
   }
 
   Future<void> _refreshBackups() async {
     setState(() => _isLoading = true);
     try {
-      _backups = await _backup.getBackupList();
+      _backups = await _backupService.getBackupList();
     } catch (e) { AppLogger.error('loading backups: $e'); }
+    if (!mounted) return;
     setState(() => _isLoading = false);
   }
 
@@ -76,12 +83,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 subtitle: Text(_autoBackupEnabled ? '已开启' : '已关闭'),
                 secondary: Icon(Icons.timer_outlined, color: Color(0xFF7B1FA2)),
                 value: _autoBackupEnabled,
-                activeColor: primaryColor,
+                activeThumbColor: primaryColor,
                 onChanged: kIsWeb ? null : (v) async {
-                  await _backup.setAutoBackupEnabled(v);
+                  await _backupService.setAutoBackupEnabled(v);
+                  if (!context.mounted) return;
                   setState(() => _autoBackupEnabled = v);
-                  if (v) ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('自动备份已启用，将在应用启动时检查并执行')));
+                  if (v && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('自动备份已启用，将在应用启动时检查并执行')));
+                  }
                 },
               ),
               if (_autoBackupEnabled) ...[
@@ -94,11 +104,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                     width: 80,
                     child: DropdownButton<int>(
                       value: _intervalHours,
-                      items: [1, 6, 12, 24, 48, 72].map((h) =>
+                      items: [1, 6, 12, 24, 48, 72].map<DropdownMenuItem<int>>((h) =>
                         DropdownMenuItem(value: h, child: Text('$h小时'))
                       ).toList(),
                       onChanged: (v) async {
-                        await _backup.setBackupIntervalHours(v!);
+                        await _backupService.setBackupIntervalHours(v!);
+                        if (!mounted) return;
                         setState(() => _intervalHours = v);
                       },
                     ),
@@ -113,11 +124,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                     width: 60,
                     child: DropdownButton<int>(
                       value: _maxBackups,
-                      items: [3, 5, 10, 20].map((n) =>
+                      items: [3, 5, 10, 20].map<DropdownMenuItem<int>>((n) =>
                         DropdownMenuItem(value: n, child: Text('$n个'))
                       ).toList(),
                       onChanged: (v) async {
-                        await _backup.setMaxBackupsCount(v!);
+                        await _backupService.setMaxBackupsCount(v!);
+                        if (!mounted) return;
                         setState(() => _maxBackups = v);
                       },
                     ),
@@ -170,9 +182,14 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               Container(
                 padding: EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50.withOpacity(0.5),
+                  color: isDark
+                      ? Colors.blue.shade900.withValues(alpha: 0.3)
+                      : Colors.blue.shade50.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade100),
+                  border: Border.all(
+                      color: isDark
+                          ? Colors.blue.shade800.withValues(alpha: 0.5)
+                          : Colors.blue.shade100),
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
@@ -207,8 +224,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           if (_isLoading)
             Center(child: Padding(padding: EdgeInsets.all(30), child: CircularProgressIndicator()))
           else if (_backups.isEmpty)
-            _EmptyBackupsPlaceholder()
-          else ..._backups.map((b) => _buildBackupTile(b, context, isDark)).toList(),
+            EmptyStatePlaceholder(
+              icon: Icons.cloud_off_rounded,
+              message: '暂无备份',
+              actionHint: '点击上方「立即备份」按钮创建第一个备份',
+            )
+          else ..._backups.map<Widget>((b) => _buildBackupTile(b, context, isDark)),
           SizedBox(height: 40),
         ],
       ),
@@ -225,13 +246,13 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     return Container(
       padding: EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? Color(0xFF2C2C2C) : Colors.white,
+        color: AppDesign.cardBg(isDark),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: Offset(0, 2))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: iconColor.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+          Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, size: 20, color: iconColor)),
           SizedBox(width: 12),
           Text(title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
@@ -252,7 +273,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         child: Row(children: [
           Container(
             width: 44, height: 44,
-            decoration: BoxDecoration(color: info.isAuto ? Color(0xFFE3F2FD) : Color(0xFFF3E5F5), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: info.isAuto ? (isDark ? Color(0xFF1565C0).withValues(alpha: 0.2) : Color(0xFFE3F2FD)) : (isDark ? Color(0xFF7B1FA2).withValues(alpha: 0.2) : Color(0xFFF3E5F5)), borderRadius: BorderRadius.circular(10)),
             child: Icon(info.isAuto ? Icons.auto_awesome : Icons.backup, color: info.isAuto ? Color(0xFF1565C0) : Color(0xFF7B1FA2)),
           ),
           SizedBox(width: 12),
@@ -291,10 +312,11 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     switch (action) {
       case 'share':
         try {
-          final shareFile = await _backup.exportBackupForSharing(info.path);
-          await Share.shareXFiles([XFile(shareFile.path)], subject: '保险管理系统备份');
+          final shareFile = await _backupService.exportBackupForSharing(info.path);
+          await Share.shareXFiles([XFile(shareFile.path)], subject: '保险经纪人备份');
+          if (!ctx.mounted) return;
           ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('已准备分享')));
-        } catch (e) { ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('分享失败：$e'))); }
+        } catch (e) { if (!ctx.mounted) return; ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('分享失败：$e'))); }
         break;
       case 'restore':
         _confirmRestore(ctx, info.path, info.fileName);
@@ -311,7 +333,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('取消')),
         TextButton(style: TextButton.styleFrom(foregroundColor: Colors.red),
-          onPressed: () async { Navigator.pop(dialogCtx); await _backup.deleteBackup(info.path); _refreshBackups(); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('已删除'))); }, child: Text('删除')),
+          onPressed: () async { Navigator.pop(dialogCtx); await _backupService.deleteBackup(info.path); if (!ctx.mounted) return; await _refreshBackups(); if (!ctx.mounted) return; ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('已删除'))); }, child: Text('删除')),
       ],
     ));
   }
@@ -335,9 +357,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('取消')),
         ElevatedButton(
           onPressed: () async {
-            Navigator.pop(dialogCtx);
-            final dialog = showDialog(barrierDismissible: false, context: context, builder: (loadingCtx) => WillPopScope(
-              onWillPop: () async => false,
+            Navigator.pop(dialogCtx); // close confirm dialog
+            // Show loading dialog
+            showDialog(barrierDismissible: false, context: ctx, builder: (loadingCtx) => PopScope(
+              canPop: false,
               child: AlertDialog(content: Row(children: [
                 CircularProgressIndicator(strokeWidth:3),
                 SizedBox(width:16),
@@ -346,16 +369,32 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                   Text('请勿关闭应用', style: TextStyle(fontSize:12, color: Colors.grey))
                 ]))
               ]))));
-            final result = await _backup.restoreFromBackup(backupPath);
-            Navigator.pop(context);
+            (bool, String) result;
+            try {
+              result = await _backupService.restoreFromBackup(backupPath);
+            } catch (e) {
+              result = (false, '恢复异常：$e');
+            }
+            // Close loading dialog
+            if (ctx.mounted) Navigator.pop(ctx);
+            if (!ctx.mounted) return;
             if (result.$1) {
-              showDialog(context: context, builder: (successCtx) => AlertDialog(
+              showDialog(context: ctx, builder: (successCtx) => AlertDialog(
                 icon: Icon(Icons.check_circle, color: Colors.green, size: 48),
                 title: Text('恢复成功！'),
-                content: Text(result.$2 + '\n\n建议重启应用以完整加载恢复的数据。'),
-                actions: [TextButton(onPressed: (){ Navigator.pop(successCtx); _refreshBackups(); }, child: Text('好的'))]));
+                content: Text('${result.$2}\n\n建议重启应用以完整加载恢复的数据。'),
+                actions: [TextButton(onPressed: () async { 
+                  Navigator.pop(successCtx); 
+                  _refreshBackups();
+                  // Reload all data to ensure UI reflects restored data
+                  final appState = Provider.of<AppState>(ctx, listen: false);
+                  await appState.initializeApp();
+                  if (!mounted) return;
+                  setState(() {});
+                }, child: Text('好的'))]));
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.$2)));
+              if (!ctx.mounted) return;
+              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(result.$2)));
             }
           },
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -368,11 +407,13 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   Future<void> _createManualBackup(BuildContext ctx) async {
     setState(() => _isCreating = true);
     try {
-      final backupPath = await _backup.createFullBackup(isAutoBackup: false);
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('✅ 备份成功！\n$backupPath')));
+      final backupPath = await _backupService.createFullBackup(isAutoBackup: false);
+      if (!ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('备份成功：$backupPath')));
       _refreshBackups();
     } catch (e) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('❌ 备份失败：$e')));
+      if (!ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('备份失败：$e')));
     } finally {
       if (mounted) setState(() => _isCreating = false);
     }
@@ -403,22 +444,3 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   }
 }
 
-class _EmptyBackupsPlaceholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(40),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.cloud_off_rounded, size: 64, color: Colors.grey.shade300),
-          SizedBox(height: 16),
-          Text('暂无备份', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey)),
-          SizedBox(height: 8),
-          Text('点击上方「立即备份」按钮创建第一个备份', style: TextStyle(color: Colors.grey.shade500)),
-          SizedBox(height: 16),
-          Text('建议：开启自动备份以防止数据丢失', style: TextStyle(fontSize: 13, color: Colors.orange.shade700)),
-        ]),
-      ),
-    );
-  }
-}

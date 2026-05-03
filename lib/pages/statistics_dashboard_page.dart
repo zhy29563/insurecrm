@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:insurecrm/providers/app_state.dart';
+import 'package:insurance_manager/providers/app_state.dart';
+import 'package:insurance_manager/widgets/app_components.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class StatisticsDashboardPage extends StatefulWidget {
+  const StatisticsDashboardPage({super.key});
+
   @override
   _StatisticsDashboardPageState createState() =>
       _StatisticsDashboardPageState();
@@ -11,24 +14,30 @@ class StatisticsDashboardPage extends StatefulWidget {
 
 class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     with TickerProviderStateMixin {
-  late AnimationController _kpiController;
+  late AnimationController _kpiAnimationController;
   late AnimationController _chartController;
-  late Animation<double> _kpiAnimation;
+  late Animation<double> _kpiCardAnimation;
   late Animation<double> _chartAnimation;
+
+  // Static Tween to avoid recreating on every build call
+  static final _slideUpTween = Tween<Offset>(
+    begin: Offset(0, 0.1),
+    end: Offset(0, 0),
+  );
 
   @override
   void initState() {
     super.initState();
 
     // KPI卡片动画
-    _kpiController = AnimationController(
+    _kpiAnimationController = AnimationController(
       duration: Duration(milliseconds: 800),
       vsync: this,
     );
-    _kpiAnimation = Tween<double>(
+    _kpiCardAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(parent: _kpiController, curve: Curves.easeOut));
+    ).animate(CurvedAnimation(parent: _kpiAnimationController, curve: Curves.easeOut));
 
     // 图表动画
     _chartController = AnimationController(
@@ -43,16 +52,17 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final appState = Provider.of<AppState>(context, listen: false);
       appState.loadStatistics();
-      _kpiController.forward();
+      _kpiAnimationController.forward();
       _chartController.forward();
     });
   }
 
   @override
   void dispose() {
-    _kpiController.dispose();
+    _kpiAnimationController.dispose();
     _chartController.dispose();
     super.dispose();
   }
@@ -61,7 +71,6 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
       appBar: AppBar(title: Text('数据看板')),
@@ -75,12 +84,9 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
             children: [
               // 核心指标卡片
               FadeTransition(
-                opacity: _kpiAnimation,
+                opacity: _kpiCardAnimation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(0, 0.1),
-                    end: Offset(0, 0),
-                  ).animate(_kpiAnimation),
+                  position: _slideUpTween.animate(_kpiCardAnimation),
                   child: _buildKPIRow(appState),
                 ),
               ),
@@ -90,16 +96,13 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               FadeTransition(
                 opacity: _chartAnimation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(0, 0.1),
-                    end: Offset(0, 0),
-                  ).animate(_chartAnimation),
+                  position: _slideUpTween.animate(_chartAnimation),
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.show_chart_rounded,
                     iconColor: Color(0xFF1E88E5),
                     title: '月度保费趋势',
-                    child: Container(
+                    child: SizedBox(
                       height: 220,
                       child: _buildSalesChart(appState, isDark),
                     ),
@@ -112,16 +115,13 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               FadeTransition(
                 opacity: _chartAnimation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(0, 0.1),
-                    end: Offset(0, 0),
-                  ).animate(_chartAnimation),
+                  position: _slideUpTween.animate(_chartAnimation),
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.event_note_rounded,
                     iconColor: Color(0xFF43A047),
                     title: '月度拜访统计',
-                    child: Container(
+                    child: SizedBox(
                       height: 220,
                       child: _buildVisitChart(appState, isDark),
                     ),
@@ -134,16 +134,13 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               FadeTransition(
                 opacity: _chartAnimation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(0, 0.1),
-                    end: Offset(0, 0),
-                  ).animate(_chartAnimation),
+                  position: _slideUpTween.animate(_chartAnimation),
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.pie_chart_rounded,
                     iconColor: Color(0xFFAB47BC),
                     title: '客户意向分布',
-                    child: Container(
+                    child: SizedBox(
                       height: 220,
                       child: _buildRatingChart(appState, isDark),
                     ),
@@ -156,10 +153,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               FadeTransition(
                 opacity: _chartAnimation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(0, 0.1),
-                    end: Offset(0, 0),
-                  ).animate(_chartAnimation),
+                  position: _slideUpTween.animate(_chartAnimation),
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.emoji_events_rounded,
@@ -175,10 +169,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               FadeTransition(
                 opacity: _chartAnimation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(0, 0.1),
-                    end: Offset(0, 0),
-                  ).animate(_chartAnimation),
+                  position: _slideUpTween.animate(_chartAnimation),
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.calendar_view_month_rounded,
@@ -194,10 +185,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               FadeTransition(
                 opacity: _chartAnimation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(0, 0.1),
-                    end: Offset(0, 0),
-                  ).animate(_chartAnimation),
+                  position: _slideUpTween.animate(_chartAnimation),
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.account_balance_wallet_rounded,
@@ -213,10 +201,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               FadeTransition(
                 opacity: _chartAnimation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(0, 0.1),
-                    end: Offset(0, 0),
-                  ).animate(_chartAnimation),
+                  position: _slideUpTween.animate(_chartAnimation),
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.linear_scale_rounded,
@@ -232,10 +217,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               FadeTransition(
                 opacity: _chartAnimation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(0, 0.1),
-                    end: Offset(0, 0),
-                  ).animate(_chartAnimation),
+                  position: _slideUpTween.animate(_chartAnimation),
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.analytics_rounded,
@@ -259,7 +241,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
         Expanded(
           child: _buildKPICard(
             title: '本月保费',
-            value: _formatAmount(appState.thisMonthSalesAmount),
+            value: _formatAmount(appState.currentMonthSalesAmount),
             unit: '元',
             icon: Icons.payments_rounded,
             color: Color(0xFF1E88E5),
@@ -269,7 +251,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
         Expanded(
           child: _buildKPICard(
             title: '本月拜访',
-            value: '${appState.thisMonthVisitsCount}',
+            value: '${appState.currentMonthVisitsCount}',
             unit: '次',
             icon: Icons.directions_walk_rounded,
             color: Color(0xFF43A047),
@@ -291,11 +273,11 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Color(0xFF2C2C2C) : Colors.white,
+        color: AppDesign.cardBg(isDark),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -309,7 +291,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               Container(
                 padding: EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, size: 16, color: color),
@@ -358,11 +340,11 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     return Container(
       padding: EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? Color(0xFF2C2C2C) : Colors.white,
+        color: AppDesign.cardBg(isDark),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -376,7 +358,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               Container(
                 padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.12),
+                  color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 18, color: iconColor),
@@ -399,8 +381,10 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     final months = List.generate(12, (i) => i + 1);
     final dataMap = <int, double>{};
     for (var item in appState.monthlySales) {
-      dataMap[item['month'] as int] =
-          (item['total_amount'] as num?)?.toDouble() ?? 0;
+      final month = (item['month'] as num?)?.toInt();
+      if (month != null) {
+        dataMap[month] = (item['total_amount'] as num?)?.toDouble() ?? 0;
+      }
     }
 
     final spots = months
@@ -409,19 +393,9 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     final hasData = spots.any((s) => s.y > 0);
 
     if (!hasData) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.bar_chart_rounded,
-              size: 40,
-              color: Colors.grey.shade300,
-            ),
-            SizedBox(height: 8),
-            Text('暂无销售数据', style: TextStyle(color: Colors.grey.shade400)),
-          ],
-        ),
+      return const EmptyStatePlaceholder(
+        icon: Icons.bar_chart_rounded,
+        message: '暂无销售数据',
       );
     }
 
@@ -465,7 +439,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
             dotData: FlDotData(show: true),
             belowBarData: BarAreaData(
               show: true,
-              color: Color(0xFF1E88E5).withOpacity(0.1),
+              color: Color(0xFF1E88E5).withValues(alpha: 0.1),
             ),
           ),
         ],
@@ -492,7 +466,10 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     final months = List.generate(12, (i) => i + 1);
     final dataMap = <int, double>{};
     for (var item in appState.monthlyVisits) {
-      dataMap[item['month'] as int] = (item['count'] as num?)?.toDouble() ?? 0;
+      final month = (item['month'] as num?)?.toInt();
+      if (month != null) {
+        dataMap[month] = (item['count'] as num?)?.toDouble() ?? 0;
+      }
     }
 
     final barGroups = months.map((m) {
@@ -513,19 +490,9 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     final hasData = dataMap.values.any((v) => v > 0);
 
     if (!hasData) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.event_note_rounded,
-              size: 40,
-              color: Colors.grey.shade300,
-            ),
-            SizedBox(height: 8),
-            Text('暂无拜访数据', style: TextStyle(color: Colors.grey.shade400)),
-          ],
-        ),
+      return const EmptyStatePlaceholder(
+        icon: Icons.event_note_rounded,
+        message: '暂无拜访数据',
       );
     }
 
@@ -581,19 +548,9 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
   Widget _buildRatingChart(AppState appState, bool isDark) {
     final ratingData = appState.ratingDistribution;
     if (ratingData.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.pie_chart_rounded,
-              size: 40,
-              color: Colors.grey.shade300,
-            ),
-            SizedBox(height: 8),
-            Text('暂无客户数据', style: TextStyle(color: Colors.grey.shade400)),
-          ],
-        ),
+      return const EmptyStatePlaceholder(
+        icon: Icons.pie_chart_rounded,
+        message: '暂无客户数据',
       );
     }
 
@@ -604,15 +561,6 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
       2: Color(0xFF43A047),
       1: Color(0xFF42A5F5),
       0: Color(0xFF9E9E9E),
-    };
-
-    final ratingLabels = {
-      5: '高意向',
-      4: '中高意向',
-      3: '中等意向',
-      2: '低意向',
-      1: '无意向',
-      0: '未评级',
     };
 
     final total = ratingData.fold(
@@ -627,7 +575,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
           child: PieChart(
             PieChartData(
               sections: ratingData.map((item) {
-                final rating = item['rating'] as int;
+                final rating = (item['rating'] as num?)?.toInt() ?? -1;
                 final count = (item['count'] as num?)?.toInt() ?? 0;
                 final percentage = total > 0 ? (count / total * 100) : 0.0;
                 return PieChartSectionData(
@@ -655,8 +603,8 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: ratingData.map((item) {
-              final rating = item['rating'] as int;
+            children: ratingData.map<Widget>((item) {
+              final rating = (item['rating'] as num?)?.toInt() ?? -1;
               final count = (item['count'] as num?)?.toInt() ?? 0;
               return Padding(
                 padding: EdgeInsets.only(bottom: 6),
@@ -673,7 +621,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                     SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '${ratingLabels[rating] ?? '未知'}',
+                        AppDesign.ratingLabel(rating),
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey.shade600,
@@ -702,37 +650,24 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     final ranking = appState.productRanking;
 
     if (ranking.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(
-                Icons.emoji_events_rounded,
-                size: 40,
-                color: Colors.grey.shade300,
-              ),
-              SizedBox(height: 8),
-              Text('暂无销售数据', style: TextStyle(color: Colors.grey.shade400)),
-            ],
-          ),
-        ),
+      return const EmptyStatePlaceholder(
+        icon: Icons.emoji_events_rounded,
+        message: '暂无销售数据',
       );
     }
 
     final top5 = ranking.take(5).toList();
     final maxCount = top5.isEmpty
         ? 1
-        : (top5[0]['sale_count'] as num?)?.toInt() ?? 1;
+        : ((top5[0]['sale_count'] as num?)?.toInt() ?? 0).clamp(1, 999999);
 
     return Column(
-      children: top5.asMap().entries.map((entry) {
+      children: top5.asMap().entries.map<Widget>((entry) {
         final index = entry.key;
         final item = entry.value;
         final saleCount = (item['sale_count'] as num?)?.toInt() ?? 0;
         final totalAmount = (item['total_amount'] as num?)?.toDouble() ?? 0;
-        final productName = item['product_name'] ?? '未知产品';
-        final category = item['product_category'] ?? '';
+        final productName = (item['product_name'] as String?) ?? '未知产品';
         final progress = saleCount / maxCount;
 
         final medalColors = [
@@ -751,8 +686,8 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                 height: 28,
                 decoration: BoxDecoration(
                   color: index < 3
-                      ? medalColors[index].withOpacity(0.15)
-                      : Colors.grey.shade100,
+                      ? medalColors[index].withValues(alpha: 0.15)
+                      : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade100),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
@@ -792,7 +727,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                           ),
                         ),
                         Text(
-                          '${saleCount}笔',
+                          '$saleCount笔',
                           style: TextStyle(
                             fontSize: 13,
                             color: Color(0xFFFF9800),
@@ -807,7 +742,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                         Container(
                           height: 6,
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
+                            color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),
@@ -846,32 +781,38 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     );
   }
 
-  String _formatAmount(int amount) {
-    if (amount >= 10000) {
+  String _formatAmount(num amount) {
+    if (amount.abs() >= 10000) {
       return '${(amount / 10000).toStringAsFixed(1)}万';
     }
-    return '$amount';
+    return amount == amount.toInt() ? amount.toInt().toString() : amount.toStringAsFixed(1);
   }
 
   Widget _buildQuarterlySalesChart(AppState appState, bool isDark) {
     final data = appState.quarterlySales;
     if (data.isEmpty) {
-      return const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('暂无季度数据')));
+      return const EmptyStatePlaceholder(
+        icon: Icons.calendar_view_month_rounded,
+        message: '暂无季度数据',
+      );
     }
     return Column(
-      children: data.map((q) {
-        final quarter = q['quarter'] ?? '?';
-        final amount = (q['total_amount'] as num?)?.toInt() ?? 0;
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(children: [
-            SizedBox(width: 60, child: Text('Q$quarter', style: const TextStyle(fontWeight: FontWeight.w600))),
-            Expanded(child: LinearProgressIndicator(value: amount > 0 ? 1.0 : 0, minHeight: 20, borderRadius: BorderRadius.circular(4), backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade200, valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF5C6BC0)))),
-            const SizedBox(width: 8),
-            SizedBox(width: 80, child: Text(_formatAmount(amount), style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
-          ]),
-        );
-      }).toList(),
+      children: () {
+        final maxAmount = data.map((q) => (q['total_amount'] as num?)?.toDouble() ?? 0).fold(0.0, (a, b) => a > b ? a : b);
+        return data.map((q) {
+          final quarter = q['quarter'] ?? '?';
+          final amount = (q['total_amount'] as num?)?.toDouble() ?? 0;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(children: [
+              SizedBox(width: 60, child: Text('Q$quarter', style: const TextStyle(fontWeight: FontWeight.w600))),
+              Expanded(child: LinearProgressIndicator(value: maxAmount > 0 ? amount / maxAmount : 0, minHeight: 20, borderRadius: BorderRadius.circular(4), backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade200, valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF5C6BC0)))),
+              const SizedBox(width: 8),
+              SizedBox(width: 80, child: Text(_formatAmount(amount), style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
+            ]),
+          );
+        }).toList();
+      }(),
     );
   }
 
@@ -879,13 +820,32 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     final monthly = appState.monthlyCommissions;
     final quarterly = appState.quarterlyCommissions;
     if (monthly.isEmpty && quarterly.isEmpty) {
-      return const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('暂无佣金数据')));
+      return const EmptyStatePlaceholder(
+        icon: Icons.account_balance_wallet_rounded,
+        message: '暂无佣金数据',
+      );
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (monthly.isNotEmpty) ...[
+        const Text('月度佣金', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const SizedBox(height: 8),
+        ...monthly.map<Widget>((m) {
+          final month = m['month'] ?? '?';
+          final commission = (m['total_commission'] as num?)?.toDouble() ?? 0.0;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(children: [
+              SizedBox(width: 60, child: Text('$month月', style: const TextStyle(fontWeight: FontWeight.w500))),
+              Expanded(child: Text('¥${commission.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF66BB6A)))),
+            ]),
+          );
+        }),
+        const SizedBox(height: 12),
+      ],
       if (quarterly.isNotEmpty) ...[
         const Text('季度佣金', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         const SizedBox(height: 8),
-        ...quarterly.map((q) {
+        ...quarterly.map<Widget>((q) {
           final quarter = q['quarter'] ?? '?';
           final commission = (q['total_commission'] as num?)?.toDouble() ?? 0.0;
           return Padding(
@@ -904,19 +864,24 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
   Widget _buildConversionFunnelChart(AppState appState, bool isDark) {
     final data = appState.conversionFunnel;
     if (data.isEmpty) {
-      return const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('暂无转化数据')));
+      return const EmptyStatePlaceholder(
+        icon: Icons.linear_scale_rounded,
+        message: '暂无转化数据',
+      );
     }
     return Column(
-      children: data.map((stage) {
-        final name = stage['stage'] ?? '';
-        final count = stage['count'] ?? 0;
-        final rate = stage['rate'] ?? 0.0;
+      children: data.map<Widget>((stage) {
+        final rating = (stage['rating'] as num?)?.toInt();
+        final name = AppDesign.ratingLabel(rating);
+        final count = (stage['count'] as num?)?.toInt() ?? 0;
+        final rate = (stage['conversion_rate'] as num?)?.toDouble()
+            ?? 0.0;
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(children: [
             Expanded(flex: 2, child: Text(name, style: const TextStyle(fontWeight: FontWeight.w500))),
             Expanded(flex: 1, child: Text('$count', style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center)),
-            Expanded(flex: 1, child: Text('${(rate * 100).toStringAsFixed(1)}%', style: TextStyle(fontWeight: FontWeight.w600, color: rate > 0.5 ? Colors.green : Colors.orange), textAlign: TextAlign.right)),
+            Expanded(flex: 1, child: Text('${rate.toStringAsFixed(1)}%', style: TextStyle(fontWeight: FontWeight.w600, color: rate > 50 ? Colors.green : Colors.orange), textAlign: TextAlign.right)),
           ]),
         );
       }).toList(),
@@ -926,13 +891,19 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
   Widget _buildVisitEfficiencyList(AppState appState, bool isDark) {
     final data = appState.visitEfficiency;
     if (data.isEmpty) {
-      return const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('暂无拜访效率数据')));
+      return const EmptyStatePlaceholder(
+        icon: Icons.analytics_rounded,
+        message: '暂无拜访效率数据',
+      );
     }
     return Column(
-      children: data.map((item) {
-        final customerName = item['customer_name'] ?? '';
-        final visitCount = item['visit_count'] ?? 0;
-        final conversionRate = item['conversion_rate'] ?? 0.0;
+      children: data.map<Widget>((item) {
+        // 兼容 Web（汇总数据）和数据库（每客户数据）两种格式
+        final customerName = (item['customer_name'] as String?) ?? '汇总统计';
+        final visitCount = (item['visit_count'] as num?)?.toInt()
+            ?? (item['total_visits'] as num?)?.toInt()
+            ?? 0;
+        final conversionRate = (item['conversion_per_visit'] as num?)?.toDouble() ?? 0.0;
         return Card(
           margin: const EdgeInsets.only(bottom: 6),
           elevation: 0,
@@ -940,8 +911,8 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
           child: ListTile(
             dense: true,
             title: Text(customerName, style: const TextStyle(fontWeight: FontWeight.w500)),
-            subtitle: Text('拜访 $visitCount 次 · 转化率 ${(conversionRate * 100).toStringAsFixed(0)}%'),
-            trailing: Icon(Icons.trending_up, color: conversionRate > 0.3 ? Colors.green : Colors.orange, size: 20),
+            subtitle: Text('拜访 $visitCount 次 · 转化率 ${conversionRate.toStringAsFixed(0)}%'),
+            trailing: Icon(Icons.trending_up, color: conversionRate > 30 ? Colors.green : Colors.orange, size: 20),
           ),
         );
       }).toList(),

@@ -9,42 +9,56 @@ class TagSelector extends StatelessWidget {
   final String title;
 
   const TagSelector({
-    Key? key,
+    super.key,
     required this.allTags,
     required this.selectedTagIds,
     required this.onSelectionChanged,
     this.title = '选择标签',
-  }) : super(key: key);
+  });
+
+  /// Safely parse a hex color string (supports #RGB, #RRGGBB, RRGGBB)
+  static Color _parseColor(String? colorStr) {
+    if (colorStr == null || colorStr.isEmpty) return const Color(0xFF1565C0);
+    final hex = colorStr.startsWith('#') ? colorStr.substring(1) : colorStr;
+    if (hex.length == 3) {
+      // Expand #RGB to #RRGGBB
+      final expanded = 'FF${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}';
+      final value = int.tryParse(expanded, radix: 16);
+      return value != null ? Color(value) : const Color(0xFF1565C0);
+    }
+    if (hex.length == 6) {
+      final value = int.tryParse('FF$hex', radix: 16);
+      return value != null ? Color(value) : const Color(0xFF1565C0);
+    }
+    return const Color(0xFF1565C0);
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(title),
-      content: Container(
+      content: SizedBox(
         width: double.maxFinite,
         child: Wrap(
           spacing: 8,
-          children: allTags.map((tag) {
-            final isSelected = selectedTagIds.contains(tag.id!);
+          children: allTags.map<Widget>((tag) {
+            final tagId = tag.id;
+            final isSelected = tagId != null && selectedTagIds.contains(tagId);
+            final tagColor = _parseColor(tag.color);
             return FilterChip(
               label: Text(tag.name),
               labelStyle: TextStyle(
-                color: isSelected
-                    ? Colors.white
-                    : Color(
-                        int.parse('FF\${tag.color.substring(1)}', radix: 16),
-                      ),
+                color: isSelected ? Colors.white : tagColor,
               ),
               selected: isSelected,
-              selectedColor: Color(
-                int.parse('FF\${tag.color.substring(1)}', radix: 16),
-              ),
+              selectedColor: tagColor,
               onSelected: (selected) {
+                if (tagId == null) return;
                 final newSelection = List<int>.from(selectedTagIds);
                 if (selected) {
-                  newSelection.add(tag.id!);
+                  newSelection.add(tagId);
                 } else {
-                  newSelection.remove(tag.id!);
+                  newSelection.remove(tagId);
                 }
                 onSelectionChanged(newSelection);
               },

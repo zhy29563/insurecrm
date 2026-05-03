@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:insurecrm/providers/app_state.dart';
+import 'package:insurance_manager/providers/app_state.dart';
 
 class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
+
   @override
   _RegisterPageState createState() => _RegisterPageState();
 }
@@ -82,6 +84,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: Text('注册账号'),
@@ -92,7 +95,9 @@ class _RegisterPageState extends State<RegisterPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFF0F4FF), Color(0xFFFFFFFF)],
+            colors: isDark
+                ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
+                : [const Color(0xFFF0F4FF), Colors.white],
           ),
         ),
         child: SingleChildScrollView(
@@ -108,11 +113,11 @@ class _RegisterPageState extends State<RegisterPage> {
                     Container(
                       width: 64,
                       height: 64,
-                      decoration: BoxDecoration(color: Color(0xFF1565C0).withOpacity(0.1), shape: BoxShape.circle),
+                      decoration: BoxDecoration(color: Color(0xFF1565C0).withValues(alpha: 0.1), shape: BoxShape.circle),
                       child: Icon(Icons.person_add_rounded, size: 32, color: Color(0xFF1565C0)),
                     ),
                     SizedBox(height: 12),
-                    Text('创建新账号', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1))),
+                    Text('创建新账号', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Color(0xFF0D47A1))),
                     SizedBox(height: 6),
                     Text('填写以下信息完成注册', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
                   ]),
@@ -120,7 +125,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 SizedBox(height: 28),
 
                 // Username
-                Text('用户名 *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF333))),
+                Text('用户名 *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? Colors.grey.shade300 : Color(0xFF333333))),
                 SizedBox(height: 6),
                 TextFormField(
                   controller: _usernameController,
@@ -136,7 +141,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 SizedBox(height: 16),
 
                 // Display Name
-                Text('显示名称 *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF333))),
+                Text('显示名称 *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? Colors.grey.shade300 : Color(0xFF333333))),
                 SizedBox(height: 6),
                 TextFormField(
                   controller: _displayNameController,
@@ -151,7 +156,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 SizedBox(height: 16),
 
                 // Password
-                Text('密码 *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF333))),
+                Text('密码 *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? Colors.grey.shade300 : Color(0xFF333333))),
                 SizedBox(height: 6),
                 TextFormField(
                   controller: _passwordController,
@@ -161,6 +166,11 @@ class _RegisterPageState extends State<RegisterPage> {
                     hintText: '至少6位密码',
                   ),
                   obscureText: _obscurePassword,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return '请输入密码';
+                    if (value.length < 6) return '密码至少6位';
+                    return null;
+                  },
                   onChanged: (_) => setState(() {}),
                   textInputAction: TextInputAction.next,
                 ),
@@ -194,7 +204,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 SizedBox(height: 16),
 
                 // Confirm Password
-                Text('确认密码 *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF333))),
+                Text('确认密码 *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? Colors.grey.shade300 : Color(0xFF333333))),
                 SizedBox(height: 6),
                 TextFormField(
                   controller: _confirmPasswordController,
@@ -205,6 +215,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   obscureText: _obscureConfirm,
                   validator: (value) {
+                    if (value == null || value.isEmpty) return '请确认密码';
                     if (value != _passwordController.text) return '两次密码不一致';
                     return null;
                   },
@@ -213,7 +224,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 SizedBox(height: 20),
 
                 // Security Question
-                Card(elevation: 0,color: Color(0xFFFFF8E1),margin: EdgeInsets.zero,shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12),side: BorderSide(color: Color(0xFFFFC107).withOpacity(0.5))),child: Padding(padding: EdgeInsets.all(14),child: Column(crossAxisAlignment: CrossAxisAlignment.start,children: [Row(children: [Icon(Icons.security_rounded, size: 18, color: Color(0xFFFF8F00)),SizedBox(width: 8),Text('安全设置（忘记密码时使用）',style: TextStyle(fontWeight: FontWeight.w600,fontSize: 14,color: Color(0xFFE65100))),]),SizedBox(height: 10),DropdownButtonFormField<String>(decoration: InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12,vertical: 8)),hint: Text('选择安全问题'),value: _selectedQuestion,isExpanded:true,items:_securityQuestions.map((q)=>DropdownMenuItem(value:q,child:Text(q,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){setState(()=>_selectedQuestion=v);}),SizedBox(height:10),TextField(controller:_securityAnswerController,obscureText:false,decoration:InputDecoration(contentPadding:EdgeInsets.symmetric(horizontal:12,vertical:8),hintText:'安全问题的答案')),]))),
+                Card(elevation: 0,color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFFFF8E1),margin: EdgeInsets.zero,shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12),side: BorderSide(color: isDark ? Colors.grey.shade700 : Color(0xFFFFC107).withValues(alpha: 0.5))),child: Padding(padding: EdgeInsets.all(14),child: Column(crossAxisAlignment: CrossAxisAlignment.start,children: [Row(children: [Icon(Icons.security_rounded, size: 18, color: isDark ? Colors.orange.shade300 : const Color(0xFFFF8F00)),SizedBox(width: 8),Text('安全设置（忘记密码时使用）',style: TextStyle(fontWeight: FontWeight.w600,fontSize: 14,color: isDark ? Colors.orange.shade300 : const Color(0xFFE65100))),]),SizedBox(height: 10),DropdownButtonFormField<String>(decoration: InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12,vertical: 8)),hint: Text('选择安全问题'),initialValue: _selectedQuestion,isExpanded:true,items:_securityQuestions.map<DropdownMenuItem<String>>((q)=>DropdownMenuItem(value:q,child:Text(q,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){setState(()=>_selectedQuestion=v);}),SizedBox(height:10),TextFormField(controller:_securityAnswerController,obscureText:false,decoration:InputDecoration(contentPadding:EdgeInsets.symmetric(horizontal:12,vertical:8),hintText:'安全问题的答案'),validator:(v){if(v==null||v.trim().isEmpty)return'请输入安全问题的答案';return null;}),]))),
 
                 SizedBox(height: 24),
 
@@ -229,15 +240,29 @@ class _RegisterPageState extends State<RegisterPage> {
 
   String _passwordStrengthLabel() {
     String p = _passwordController.text;
-    if (p.length >= 6 && RegExp(r'[a-zA-Z]').hasMatch(p) && RegExp(r'[0-9]').hasMatch(p)) return '\u5f3a';
-    if (p.length >= 4) return '\u4e2d';
-    return '\u5f31';
+    int len = p.length;
+    bool hasLetter = RegExp(r'[a-zA-Z]').hasMatch(p);
+    bool hasDigit = RegExp(r'[0-9]').hasMatch(p);
+    int strength = 0;
+    if (len >= 6) strength++;
+    if (hasLetter) strength++;
+    if (hasDigit) strength++;
+    if (strength >= 3) return '强';
+    if (strength >= 2) return '中';
+    return '弱';
   }
 
   Color _passwordStrengthColor() {
     String p = _passwordController.text;
-    if (p.length >= 6 && RegExp(r'[a-zA-Z]').hasMatch(p) && RegExp(r'[0-9]').hasMatch(p)) return Colors.green;
-    if (p.length >= 4) return Colors.orange;
+    int len = p.length;
+    bool hasLetter = RegExp(r'[a-zA-Z]').hasMatch(p);
+    bool hasDigit = RegExp(r'[0-9]').hasMatch(p);
+    int strength = 0;
+    if (len >= 6) strength++;
+    if (hasLetter) strength++;
+    if (hasDigit) strength++;
+    if (strength >= 3) return Colors.green;
+    if (strength >= 2) return Colors.orange;
     return Colors.red;
   }
 }

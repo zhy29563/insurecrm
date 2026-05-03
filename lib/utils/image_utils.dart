@@ -1,6 +1,6 @@
-import 'package:insurecrm/utils/app_logger.dart';
+import 'dart:math' as math;
+import 'package:insurance_manager/utils/app_logger.dart';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as path;
@@ -20,8 +20,8 @@ class ImageUtils {
   /// JPEG 压缩质量 (0-100)
   static const int jpegQuality = 85;
 
-  /// 缩略图 JPEG 质量
-  static const int thumbQuality = 70;
+  /// 缩略图 JPEG 质量 (Thumbnail JPEG quality)
+  static const int thumbnailQuality = 70;
 
   // Web 平台不使用此工具
   static bool get isSupported => !kIsWeb;
@@ -38,7 +38,7 @@ class ImageUtils {
 
     final directory = await getApplicationDocumentsDirectory();
     final targetDir = subDir != null
-        ? Directory('${directory.path}/$subDir')
+        ? Directory(path.join(directory.path, subDir))
         : directory;
 
     if (!targetDir.existsSync()) targetDir.createSync(recursive: true);
@@ -46,7 +46,8 @@ class ImageUtils {
     final outputName = fileName ??
         '${DateTime.now().millisecondsSinceEpoch}${path.extension(originalFile.path)}';
 
-    final outputPath = '${targetDir.path}/$outputName';
+    final outputPath = path.join(targetDir.path, outputName);
+    final ext = path.extension(originalFile.path).toLowerCase();
 
     try {
       final bytes = await originalFile.readAsBytes();
@@ -68,22 +69,36 @@ class ImageUtils {
       }
 
       // 计算等比缩放后的尺寸
+      final scale = math.min(w / decodedImage.width, h / decodedImage.height);
+      final newWidth = (decodedImage.width * scale).round();
+      final newHeight = (decodedImage.height * scale).round();
       final resized = img.copyResize(
         decodedImage,
-        width: w > decodedImage.width ? decodedImage.width : w,
-        height: h > decodedImage.height ? decodedImage.height : h,
+        width: newWidth,
+        height: newHeight,
         interpolation: img.Interpolation.linear,
       );
 
       final outFile = File(outputPath);
-      final encoder = img.JpegEncoder(quality: jpegQuality);
-      await outFile.writeAsBytes(encoder.encode(resized));
+      // Preserve format: use PNG encoder for PNG files, JPEG for others
+      if (ext == '.png') {
+        final pngEncoder = img.PngEncoder(level: 6);
+        await outFile.writeAsBytes(pngEncoder.encode(resized));
+      } else {
+        final encoder = img.JpegEncoder(quality: jpegQuality);
+        await outFile.writeAsBytes(encoder.encode(resized));
+      }
       return outputPath;
     } catch (e) {
       AppLogger.error('compress error: $e');
       // 压缩失败时回退到直接复制
-      await originalFile.copy(outputPath);
-      return outputPath;
+      try {
+        await originalFile.copy(outputPath);
+        return outputPath;
+      } catch (e2) {
+        AppLogger.error('copy fallback error: $e2');
+        return originalFile.path;
+      }
     }
   }
 
@@ -97,7 +112,7 @@ class ImageUtils {
       if (decodedImage == null) return null;
 
       final directory = await getApplicationDocumentsDirectory();
-      final thumbDir = Directory('${directory.path}/thumbnails');
+      final thumbDir = Directory(path.join(directory.path, 'thumbnails'));
       if (!thumbDir.existsSync()) thumbDir.createSync(recursive: true);
 
       // 正方形裁切+缩放
@@ -109,9 +124,9 @@ class ImageUtils {
         interpolation: img.Interpolation.linear,
       );
 
-      final outputPath =
-          '${thumbDir.path}/thumb_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final thumbEncoder = img.JpegEncoder(quality: thumbQuality);
+      final outputPath = path.join(
+          thumbDir.path, 'thumb_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final thumbEncoder = img.JpegEncoder(quality: thumbnailQuality);
       await File(outputPath)
           .writeAsBytes(thumbEncoder.encode(resized));
       return outputPath;
@@ -130,6 +145,7 @@ class ImageUtils {
 
   /// 获取文件大小（字节）
   static int getFileSize(String filePath) {
+    if (kIsWeb) return 0;
     try {
       return File(filePath).lengthSync();
     } catch (_) {
@@ -139,8 +155,9 @@ class ImageUtils {
 
   /// 删除物理文件
   static void deleteFiles(List<String> paths) {
-    for (var p in paths) {
-      try { File(p).deleteSync(); } catch (_) {}
+    if (kIsWeb) return;
+    for (var filePath in paths) {
+      try { File(filePath).deleteSync(); } catch (_) {}
     }
   }
 
