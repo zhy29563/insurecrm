@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:insurance_manager/providers/app_state.dart';
 import 'package:insurance_manager/models/customer.dart';
 import 'package:insurance_manager/pages/customer_detail_page.dart';
-import 'package:insurance_manager/pages/customer_map_page.dart';
+
 import 'package:insurance_manager/widgets/app_components.dart';
 
 class CustomerListPage extends StatefulWidget {
@@ -119,22 +119,6 @@ class _CustomerListPageState extends State<CustomerListPage>
       appBar: AppBar(
         title: Text('客户管理'),
         actions: [
-          IconButton(
-            icon: Container(
-              padding: EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.map_rounded, size: 20),
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => CustomerMapPage()),
-              );
-            },
-          ),
           IconButton(
             icon: Container(
               padding: EdgeInsets.all(6),

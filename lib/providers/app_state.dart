@@ -65,59 +65,6 @@ class AppState extends ChangeNotifier {
 
   bool _isSeedingSampleData = false;
 
-  // 高德地图 API Key (AMap API Key)
-  String _amapApiKey = '9899118f0feee8101d581461cd896476';
-  String _amapApiKeyIOS = '';
-  String get amapApiKey => _amapApiKey;
-  String get amapApiKeyIOS => _amapApiKeyIOS;
-  bool get hasAmapApiKey => _amapApiKey.isNotEmpty || _amapApiKeyIOS.isNotEmpty;
-
-  // Load AMap API Key from SharedPreferences
-  Future<void> loadAmapApiKey() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      // 兼容旧版本：先读取高德 key，若为空则读取旧的 Google Maps key
-      _amapApiKey = prefs.getString('amap_api_key') ??
-          prefs.getString('google_maps_api_key') ?? _amapApiKey;
-      _amapApiKeyIOS = prefs.getString('amap_api_key_ios') ?? '';
-      notifyListeners();
-    } catch (e) {
-      AppLogger.error('loading AMap API key: $e');
-    }
-  }
-
-  // Save AMap Android API Key to SharedPreferences
-  Future<void> setAmapApiKey(String key) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (key.isEmpty) {
-        await prefs.remove('amap_api_key');
-      } else {
-        await prefs.setString('amap_api_key', key);
-      }
-      _amapApiKey = key;
-      notifyListeners();
-    } catch (e) {
-      AppLogger.error('saving AMap API key: $e');
-    }
-  }
-
-  // Save AMap iOS API Key to SharedPreferences
-  Future<void> setAmapApiKeyIOS(String key) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (key.isEmpty) {
-        await prefs.remove('amap_api_key_ios');
-      } else {
-        await prefs.setString('amap_api_key_ios', key);
-      }
-      _amapApiKeyIOS = key;
-      notifyListeners();
-    } catch (e) {
-      AppLogger.error('saving AMap iOS API key: $e');
-    }
-  }
-
   // 加载关系标签
   Future<void> _loadRelationshipLabels() async {
     try {
@@ -168,7 +115,6 @@ class AppState extends ChangeNotifier {
     try {
       // Load config data in parallel (lightweight)
       await Future.wait([
-        loadAmapApiKey(),
         _loadRelationshipLabels(),
         _loadAIConfigs(),
       ]);

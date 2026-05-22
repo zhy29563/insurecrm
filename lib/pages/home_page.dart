@@ -6,8 +6,9 @@ import 'package:insurance_manager/pages/settings_page.dart';
 import 'package:insurance_manager/pages/product_recommendation_page.dart';
 import 'package:insurance_manager/pages/statistics_dashboard_page.dart';
 import 'package:insurance_manager/pages/calendar_page.dart';
-import 'package:insurance_manager/pages/customer_map_page.dart';
+
 import 'package:insurance_manager/pages/notification_center_page.dart';
+import 'package:insurance_manager/pages/colleague_management_page.dart';
 import 'package:provider/provider.dart';
 import 'package:insurance_manager/providers/app_state.dart';
 import 'package:insurance_manager/models/customer.dart';
@@ -398,16 +399,6 @@ class _HomeContentState extends State<_HomeContent> {
                     ),
                     _buildQuickAction(
                       context,
-                      '客户地图',
-                      Icons.map_rounded,
-                      Color(0xFFFF7043),
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => CustomerMapPage()),
-                      ),
-                    ),
-                    _buildQuickAction(
-                      context,
                       '产品推荐',
                       Icons.recommend_rounded,
                       Color(0xFFAB47BC),
@@ -415,6 +406,18 @@ class _HomeContentState extends State<_HomeContent> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => ProductRecommendationPage(),
+                        ),
+                      ),
+                    ),
+                    _buildQuickAction(
+                      context,
+                      '添加同事',
+                      Icons.group_add_rounded,
+                      Color(0xFFFF7043),
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ColleagueManagementPage(),
                         ),
                       ),
                     ),

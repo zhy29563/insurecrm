@@ -20,25 +20,15 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final _amapApiKeyController = TextEditingController();
-  final _amapApiKeyIOSController = TextEditingController();
   final _newRelLabelController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final appState = Provider.of<AppState>(context, listen: false);
-      _amapApiKeyController.text = appState.amapApiKey;
-      _amapApiKeyIOSController.text = appState.amapApiKeyIOS;
-    });
   }
 
   @override
   void dispose() {
-    _amapApiKeyController.dispose();
-    _amapApiKeyIOSController.dispose();
     _newRelLabelController.dispose();
     super.dispose();
   }
@@ -288,162 +278,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 value: appState.darkMode,
                 activeThumbColor: primaryColor,
                 onChanged: (value) => appState.toggleDarkMode(value),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-
-          // 高德地图配置
-          _buildSectionCard(
-            isDark: isDark,
-            icon: Icons.map_rounded,
-            iconColor: Color(0xFF43A047),
-            title: '高德地图配置',
-            children: [
-              Text(
-                '地图功能使用高德地图 SDK。请前往高德开放平台 (lbs.amap.com) '
-                '注册账号，创建应用并获取 Android/iOS 平台的 API Key。',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-              ),
-              SizedBox(height: 10),
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: (appState.hasAmapApiKey
-                          ? Color(0xFF43A047)
-                          : Color(0xFFFF9800))
-                      .withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      appState.hasAmapApiKey
-                          ? Icons.check_circle_rounded
-                          : Icons.warning_amber_rounded,
-                      size: 20,
-                      color: appState.hasAmapApiKey
-                          ? Color(0xFF43A047)
-                          : Color(0xFFFF9800),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        appState.hasAmapApiKey
-                            ? 'API Key 已配置，地图功能可用'
-                            : 'API Key 未配置，地图功能将不可用',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: appState.hasAmapApiKey
-                              ? Color(0xFF43A047)
-                              : Color(0xFFFF9800),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 14),
-              TextField(
-                controller: _amapApiKeyController,
-                decoration: InputDecoration(
-                  labelText: 'Android API Key',
-                  hintText: '输入高德地图 Android 平台 Key',
-                  prefixIcon: Icon(Icons.android_rounded, color: primaryColor),
-                  suffixIcon: _amapApiKeyController.text.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            _amapApiKeyController.clear();
-                            setState(() {});
-                          },
-                        )
-                      : null,
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: _amapApiKeyIOSController,
-                decoration: InputDecoration(
-                  labelText: 'iOS API Key（可选）',
-                  hintText: '输入高德地图 iOS 平台 Key',
-                  prefixIcon: Icon(Icons.phone_iphone_rounded, color: primaryColor),
-                  suffixIcon: _amapApiKeyIOSController.text.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            _amapApiKeyIOSController.clear();
-                            setState(() {});
-                          },
-                        )
-                      : null,
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-              SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    await appState.setAmapApiKey(
-                        _amapApiKeyController.text.trim());
-                    await appState.setAmapApiKeyIOS(
-                        _amapApiKeyIOSController.text.trim());
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(appState.hasAmapApiKey
-                            ? 'API Key 已保存'
-                            : 'API Key 已清除'),
-                      ),
-                    );
-                    setState(() {});
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF43A047),
-                  ),
-                  icon: Icon(Icons.save_rounded),
-                  label: Text('保存 API Key'),
-                ),
-              ),
-              SizedBox(height: 10),
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.blue.shade900.withValues(alpha: 0.3)
-                      : Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: isDark
-                          ? Colors.blue.shade800.withValues(alpha: 0.5)
-                          : Colors.blue.shade100),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
-                        SizedBox(width: 6),
-                        Text('配置说明',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.blue.shade700)),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      '• 前往 lbs.amap.com 注册并创建应用\n'
-                      '• 分别获取 Android 和 iOS 平台的 Key\n'
-                      '• 保存后地图功能即可使用',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
               ),
             ],
           ),

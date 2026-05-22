@@ -25,8 +25,6 @@ android {
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-
-        // 高德地图 JS API 通过 WebView 加载，不需要 manifest placeholder
     }
 
     buildTypes {
@@ -43,6 +41,4 @@ flutter {
 }
 
 dependencies {
-    // 高德地图 3D SDK - Flutter 插件使用 compileOnly，必须由宿主 App 声明 implementation
-    implementation("com.amap.api:3dmap:9.7.0")
 }

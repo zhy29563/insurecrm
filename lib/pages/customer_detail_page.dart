@@ -13,9 +13,6 @@ import 'package:insurance_manager/models/product.dart';
 import 'package:insurance_manager/models/visit.dart';
 import 'package:insurance_manager/models/colleague.dart';
 import 'package:insurance_manager/models/sale.dart';
-import 'package:amap_flutter_map_plus/amap_flutter_map_plus.dart';
-import 'package:amap_flutter_base_plus/amap_flutter_base_plus.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:insurance_manager/pages/product_detail_page.dart';
@@ -243,9 +240,6 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
   List<String> _phones = [];
   List<String> _addresses = [];
   List<String> _photos = [];
-  AMapController? _mapViewController;
-  double? _currentLat;
-  double? _currentLng;
   bool _isEditing = false;
 
   @override
@@ -266,17 +260,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       _occupationController.text = widget.customer!.occupation ?? '';
       _source = widget.customer!.source;
       _notesController.text = widget.customer!.notes ?? '';
-      if (widget.customer!.latitude != null &&
-          widget.customer!.longitude != null) {
-        _currentLat = widget.customer!.latitude!;
-        _currentLng = widget.customer!.longitude!;
-      }
     } else {
       _isEditing = true;
-    }
-    // Only get current location for new customers (not when editing existing ones)
-    if (widget.customer == null) {
-      _getCurrentLocation();
     }
   }
 
@@ -295,84 +280,6 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     super.dispose();
   }
 
-  void _getCurrentLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
-      if (permission == LocationPermission.deniedForever) return;
-
-      final result = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
-        ),
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _currentLat = result.latitude;
-        _currentLng = result.longitude;
-      });
-      _moveMapTo(result.latitude, result.longitude);
-    } catch (e) {
-      AppLogger.error('getting location: $e');
-    }
-  }
-
-  void _moveMapTo(double lat, double lng) {
-    _mapViewController?.moveCamera(
-      CameraUpdate.newLatLngZoom(LatLng(lat, lng), 15),
-    );
-  }
-
-  // Current marker for detail map - cached to avoid creating new Set on every build
-  Set<Marker>? _cachedDetailMapMarkers;
-  bool? _cachedDetailMapIsEditing;
-  double? _cachedDetailMapLat;
-  double? _cachedDetailMapLng;
-
-  Set<Marker> get _detailMapMarkers {
-    if (_cachedDetailMapIsEditing == _isEditing &&
-        _cachedDetailMapLat == _currentLat &&
-        _cachedDetailMapLng == _currentLng &&
-        _cachedDetailMapMarkers != null) {
-      return _cachedDetailMapMarkers!;
-    }
-    if (_currentLat == null || _currentLng == null) {
-      _cachedDetailMapMarkers = {};
-      _cachedDetailMapIsEditing = _isEditing;
-      _cachedDetailMapLat = _currentLat;
-      _cachedDetailMapLng = _currentLng;
-      return _cachedDetailMapMarkers!;
-    }
-    _cachedDetailMapIsEditing = _isEditing;
-    _cachedDetailMapLat = _currentLat;
-    _cachedDetailMapLng = _currentLng;
-    _cachedDetailMapMarkers = {
-      Marker(
-        position: LatLng(_currentLat!, _currentLng!),
-        draggable: _isEditing,
-        infoWindow: const InfoWindow(title: '客户位置'),
-        onDragEnd: (id, position) {
-          if (_isEditing) {
-            setState(() {
-              _currentLat = position.latitude;
-              _currentLng = position.longitude;
-              _cachedDetailMapMarkers = null; // invalidate cache
-            });
-          }
-        },
-      ),
-    };
-    return _cachedDetailMapMarkers!;
-  }
-
   void _saveCustomer() async {
     if (_formKey.currentState?.validate() ?? false) {
       final appState = Provider.of<AppState>(context, listen: false);
@@ -384,8 +291,6 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         age: int.tryParse(_ageController.text),
         gender: _gender,
         rating: _rating,
-        latitude: _currentLat,
-        longitude: _currentLng,
         phones: _phones,
         addresses: _addresses,
         photos: _photos.isNotEmpty ? _photos.join('|') : null,
@@ -836,115 +741,6 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('打开微信失败: $e')));
-    }
-  }
-
-  Widget _buildMapWidget() {
-    try {
-      if (kIsWeb ||
-          (!kIsWeb &&
-              (Platform.isLinux || Platform.isWindows || Platform.isMacOS))) {
-        return Container(
-          height: 200,
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.map, color: Colors.grey[400], size: 40),
-                SizedBox(height: 8),
-                Text('地图功能在当前平台暂不可用',
-                    style: TextStyle(color: Colors.grey, fontSize: 13)),
-              ],
-            ),
-          ),
-        );
-      }
-      final appState = Provider.of<AppState>(context, listen: false);
-      if (!appState.hasAmapApiKey) {
-        return Container(
-          height: 200,
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.vpn_key_rounded, color: Colors.orange[400], size: 40),
-                SizedBox(height: 8),
-                Text('高德地图 API Key 未配置',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                SizedBox(height: 4),
-                Text('请在设置中配置 API Key',
-                    style: TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
-          ),
-        );
-      }
-
-      // Use AMapWidget (native map)
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          height: 200,
-          child: AMapWidget(
-            apiKey: AMapApiKey(
-              androidKey: appState.amapApiKey,
-              iosKey: appState.amapApiKeyIOS.isNotEmpty ? appState.amapApiKeyIOS : appState.amapApiKey,
-            ),
-            privacyStatement: const AMapPrivacyStatement(
-              hasContains: true,
-              hasShow: true,
-              hasAgree: true,
-            ),
-            initialCameraPosition: CameraPosition(
-              target: LatLng(_currentLat ?? 39.9042, _currentLng ?? 116.4074),
-              zoom: 15,
-            ),
-            markers: _detailMapMarkers,
-            myLocationStyleOptions: MyLocationStyleOptions(false),
-            scaleEnabled: true,
-            zoomGesturesEnabled: true,
-            scrollGesturesEnabled: true,
-            onTap: (latLng) {
-              if (_isEditing) {
-                setState(() {
-                  _currentLat = latLng.latitude;
-                  _currentLng = latLng.longitude;
-                });
-              }
-            },
-            onMapCreated: (controller) {
-              if (mounted) _mapViewController = controller;
-            },
-          ),
-        ),
-      );
-    } catch (e) {
-      return Container(
-        height: 200,
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.map, color: Colors.grey[400], size: 40),
-              SizedBox(height: 8),
-              Text('地图功能在当前平台暂不可用',
-                  style: TextStyle(color: Colors.grey, fontSize: 13)),
-            ],
-          ),
-        ),
-      );
     }
   }
 
@@ -2337,39 +2133,6 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     );
   }
 
-  /// 位置信息区块
-  Widget _buildLocationSection() {
-    return _buildGroupedSection(
-      title: '位置信息',
-      children: [
-        Padding(
-          padding: EdgeInsets.all(12),
-          child: _buildMapWidget(),
-        ),
-        if (_isEditing)
-          Padding(
-            padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _getCurrentLocation,
-                icon: Icon(Icons.my_location, size: 18),
-                label: Text('获取当前位置'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: primaryColor,
-                  side: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
   /// 照片区块
   Widget _buildPhotosSection() {
     return _buildGroupedSection(
@@ -3132,8 +2895,6 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               _buildScanSection(),
               // 备注
               _buildRemarkSection(),
-              // 位置信息
-              _buildLocationSection(),
               // 照片
               _buildPhotosSection(),
               // 以下仅编辑模式/已有客户时显示
