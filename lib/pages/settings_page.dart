@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:insurance_manager/providers/app_state.dart';
 import 'package:insurance_manager/pages/colleague_management_page.dart';
 import 'package:insurance_manager/database/database_helper.dart';
-import 'package:insurance_manager/pages/login_page.dart';
 import 'package:insurance_manager/pages/backup_restore_page.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -604,40 +603,6 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
           ),
           SizedBox(height: 24),
-
-          // 退出登录
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () {
-                final appState = Provider.of<AppState>(context, listen: false);
-                appState.logout();
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginPage()),
-                  (route) => false,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFE53935),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.logout_rounded, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    '退出登录',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ),
-          ),
           SizedBox(height: 40),
         ],
       ),

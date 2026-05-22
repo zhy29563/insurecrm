@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:insurance_manager/providers/app_state.dart';
-import 'package:insurance_manager/pages/login_page.dart';
 import 'package:insurance_manager/pages/home_page.dart';
 import 'package:insurance_manager/database/database_helper.dart';
 import 'package:insurance_manager/utils/app_logger.dart';
@@ -203,15 +202,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // Use Selector instead of Consumer to only rebuild MaterialApp
     // when darkMode or isLoggedIn changes, not on every notifyListeners()
-    return Selector<AppState, ({bool darkMode, bool isLoggedIn})>(
-      selector: (_, appState) => (darkMode: appState.darkMode, isLoggedIn: appState.isLoggedIn),
-      builder: (context, data, child) {
+    return Selector<AppState, bool>(
+      selector: (_, appState) => appState.darkMode,
+      builder: (context, darkMode, child) {
         return MaterialApp(
           title: '保险经纪人',
           theme: _lightTheme,
           darkTheme: _darkTheme,
-          themeMode: data.darkMode ? ThemeMode.dark : ThemeMode.light,
-          home: data.isLoggedIn ? HomePage() : LoginPage(),
+          themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
+          home: HomePage(),
           debugShowCheckedModeBanner: false,
         );
       },
