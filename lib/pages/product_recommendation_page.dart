@@ -36,7 +36,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
   File? _selectedImage;
 
   // Use AppDesign.categoryColor instead of local map
-  static Color _categoryColor(String? category) => AppDesign.categoryColor(category);
+  static Color _categoryColor(String? category) =>
+      AppDesign.categoryColor(category);
   List<Product> _recommendedProducts = [];
   bool _isAnalyzing = false;
   String _selectedAIProviderKey = '';
@@ -127,7 +128,9 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         }
       },
       onError: (error) {
-        AppLogger.error('speech error: ${error.errorMsg} (permanent: ${error.permanent})');
+        AppLogger.error(
+          'speech error: ${error.errorMsg} (permanent: ${error.permanent})',
+        );
         if (mounted) {
           setState(() => _isListening = false);
           String msg = '语音识别出错';
@@ -176,7 +179,9 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     }
   }
 
-  Future<void> _startRecordingForCustomASR(List<Map<String, dynamic>> asrEngines) async {
+  Future<void> _startRecordingForCustomASR(
+    List<Map<String, dynamic>> asrEngines,
+  ) async {
     try {
       if (kIsWeb) {
         // Web 平台不支持录音文件方式
@@ -186,7 +191,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
       // 获取临时目录用于保存录音文件
       final tempDir = await getTemporaryDirectory();
-      _recordingPath = '${tempDir.path}/asr_recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      _recordingPath =
+          '${tempDir.path}/asr_recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
       if (await _audioRecorder.hasPermission()) {
         await _audioRecorder.start(
@@ -250,7 +256,10 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       if (apiKey.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$asrName 的 API Key 未配置'), duration: Duration(seconds: 3)),
+            SnackBar(
+              content: Text('$asrName 的 API Key 未配置'),
+              duration: Duration(seconds: 3),
+            ),
           );
         }
         return;
@@ -265,7 +274,10 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                 SizedBox(
                   height: 16,
                   width: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 ),
                 SizedBox(width: 12),
                 Text('正在使用 $asrName 识别语音...'),
@@ -301,7 +313,10 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('语音识别结果为空，请重试'), duration: Duration(seconds: 3)),
+            SnackBar(
+              content: Text('语音识别结果为空，请重试'),
+              duration: Duration(seconds: 3),
+            ),
           );
         }
       }
@@ -350,14 +365,18 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
       );
 
-      final streamedResponse = await request.send().timeout(Duration(seconds: 30));
+      final streamedResponse = await request.send().timeout(
+        Duration(seconds: 30),
+      );
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         return json['text'] as String?;
       } else {
-        AppLogger.error('ASR API error: ${response.statusCode} ${response.body}');
+        AppLogger.error(
+          'ASR API error: ${response.statusCode} ${response.body}',
+        );
         return null;
       }
     } catch (e) {
@@ -404,13 +423,19 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                   ),
                 ),
                 ListTile(
-                  leading: Icon(Icons.camera_alt_rounded, color: Color(0xFF43A047)),
+                  leading: Icon(
+                    Icons.camera_alt_rounded,
+                    color: Color(0xFF43A047),
+                  ),
                   title: Text('拍照'),
                   subtitle: Text('拍摄沟通记录'),
                   onTap: () => Navigator.pop(context, ImageSource.camera),
                 ),
                 ListTile(
-                  leading: Icon(Icons.photo_library_rounded, color: Color(0xFF1E88E5)),
+                  leading: Icon(
+                    Icons.photo_library_rounded,
+                    color: Color(0xFF1E88E5),
+                  ),
                   title: Text('从相册选择'),
                   subtitle: Text('选择已有的记录照片'),
                   onTap: () => Navigator.pop(context, ImageSource.gallery),
@@ -434,10 +459,14 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       });
 
       // 使用 ML Kit OCR 识别文字
-      final textRecognizer = TextRecognizer(script: TextRecognitionScript.chinese);
+      final textRecognizer = TextRecognizer(
+        script: TextRecognitionScript.chinese,
+      );
       final inputImage = InputImage.fromFilePath(image.path);
 
-      final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
+      final RecognizedText recognizedText = await textRecognizer.processImage(
+        inputImage,
+      );
       await textRecognizer.close();
 
       String ocrText = recognizedText.text.trim();
@@ -512,7 +541,9 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                 maxLines: 8,
                 autofocus: false,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ],
@@ -554,12 +585,15 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
     // Validate that the selected AI provider key still exists in enabled chat engines
     final appStateCheck = Provider.of<AppState>(context, listen: false);
-    final enabledKeys = appStateCheck.enabledChatEngines.map((e) => e['key']?.toString() ?? '').where((k) => k.isNotEmpty).toList();
+    final enabledKeys = appStateCheck.enabledChatEngines
+        .map((e) => e['key']?.toString() ?? '')
+        .where((k) => k.isNotEmpty)
+        .toList();
     if (!enabledKeys.contains(_selectedAIProviderKey)) {
       if (enabledKeys.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('请先在设置中配置对话分析引擎')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('请先在设置中配置对话分析引擎')));
         return;
       }
       setState(() => _selectedAIProviderKey = enabledKeys.first);
@@ -579,7 +613,9 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     var keywords = _requirementController.text
         .toLowerCase()
         .split(RegExp(r'[,，、\s]+'))
-        .where((k) => k.length >= 2) // Filter out single-char keywords to avoid overly broad matches
+        .where(
+          (k) => k.length >= 2,
+        ) // Filter out single-char keywords to avoid overly broad matches
         .toList();
     // If no keywords >= 2 chars, fall back to all non-empty tokens
     if (keywords.isEmpty) {
@@ -598,7 +634,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         product.name.toLowerCase(),
         if (product.description != null) product.description!.toLowerCase(),
         if (product.category != null) product.category!.toLowerCase(),
-        if (product.sellingPoints != null) ...product.sellingPoints!.split(';').map((a) => a.toLowerCase()),
+        if (product.sellingPoints != null)
+          ...product.sellingPoints!.split(';').map((a) => a.toLowerCase()),
       ];
 
       // Match if any keyword is found in any search field
@@ -634,7 +671,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
   @override
   void dispose() {
-    _speech.cancel(); // cancel() releases platform resources, stop() only stops listening
+    _speech
+        .cancel(); // cancel() releases platform resources, stop() only stops listening
     _audioRecorder.dispose();
     _requirementController.dispose();
     super.dispose();
@@ -725,19 +763,28 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                     SizedBox(
                       width: double.infinity,
                       child: DropdownButtonFormField<String>(
-                        value: enabledEngines.any((e) => e['key'] == _selectedAIProviderKey)
+                        initialValue:
+                            enabledEngines.any(
+                              (e) => e['key'] == _selectedAIProviderKey,
+                            )
                             ? _selectedAIProviderKey
                             : enabledEngines.first['key']?.toString(),
                         decoration: InputDecoration(
                           contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          prefixIcon: Icon(Icons.memory_rounded,
-                              color: primaryColor),
+                          prefixIcon: Icon(
+                            Icons.memory_rounded,
+                            color: primaryColor,
+                          ),
                         ),
-                        items: enabledEngines.map<DropdownMenuItem<String>>((engine) {
+                        items: enabledEngines.map<DropdownMenuItem<String>>((
+                          engine,
+                        ) {
                           final key = engine['key']?.toString() ?? '';
                           final name = engine['name']?.toString() ?? key;
                           final model = engine['model']?.toString() ?? '';
@@ -745,24 +792,34 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                             value: key,
                             child: Row(
                               children: [
-                                Icon(Icons.smart_toy_rounded,
-                                    size: 18, color: primaryColor),
+                                Icon(
+                                  Icons.smart_toy_rounded,
+                                  size: 18,
+                                  color: primaryColor,
+                                ),
                                 SizedBox(width: 8),
                                 Text(name),
                                 if (model.isNotEmpty) ...[
                                   SizedBox(width: 6),
                                   Container(
                                     padding: EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade100,
+                                      color: isDark
+                                          ? Colors.white.withValues(alpha: 0.08)
+                                          : Colors.grey.shade100,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       model,
                                       style: TextStyle(
-                                          fontSize: 10,
-                                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                        fontSize: 10,
+                                        color: isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey.shade600,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -849,12 +906,14 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                         label: _isRecordingForASR
                             ? '录音中(点击结束)...'
                             : _isListening
-                                ? '识别中...'
-                                : _getAsrLabel(appState),
+                            ? '识别中...'
+                            : _getAsrLabel(appState),
                         color: _isListening || _isRecordingForASR
                             ? Color(0xFFE53935)
                             : Color(0xFF1E88E5),
-                        onTap: _isListening || _isRecordingForASR ? _stopListening : _startListening,
+                        onTap: _isListening || _isRecordingForASR
+                            ? _stopListening
+                            : _startListening,
                       ),
                       SizedBox(width: 12),
                       _buildToolButton(
@@ -890,12 +949,17 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                                 SizedBox(
                                   height: 16,
                                   width: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 ),
                                 SizedBox(width: 8),
                                 Text(
                                   '正在识别文字...',
-                                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
                                 ),
                               ],
                             ),
@@ -937,9 +1001,11 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                               children: [
                                 Icon(Icons.auto_awesome_rounded, size: 20),
                                 SizedBox(width: 8),
-                                Text(_selectedAIProviderKey.isEmpty
-                                    ? '分析并推荐产品'
-                                    : '使用 ${_getSelectedAIName(appState)} 分析'),
+                                Text(
+                                  _selectedAIProviderKey.isEmpty
+                                      ? '分析并推荐产品'
+                                      : '使用 ${_getSelectedAIName(appState)} 分析',
+                                ),
                               ],
                             ),
                     ),
@@ -982,15 +1048,19 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.smart_toy_rounded,
-                              size: 14, color: primaryColor),
+                          Icon(
+                            Icons.smart_toy_rounded,
+                            size: 14,
+                            color: primaryColor,
+                          ),
                           SizedBox(width: 4),
                           Text(
                             _getSelectedAIName(appState),
                             style: TextStyle(
-                                fontSize: 12,
-                                color: primaryColor,
-                                fontWeight: FontWeight.w500),
+                              fontSize: 12,
+                              color: primaryColor,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
@@ -1017,7 +1087,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     if (_selectedAIProviderKey.isEmpty) return 'AI';
     final config = appState.aiProviderConfigs[_selectedAIProviderKey];
     if (config == null) return 'AI';
-    return (config as Map<String, dynamic>)['name']?.toString() ?? _selectedAIProviderKey;
+    return (config as Map<String, dynamic>)['name']?.toString() ??
+        _selectedAIProviderKey;
   }
 
   String _getAsrLabel(AppState appState) {
@@ -1040,31 +1111,31 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       borderRadius: BorderRadius.circular(10),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: color),
-            SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: color,
-                fontWeight: FontWeight.w500,
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: color),
+              SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: color,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1159,7 +1230,9 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.03),
+                color: (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: 0.03,
+                ),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(

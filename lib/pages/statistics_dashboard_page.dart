@@ -34,10 +34,9 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
       duration: Duration(milliseconds: 800),
       vsync: this,
     );
-    _kpiCardAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _kpiAnimationController, curve: Curves.easeOut));
+    _kpiCardAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _kpiAnimationController, curve: Curves.easeOut),
+    );
 
     // 图表动画
     _chartController = AnimationController(
@@ -687,7 +686,9 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                 decoration: BoxDecoration(
                   color: index < 3
                       ? medalColors[index].withValues(alpha: 0.15)
-                      : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade100),
+                      : (isDark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : Colors.grey.shade100),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
@@ -742,7 +743,9 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                         Container(
                           height: 6,
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+                            color: isDark
+                                ? Colors.grey.shade700
+                                : Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),
@@ -785,7 +788,9 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     if (amount.abs() >= 10000) {
       return '${(amount / 10000).toStringAsFixed(1)}万';
     }
-    return amount == amount.toInt() ? amount.toInt().toString() : amount.toStringAsFixed(1);
+    return amount == amount.toInt()
+        ? amount.toInt().toString()
+        : amount.toStringAsFixed(1);
   }
 
   Widget _buildQuarterlySalesChart(AppState appState, bool isDark) {
@@ -798,18 +803,47 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     }
     return Column(
       children: () {
-        final maxAmount = data.map((q) => (q['total_amount'] as num?)?.toDouble() ?? 0).fold(0.0, (a, b) => a > b ? a : b);
+        final maxAmount = data
+            .map((q) => (q['total_amount'] as num?)?.toDouble() ?? 0)
+            .fold(0.0, (a, b) => a > b ? a : b);
         return data.map((q) {
           final quarter = q['quarter'] ?? '?';
           final amount = (q['total_amount'] as num?)?.toDouble() ?? 0;
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(children: [
-              SizedBox(width: 60, child: Text('Q$quarter', style: const TextStyle(fontWeight: FontWeight.w600))),
-              Expanded(child: LinearProgressIndicator(value: maxAmount > 0 ? amount / maxAmount : 0, minHeight: 20, borderRadius: BorderRadius.circular(4), backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade200, valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF5C6BC0)))),
-              const SizedBox(width: 8),
-              SizedBox(width: 80, child: Text(_formatAmount(amount), style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
-            ]),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 60,
+                  child: Text(
+                    'Q$quarter',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Expanded(
+                  child: LinearProgressIndicator(
+                    value: maxAmount > 0 ? amount / maxAmount : 0,
+                    minHeight: 20,
+                    borderRadius: BorderRadius.circular(4),
+                    backgroundColor: isDark
+                        ? Colors.grey.shade700
+                        : Colors.grey.shade200,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFF5C6BC0),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    _formatAmount(amount),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
           );
         }).toList();
       }(),
@@ -825,40 +859,83 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
         message: '暂无佣金数据',
       );
     }
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (monthly.isNotEmpty) ...[
-        const Text('月度佣金', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        const SizedBox(height: 8),
-        ...monthly.map<Widget>((m) {
-          final month = m['month'] ?? '?';
-          final commission = (m['total_commission'] as num?)?.toDouble() ?? 0.0;
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(children: [
-              SizedBox(width: 60, child: Text('$month月', style: const TextStyle(fontWeight: FontWeight.w500))),
-              Expanded(child: Text('¥${commission.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF66BB6A)))),
-            ]),
-          );
-        }),
-        const SizedBox(height: 12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (monthly.isNotEmpty) ...[
+          const Text(
+            '月度佣金',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          ...monthly.map<Widget>((m) {
+            final month = m['month'] ?? '?';
+            final commission =
+                (m['total_commission'] as num?)?.toDouble() ?? 0.0;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 60,
+                    child: Text(
+                      '$month月',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '¥${commission.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF66BB6A),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 12),
+        ],
+        if (quarterly.isNotEmpty) ...[
+          const Text(
+            '季度佣金',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          ...quarterly.map<Widget>((q) {
+            final quarter = q['quarter'] ?? '?';
+            final commission =
+                (q['total_commission'] as num?)?.toDouble() ?? 0.0;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 60,
+                    child: Text(
+                      'Q$quarter',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '¥${commission.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF66BB6A),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 12),
+        ],
       ],
-      if (quarterly.isNotEmpty) ...[
-        const Text('季度佣金', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        const SizedBox(height: 8),
-        ...quarterly.map<Widget>((q) {
-          final quarter = q['quarter'] ?? '?';
-          final commission = (q['total_commission'] as num?)?.toDouble() ?? 0.0;
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(children: [
-              SizedBox(width: 60, child: Text('Q$quarter', style: const TextStyle(fontWeight: FontWeight.w500))),
-              Expanded(child: Text('¥${commission.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF66BB6A)))),
-            ]),
-          );
-        }),
-        const SizedBox(height: 12),
-      ],
-    ]);
+    );
   }
 
   Widget _buildConversionFunnelChart(AppState appState, bool isDark) {
@@ -874,15 +951,39 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
         final rating = (stage['rating'] as num?)?.toInt();
         final name = AppDesign.ratingLabel(rating);
         final count = (stage['count'] as num?)?.toInt() ?? 0;
-        final rate = (stage['conversion_rate'] as num?)?.toDouble()
-            ?? 0.0;
+        final rate = (stage['conversion_rate'] as num?)?.toDouble() ?? 0.0;
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(children: [
-            Expanded(flex: 2, child: Text(name, style: const TextStyle(fontWeight: FontWeight.w500))),
-            Expanded(flex: 1, child: Text('$count', style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center)),
-            Expanded(flex: 1, child: Text('${rate.toStringAsFixed(1)}%', style: TextStyle(fontWeight: FontWeight.w600, color: rate > 50 ? Colors.green : Colors.orange), textAlign: TextAlign.right)),
-          ]),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text(
+                  '$count',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text(
+                  '${rate.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: rate > 50 ? Colors.green : Colors.orange,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
         );
       }).toList(),
     );
@@ -900,19 +1001,35 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
       children: data.map<Widget>((item) {
         // 兼容 Web（汇总数据）和数据库（每客户数据）两种格式
         final customerName = (item['customer_name'] as String?) ?? '汇总统计';
-        final visitCount = (item['visit_count'] as num?)?.toInt()
-            ?? (item['total_visits'] as num?)?.toInt()
-            ?? 0;
-        final conversionRate = (item['conversion_per_visit'] as num?)?.toDouble() ?? 0.0;
+        final visitCount =
+            (item['visit_count'] as num?)?.toInt() ??
+            (item['total_visits'] as num?)?.toInt() ??
+            0;
+        final conversionRate =
+            (item['conversion_per_visit'] as num?)?.toDouble() ?? 0.0;
         return Card(
           margin: const EdgeInsets.only(bottom: 6),
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade200)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
+            ),
+          ),
           child: ListTile(
             dense: true,
-            title: Text(customerName, style: const TextStyle(fontWeight: FontWeight.w500)),
-            subtitle: Text('拜访 $visitCount 次 · 转化率 ${conversionRate.toStringAsFixed(0)}%'),
-            trailing: Icon(Icons.trending_up, color: conversionRate > 30 ? Colors.green : Colors.orange, size: 20),
+            title: Text(
+              customerName,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            subtitle: Text(
+              '拜访 $visitCount 次 · 转化率 ${conversionRate.toStringAsFixed(0)}%',
+            ),
+            trailing: Icon(
+              Icons.trending_up,
+              color: conversionRate > 30 ? Colors.green : Colors.orange,
+              size: 20,
+            ),
           ),
         );
       }).toList(),

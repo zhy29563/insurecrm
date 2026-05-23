@@ -39,56 +39,23 @@ class _SettingsPageState extends State<SettingsPage> {
     if (label.isEmpty) return false;
     if (appState.relationshipLabels.contains(label)) {
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('标签「$label」已存在')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('标签「$label」已存在')));
       return false;
     }
     await appState.addRelationshipLabel(label);
     if (!mounted) return false;
     // No setState needed - Provider.of<AppState>(context) in build() will auto-rebuild
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已添加标签「$label」')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('已添加标签「$label」')));
     return true;
-  }
-
-  void _showAddRelationshipLabelDialog(AppState appState) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('添加关系标签'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: '标签名称',
-            hintText: '例如: 师生、合作伙伴、亲属',
-            prefixIcon: Icon(Icons.label),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final success = await _addRelationshipLabel(controller.text, appState);
-              if (success && ctx.mounted) Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFFE53935)),
-            child: Text('添加'),
-          ),
-        ],
-      ),
-    ).then((_) => controller.dispose());
   }
 
   void _showAddAIDialog({String? editKey, String category = 'chat'}) {
     final appState = Provider.of<AppState>(context, listen: false);
-    final pageContext = context;  // Capture page-level context before dialog
+    final pageContext = context; // Capture page-level context before dialog
     final nameController = TextEditingController();
     final apiKeyController = TextEditingController();
     final baseUrlController = TextEditingController();
@@ -125,7 +92,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     controller: nameController,
                     decoration: InputDecoration(
                       labelText: '引擎名称 *',
-                      hintText: isASR ? '例如: 豆包ASR、讯飞ASR' : '例如: 豆包、千问、GPT、Claude',
+                      hintText: isASR
+                          ? '例如: 豆包ASR、讯飞ASR'
+                          : '例如: 豆包、千问、GPT、Claude',
                       prefixIcon: Icon(Icons.label),
                     ),
                   ),
@@ -144,7 +113,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     controller: baseUrlController,
                     decoration: InputDecoration(
                       labelText: 'Base URL（可选）',
-                      hintText: isASR ? '例如: https://openspeech.bytedance.com/v1' : '例如: https://api.openai.com/v1',
+                      hintText: isASR
+                          ? '例如: https://openspeech.bytedance.com/v1'
+                          : '例如: https://api.openai.com/v1',
                       prefixIcon: Icon(Icons.link),
                     ),
                   ),
@@ -170,18 +141,27 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () async {
                 if (nameController.text.trim().isEmpty ||
                     apiKeyController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(pageContext).showSnackBar(
-                    SnackBar(content: Text('请填写引擎名称和API Key')),
-                  );
+                  ScaffoldMessenger.of(
+                    pageContext,
+                  ).showSnackBar(SnackBar(content: Text('请填写引擎名称和API Key')));
                   return;
                 }
                 // 生成唯一 key
-                final key = editKey ??
-                    nameController.text.trim().toLowerCase().replaceAll(' ', '_');
+                final key =
+                    editKey ??
+                    nameController.text.trim().toLowerCase().replaceAll(
+                      ' ',
+                      '_',
+                    );
                 // 检查 key 是否已存在（仅新增模式）
-                if (editKey == null && appState.aiProviderConfigs.containsKey(key)) {
+                if (editKey == null &&
+                    appState.aiProviderConfigs.containsKey(key)) {
                   ScaffoldMessenger.of(pageContext).showSnackBar(
-                    SnackBar(content: Text('名为「${nameController.text.trim()}」的引擎已存在，请使用不同名称')),
+                    SnackBar(
+                      content: Text(
+                        '名为「${nameController.text.trim()}」的引擎已存在，请使用不同名称',
+                      ),
+                    ),
                   );
                   return;
                 }
@@ -197,7 +177,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 Navigator.pop(context);
                 // No setState needed - Provider will auto-rebuild
                 ScaffoldMessenger.of(pageContext).showSnackBar(
-                  SnackBar(content: Text(editKey != null ? 'AI引擎配置已更新' : '$categoryLabel引擎已添加')),
+                  SnackBar(
+                    content: Text(
+                      editKey != null ? 'AI引擎配置已更新' : '$categoryLabel引擎已添加',
+                    ),
+                  ),
                 );
               },
               child: Text(editKey != null ? '更新' : '添加'),
@@ -227,14 +211,17 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           TextButton(
             onPressed: () async {
-              final appState = Provider.of<AppState>(pageContext, listen: false);
+              final appState = Provider.of<AppState>(
+                pageContext,
+                listen: false,
+              );
               await appState.deleteAIConfig(key);
               if (!context.mounted) return;
               Navigator.pop(context);
               // No setState needed - Provider will auto-rebuild
-              ScaffoldMessenger.of(pageContext).showSnackBar(
-                SnackBar(content: Text('已删除AI引擎「$name」')),
-              );
+              ScaffoldMessenger.of(
+                pageContext,
+              ).showSnackBar(SnackBar(content: Text('已删除AI引擎「$name」')));
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: Text('删除'),
@@ -290,13 +277,30 @@ class _SettingsPageState extends State<SettingsPage> {
             icon: Icons.mic_rounded,
             iconColor: Color(0xFFFF6D00),
             title: 'AI语音识别(ASR)配置',
-            description: '配置语音识别引擎，用于产品推荐中的语音输入识别。支持兼容 OpenAI Whisper API 格式的ASR服务。',
+            description:
+                '配置语音识别引擎，用于产品推荐中的语音输入识别。支持兼容 OpenAI Whisper API 格式的ASR服务。',
             emptyHint: '暂未配置ASR引擎',
             emptySubHint: '添加ASR引擎后，可在产品推荐中使用语音输入',
             addLabel: '添加ASR引擎',
             presetChips: [
-              _buildPresetChip('豆包ASR', 'doubao_asr', Icons.local_fire_department, Color(0xFFFF6D00), category: 'asr', appState: appState, isDark: isDark),
-              _buildPresetChip('讯飞ASR', 'xfyun_asr', Icons.record_voice_over, Color(0xFF0066CC), category: 'asr', appState: appState, isDark: isDark),
+              _buildPresetChip(
+                '豆包ASR',
+                'doubao_asr',
+                Icons.local_fire_department,
+                Color(0xFFFF6D00),
+                category: 'asr',
+                appState: appState,
+                isDark: isDark,
+              ),
+              _buildPresetChip(
+                '讯飞ASR',
+                'xfyun_asr',
+                Icons.record_voice_over,
+                Color(0xFF0066CC),
+                category: 'asr',
+                appState: appState,
+                isDark: isDark,
+              ),
             ],
           ),
           SizedBox(height: 16),
@@ -309,16 +313,52 @@ class _SettingsPageState extends State<SettingsPage> {
             icon: Icons.smart_toy_rounded,
             iconColor: Color(0xFF1E88E5),
             title: 'AI对话分析配置',
-            description: '配置对话分析引擎，用于产品推荐中的智能分析和推荐。支持兼容 OpenAI Chat API 格式的AI服务。',
+            description:
+                '配置对话分析引擎，用于产品推荐中的智能分析和推荐。支持兼容 OpenAI Chat API 格式的AI服务。',
             emptyHint: '暂未配置对话引擎',
             emptySubHint: '添加对话引擎后，可在产品推荐中使用AI分析',
             addLabel: '添加对话引擎',
             presetChips: [
-              _buildPresetChip('豆包', 'doubao', Icons.local_fire_department, Color(0xFFFF6D00), appState: appState, isDark: isDark),
-              _buildPresetChip('千问', 'qianwen', Icons.auto_awesome, Color(0xFF6A1B9A), appState: appState, isDark: isDark),
-              _buildPresetChip('GPT', 'gpt', Icons.psychology, Color(0xFF10A37F), appState: appState, isDark: isDark),
-              _buildPresetChip('Claude', 'claude', Icons.smart_toy, Color(0xFFD97757), appState: appState, isDark: isDark),
-              _buildPresetChip('Gemini', 'gemini', Icons.diamond, Color(0xFF4285F4), appState: appState, isDark: isDark),
+              _buildPresetChip(
+                '豆包',
+                'doubao',
+                Icons.local_fire_department,
+                Color(0xFFFF6D00),
+                appState: appState,
+                isDark: isDark,
+              ),
+              _buildPresetChip(
+                '千问',
+                'qianwen',
+                Icons.auto_awesome,
+                Color(0xFF6A1B9A),
+                appState: appState,
+                isDark: isDark,
+              ),
+              _buildPresetChip(
+                'GPT',
+                'gpt',
+                Icons.psychology,
+                Color(0xFF10A37F),
+                appState: appState,
+                isDark: isDark,
+              ),
+              _buildPresetChip(
+                'Claude',
+                'claude',
+                Icons.smart_toy,
+                Color(0xFFD97757),
+                appState: appState,
+                isDark: isDark,
+              ),
+              _buildPresetChip(
+                'Gemini',
+                'gemini',
+                Icons.diamond,
+                Color(0xFF4285F4),
+                appState: appState,
+                isDark: isDark,
+              ),
             ],
           ),
           SizedBox(height: 16),
@@ -342,21 +382,25 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: appState.relationshipLabels.map<Widget>((label) {
                   return Chip(
                     label: Text(label, style: TextStyle(fontSize: 13)),
-                    backgroundColor: _relLabelColor(label).withValues(alpha: 0.1),
-                    side: BorderSide(color: _relLabelColor(label).withValues(alpha: 0.3)),
+                    backgroundColor: _relLabelColor(
+                      label,
+                    ).withValues(alpha: 0.1),
+                    side: BorderSide(
+                      color: _relLabelColor(label).withValues(alpha: 0.3),
+                    ),
                     deleteIconColor: Colors.grey.shade500,
                     onDeleted: () async {
                       if (appState.relationshipLabels.length <= 1) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('至少保留一个关系标签')),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('至少保留一个关系标签')));
                         return;
                       }
                       await appState.removeRelationshipLabel(label);
                       if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('已删除标签「$label」')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('已删除标签「$label」')));
                     },
                   );
                 }).toList(),
@@ -372,13 +416,19 @@ class _SettingsPageState extends State<SettingsPage> {
                         labelText: '新标签名称',
                         hintText: '输入关系标签',
                         isDense: true,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                       onSubmitted: (value) async {
-                        final success = await _addRelationshipLabel(value, appState);
+                        final success = await _addRelationshipLabel(
+                          value,
+                          appState,
+                        );
                         if (success) _newRelLabelController.clear();
                       },
                     ),
@@ -388,7 +438,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     onPressed: () async {
                       final text = _newRelLabelController.text.trim();
                       if (text.isNotEmpty) {
-                        final success = await _addRelationshipLabel(text, appState);
+                        final success = await _addRelationshipLabel(
+                          text,
+                          appState,
+                        );
                         if (success) _newRelLabelController.clear();
                       }
                     },
@@ -396,7 +449,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     label: Text('添加'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFFE53935),
-                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -422,7 +478,9 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                           ElevatedButton(
                             onPressed: () => Navigator.pop(ctx, true),
-                            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFFE53935)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFFE53935),
+                            ),
                             child: Text('重置'),
                           ),
                         ],
@@ -431,9 +489,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     if (confirmed == true) {
                       await appState.resetRelationshipLabels();
                       if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('关系标签已重置为默认')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('关系标签已重置为默认')));
                     }
                   },
                   icon: Icon(Icons.restore_rounded, size: 16),
@@ -551,8 +609,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: kIsWeb ? null : () =>
-                          _exportCSV(context, appState, 'customers'),
+                      onPressed: kIsWeb
+                          ? null
+                          : () => _exportCSV(context, appState, 'customers'),
                       icon: Icon(Icons.table_chart_rounded, size: 18),
                       label: Text('导出客户CSV'),
                     ),
@@ -560,8 +619,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: kIsWeb ? null : () =>
-                          _exportCSV(context, appState, 'products'),
+                      onPressed: kIsWeb
+                          ? null
+                          : () => _exportCSV(context, appState, 'products'),
                       icon: Icon(Icons.table_chart_rounded, size: 18),
                       label: Text('导出产品CSV'),
                     ),
@@ -593,7 +653,15 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildPresetChip(String label, String key, IconData icon, Color color, {String category = 'chat', required AppState appState, required bool isDark}) {
+  Widget _buildPresetChip(
+    String label,
+    String key,
+    IconData icon,
+    Color color, {
+    String category = 'chat',
+    required AppState appState,
+    required bool isDark,
+  }) {
     final alreadyAdded = appState.aiProviderConfigs.containsKey(key);
 
     return InkWell(
@@ -607,7 +675,9 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: alreadyAdded
-              ? (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100)
+              ? (isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.grey.shade100)
               : color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
@@ -635,7 +705,11 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showAddAIDialogWithPreset(String key, String name, {String category = 'chat'}) {
+  void _showAddAIDialogWithPreset(
+    String key,
+    String name, {
+    String category = 'chat',
+  }) {
     final pageContext = context;
     final apiKeyController = TextEditingController();
     final baseUrlController = TextEditingController();
@@ -720,17 +794,17 @@ class _SettingsPageState extends State<SettingsPage> {
             ElevatedButton(
               onPressed: () async {
                 if (apiKeyController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(pageContext).showSnackBar(
-                    SnackBar(content: Text('请填写API Key')),
-                  );
+                  ScaffoldMessenger.of(
+                    pageContext,
+                  ).showSnackBar(SnackBar(content: Text('请填写API Key')));
                   return;
                 }
                 final appState = Provider.of<AppState>(context, listen: false);
                 // Check if key already exists
                 if (appState.aiProviderConfigs.containsKey(key)) {
-                  ScaffoldMessenger.of(pageContext).showSnackBar(
-                    SnackBar(content: Text('$name 引擎已存在')),
-                  );
+                  ScaffoldMessenger.of(
+                    pageContext,
+                  ).showSnackBar(SnackBar(content: Text('$name 引擎已存在')));
                   return;
                 }
                 await appState.updateAIConfig(key, {
@@ -744,9 +818,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (!context.mounted) return;
                 Navigator.pop(context);
                 // No setState needed - Provider will auto-rebuild
-                ScaffoldMessenger.of(pageContext).showSnackBar(
-                  SnackBar(content: Text('$name 引擎已配置')),
-                );
+                ScaffoldMessenger.of(
+                  pageContext,
+                ).showSnackBar(SnackBar(content: Text('$name 引擎已配置')));
               },
               child: Text('保存'),
             ),
@@ -853,12 +927,14 @@ class _SettingsPageState extends State<SettingsPage> {
               margin: EdgeInsets.only(bottom: 8),
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: (enabled ? iconColor : Colors.grey)
-                    .withValues(alpha: 0.06),
+                color: (enabled ? iconColor : Colors.grey).withValues(
+                  alpha: 0.06,
+                ),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: (enabled ? iconColor : Colors.grey)
-                      .withValues(alpha: 0.15),
+                  color: (enabled ? iconColor : Colors.grey).withValues(
+                    alpha: 0.15,
+                  ),
                 ),
               ),
               child: Column(
@@ -877,9 +953,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         child: Icon(
                           icon,
                           size: 20,
-                          color: enabled
-                              ? iconColor
-                              : Colors.grey.shade500,
+                          color: enabled ? iconColor : Colors.grey.shade500,
                         ),
                       ),
                       SizedBox(width: 10),
@@ -899,10 +973,14 @@ class _SettingsPageState extends State<SettingsPage> {
                                 SizedBox(width: 8),
                                 Container(
                                   padding: EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: enabled
-                                        ? Color(0xFF43A047).withValues(alpha: 0.12)
+                                        ? Color(
+                                            0xFF43A047,
+                                          ).withValues(alpha: 0.12)
                                         : Colors.grey.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
@@ -921,24 +999,28 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              hasApiKey
-                                  ? 'API Key: ****'
-                                  : '未配置 API Key',
+                              hasApiKey ? 'API Key: ****' : '未配置 API Key',
                               style: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade500),
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
                             ),
                             if (baseUrl.isNotEmpty)
                               Text(
                                 'Base URL: $baseUrl',
                                 style: TextStyle(
-                                    fontSize: 11, color: Colors.grey.shade400),
+                                  fontSize: 11,
+                                  color: Colors.grey.shade400,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             if (model.isNotEmpty)
                               Text(
                                 '模型: $model',
                                 style: TextStyle(
-                                    fontSize: 11, color: Colors.grey.shade400),
+                                  fontSize: 11,
+                                  color: Colors.grey.shade400,
+                                ),
                               ),
                           ],
                         ),
@@ -950,7 +1032,9 @@ class _SettingsPageState extends State<SettingsPage> {
                           Switch(
                             value: enabled,
                             onChanged: (val) async {
-                              final updatedConfig = Map<String, dynamic>.from(config);
+                              final updatedConfig = Map<String, dynamic>.from(
+                                config,
+                              );
                               updatedConfig['enabled'] = val;
                               await appState.updateAIConfig(key, updatedConfig);
                               // No setState needed - Provider will auto-rebuild
@@ -961,19 +1045,29 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                           IconButton(
                             icon: Icon(Icons.edit_outlined, size: 18),
-                            onPressed: () => _showAddAIDialog(editKey: key, category: category),
+                            onPressed: () => _showAddAIDialog(
+                              editKey: key,
+                              category: category,
+                            ),
                             padding: EdgeInsets.zero,
                             constraints: BoxConstraints(
-                                minWidth: 32, minHeight: 32),
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
                             tooltip: '编辑',
                           ),
                           IconButton(
-                            icon: Icon(Icons.delete_outline, size: 18,
-                                color: Colors.red.shade400),
+                            icon: Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: Colors.red.shade400,
+                            ),
                             onPressed: () => _confirmDeleteAI(key, name),
                             padding: EdgeInsets.zero,
                             constraints: BoxConstraints(
-                                minWidth: 32, minHeight: 32),
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
                             tooltip: '删除',
                           ),
                         ],
@@ -996,24 +1090,26 @@ class _SettingsPageState extends State<SettingsPage> {
               color: Colors.grey.shade50,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                  color: Colors.grey.shade200,
-                  style: BorderStyle.solid),
+                color: Colors.grey.shade200,
+                style: BorderStyle.solid,
+              ),
             ),
             child: Column(
               children: [
-                Icon(Icons.cloud_off_rounded,
-                    size: 40, color: Colors.grey.shade300),
+                Icon(
+                  Icons.cloud_off_rounded,
+                  size: 40,
+                  color: Colors.grey.shade300,
+                ),
                 SizedBox(height: 10),
                 Text(
                   emptyHint,
-                  style: TextStyle(
-                      color: Colors.grey.shade500, fontSize: 14),
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
                 ),
                 SizedBox(height: 4),
                 Text(
                   emptySubHint,
-                  style: TextStyle(
-                      color: Colors.grey.shade400, fontSize: 12),
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
                 ),
               ],
             ),
@@ -1042,11 +1138,7 @@ class _SettingsPageState extends State<SettingsPage> {
             style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
           ),
           SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: presetChips,
-          ),
+          Wrap(spacing: 8, runSpacing: 8, children: presetChips),
         ],
       ],
     );
@@ -1071,26 +1163,27 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _exportBackup(BuildContext ctx) async {
     try {
       final backupService = BackupService.instance;
-      final backupPath = await backupService.createFullBackup(isAutoBackup: false);
+      final backupPath = await backupService.createFullBackup(
+        isAutoBackup: false,
+      );
       if (!ctx.mounted) return;
 
       // Offer to share the backup
       try {
-        await Share.shareXFiles(
-          [XFile(backupPath)],
-          subject: '保险经纪人数据备份 ${DateTime.now().year}',
-        );
+        await Share.shareXFiles([
+          XFile(backupPath),
+        ], subject: '保险经纪人数据备份 ${DateTime.now().year}');
       } catch (_) {
         // Share not available or cancelled — just show path
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('备份已创建：$backupPath')),
-        );
+        ScaffoldMessenger.of(
+          ctx,
+        ).showSnackBar(SnackBar(content: Text('备份已创建：$backupPath')));
       }
     } catch (e) {
       if (!ctx.mounted) return;
-      ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(content: Text('创建备份失败：$e')),
-      );
+      ScaffoldMessenger.of(
+        ctx,
+      ).showSnackBar(SnackBar(content: Text('创建备份失败：$e')));
     }
   }
 
@@ -1107,9 +1200,9 @@ class _SettingsPageState extends State<SettingsPage> {
       final platformFile = result.files.first;
       if (platformFile.path == null) {
         if (!ctx.mounted) return;
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('无法获取文件路径')),
-        );
+        ScaffoldMessenger.of(
+          ctx,
+        ).showSnackBar(SnackBar(content: Text('无法获取文件路径')));
         return;
       }
 
@@ -1117,60 +1210,119 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // Confirm dialog
       if (!ctx.mounted) return;
-      final confirmed = await showDialog<bool>(context: ctx, builder: (dialogCtx) => AlertDialog(
-        title: Row(children: [
-          Icon(Icons.warning_amber, color: Colors.orange),
-          SizedBox(width: 8),
-          Text('恢复备份'),
-        ]),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('即将从以下备份恢复所有数据（含附件）：'),
-          SizedBox(height: 4),
-          Container(
-            margin: EdgeInsets.all(8),
-            padding: EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8)),
-            child: Text(platformFile.name, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+      final confirmed = await showDialog<bool>(
+        context: ctx,
+        builder: (dialogCtx) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('恢复备份'),
+            ],
           ),
-          SizedBox(height: 10),
-          Container(
-            padding: EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('注意：', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade800, fontSize: 13)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('即将从以下备份恢复所有数据（含附件）：'),
               SizedBox(height: 4),
-              Text('当前所有数据将被覆盖替换！建议先创建当前数据的备份再进行恢复。', style: TextStyle(fontSize: 12, color: Colors.red.shade700)),
-            ]),
+              Container(
+                margin: EdgeInsets.all(8),
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  platformFile.name,
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+              SizedBox(height: 10),
+              Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '注意：',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade800,
+                        fontSize: 13,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '当前所有数据将被覆盖替换！建议先创建当前数据的备份再进行恢复。',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx, false), child: Text('取消')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogCtx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('确认恢复', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ));
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: Text('确认恢复', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
 
       if (confirmed != true) return;
 
       // Show loading
       if (!ctx.mounted) return;
-      showDialog(barrierDismissible: false, context: ctx, builder: (loadingCtx) => PopScope(
-        canPop: false,
-        child: AlertDialog(content: Row(children: [
-          CircularProgressIndicator(strokeWidth: 3),
-          SizedBox(width: 16),
-          Expanded(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('正在恢复数据...', style: TextStyle(fontWeight: FontWeight.w600)),
-            Text('请勿关闭应用', style: TextStyle(fontSize: 12, color: Colors.grey)),
-          ])),
-        ])),
-      ));
+      showDialog(
+        barrierDismissible: false,
+        context: ctx,
+        builder: (loadingCtx) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(strokeWidth: 3),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '正在恢复数据...',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        '请勿关闭应用',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 
       final backupService = BackupService.instance;
-      final (success, message) = await backupService.restoreFromBackup(importFile.path);
+      final (success, message) = await backupService.restoreFromBackup(
+        importFile.path,
+      );
 
       if (!ctx.mounted) return;
       // Close loading dialog
@@ -1183,12 +1335,20 @@ class _SettingsPageState extends State<SettingsPage> {
         await appState.initializeApp();
 
         if (!ctx.mounted) return;
-        showDialog(context: ctx, builder: (successCtx) => AlertDialog(
-          icon: Icon(Icons.check_circle, color: Colors.green, size: 48),
-          title: Text('恢复成功！'),
-          content: Text('$message\n\n建议重启应用以完整加载恢复的数据。'),
-          actions: [TextButton(onPressed: () => Navigator.pop(successCtx), child: Text('好的'))],
-        ));
+        showDialog(
+          context: ctx,
+          builder: (successCtx) => AlertDialog(
+            icon: Icon(Icons.check_circle, color: Colors.green, size: 48),
+            title: Text('恢复成功！'),
+            content: Text('$message\n\n建议重启应用以完整加载恢复的数据。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(successCtx),
+                child: Text('好的'),
+              ),
+            ],
+          ),
+        );
       } else {
         ScaffoldMessenger.of(ctx).showSnackBar(
           SnackBar(content: Text(message), duration: Duration(seconds: 5)),
@@ -1197,10 +1357,12 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       if (!ctx.mounted) return;
       // Close loading dialog if still showing
-      try { Navigator.pop(ctx); } catch (_) {}
-      ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(content: Text('恢复失败：$e')),
-      );
+      try {
+        Navigator.pop(ctx);
+      } catch (_) {}
+      ScaffoldMessenger.of(
+        ctx,
+      ).showSnackBar(SnackBar(content: Text('恢复失败：$e')));
     }
   }
 
@@ -1248,7 +1410,9 @@ class _SettingsPageState extends State<SettingsPage> {
         '_',
       );
       final file = File('${exportDir.path}/${type}_$timestamp.csv');
-      await file.writeAsString('\ufeff$csvContent'); // Add UTF-8 BOM for Excel compatibility
+      await file.writeAsString(
+        '\ufeff$csvContent',
+      ); // Add UTF-8 BOM for Excel compatibility
 
       try {
         await Share.shareXFiles([XFile(file.path)], subject: '$type 导出');

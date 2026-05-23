@@ -29,7 +29,15 @@ class AppState extends ChangeNotifier {
   bool darkMode = false;
 
   // 客户关系标签（可自定义）
-  static const List<String> _defaultRelationshipLabels = ['家人', '朋友', '同事', '同学', '客户', '邻居', '其他'];
+  static const List<String> _defaultRelationshipLabels = [
+    '家人',
+    '朋友',
+    '同事',
+    '同学',
+    '客户',
+    '邻居',
+    '其他',
+  ];
   List<String> _relationshipLabels = List.from(_defaultRelationshipLabels);
   List<String> get relationshipLabels => _relationshipLabels;
 
@@ -90,7 +98,9 @@ class AppState extends ChangeNotifier {
 
   // 添加关系标签
   Future<void> addRelationshipLabel(String label) async {
-    if (label.trim().isEmpty || _relationshipLabels.contains(label.trim())) return;
+    if (label.trim().isEmpty || _relationshipLabels.contains(label.trim())) {
+      return;
+    }
     _relationshipLabels.add(label.trim());
     await _saveRelationshipLabels();
     notifyListeners();
@@ -114,20 +124,13 @@ class AppState extends ChangeNotifier {
   Future<void> initializeApp() async {
     try {
       // Load config data in parallel (lightweight)
-      await Future.wait([
-        _loadRelationshipLabels(),
-        _loadAIConfigs(),
-      ]);
+      await Future.wait([_loadRelationshipLabels(), _loadAIConfigs()]);
 
       // Load core data (customers first since others may depend on it)
       await loadCustomers();
 
       // Products, colleagues, sales can be loaded in parallel
-      await Future.wait([
-        loadProducts(),
-        loadColleagues(),
-        loadSales(),
-      ]);
+      await Future.wait([loadProducts(), loadColleagues(), loadSales()]);
 
       // Load dependent data (reminders + statistics + notifications in parallel)
       await Future.wait([
@@ -195,37 +198,43 @@ class AppState extends ChangeNotifier {
         totalVisitsCountAllTime = (results[13] as num?)?.toInt() ?? 0;
 
         // Conversion funnel with labels
-        final ratingLabelMap = {0: '未评级', 1: '无意向', 2: '低意向', 3: '中意向', 4: '高意向', 5: '已成交'};
+        final ratingLabelMap = {
+          0: '未评级',
+          1: '无意向',
+          2: '低意向',
+          3: '中意向',
+          4: '高意向',
+          5: '已成交',
+        };
         conversionFunnel = rawConversionFunnel.map((item) {
           final count = (item['count'] as num?)?.toInt() ?? 0;
           return {
             ...item,
             'label': ratingLabelMap[item['rating']] ?? '未知',
-            'percentage': customers.isNotEmpty ? (count / customers.length * 100) : 0.0,
+            'percentage': customers.isNotEmpty
+                ? (count / customers.length * 100)
+                : 0.0,
           };
         }).toList();
 
         // This month specific (use firstWhere to avoid creating temporary lists)
-        final thisMonthSalesEntry = monthlySales.cast<Map<String, dynamic>?>().firstWhere(
-          (s) => s?['month'] == thisMonth,
-          orElse: () => null,
-        );
+        final thisMonthSalesEntry = monthlySales
+            .cast<Map<String, dynamic>?>()
+            .firstWhere((s) => s?['month'] == thisMonth, orElse: () => null);
         currentMonthSalesAmount = thisMonthSalesEntry != null
             ? (thisMonthSalesEntry['total_amount'] as num?)?.toDouble() ?? 0
             : 0;
 
-        final thisMonthVisitsEntry = monthlyVisits.cast<Map<String, dynamic>?>().firstWhere(
-          (v) => v?['month'] == thisMonth,
-          orElse: () => null,
-        );
+        final thisMonthVisitsEntry = monthlyVisits
+            .cast<Map<String, dynamic>?>()
+            .firstWhere((v) => v?['month'] == thisMonth, orElse: () => null);
         currentMonthVisitsCount = thisMonthVisitsEntry != null
             ? (thisMonthVisitsEntry['count'] as num?)?.toInt() ?? 0
             : 0;
 
-        final thisMonthCustomersEntry = monthlyNewCustomers.cast<Map<String, dynamic>?>().firstWhere(
-          (c) => c?['month'] == thisMonth,
-          orElse: () => null,
-        );
+        final thisMonthCustomersEntry = monthlyNewCustomers
+            .cast<Map<String, dynamic>?>()
+            .firstWhere((c) => c?['month'] == thisMonth, orElse: () => null);
         currentMonthNewCustomerCount = thisMonthCustomersEntry != null
             ? (thisMonthCustomersEntry['count'] as num?)?.toInt() ?? 0
             : 0;
@@ -249,12 +258,14 @@ class AppState extends ChangeNotifier {
         // Run all 3 queries in parallel instead of sequentially
         final results = await Future.wait([
           db.getAllReminders(),
-          db.getRemindersByDate(DateTime.now().toIso8601String().substring(0, 10)),
+          db.getRemindersByDate(
+            DateTime.now().toIso8601String().substring(0, 10),
+          ),
           db.getOverdueReminders(),
         ]);
-        reminders = results[0] as List<Map<String, dynamic>>;
-        todayReminders = results[1] as List<Map<String, dynamic>>;
-        overdueReminders = results[2] as List<Map<String, dynamic>>;
+        reminders = results[0];
+        todayReminders = results[1];
+        overdueReminders = results[2];
       }
       notifyListeners();
     } catch (e) {
@@ -335,7 +346,11 @@ class AppState extends ChangeNotifier {
             ? (parts[2].length <= 2 ? parts[2] : parts[2].substring(0, 2))
             : '1';
         final dayNum = int.tryParse(dayStr) ?? 1;
-        var birthdayCheck = DateTime(now.year, int.tryParse(parts[1]) ?? 1, dayNum);
+        var birthdayCheck = DateTime(
+          now.year,
+          int.tryParse(parts[1]) ?? 1,
+          dayNum,
+        );
 
         if (birthdayCheck.month < now.month ||
             (birthdayCheck.month == now.month && birthdayCheck.day < now.day)) {
@@ -648,7 +663,8 @@ class AppState extends ChangeNotifier {
         .map((e) => {'rating': e.key, 'count': e.value})
         .toList();
     ratingDistribution.sort(
-      (a, b) => ((b['rating'] as num?) ?? 0).compareTo((a['rating'] as num?) ?? 0),
+      (a, b) =>
+          ((b['rating'] as num?) ?? 0).compareTo((a['rating'] as num?) ?? 0),
     );
 
     // New customers this month
@@ -671,20 +687,25 @@ class AppState extends ChangeNotifier {
         monthlyCounts.entries
             .map((e) => {'month': e.key, 'count': e.value})
             .toList()
-          ..sort((a, b) => ((a['month'] as num?) ?? 0).compareTo((b['month'] as num?) ?? 0));
+          ..sort((a, b) => (a['month'] ?? 0).compareTo(b['month'] ?? 0));
 
     // Sales and visits from in-memory data
     totalSalesAmountAllTime = salesRecords.fold(
       0.0,
       (sum, s) => sum + ((s['amount'] as num?)?.toDouble() ?? 0),
     );
-    totalVisitsCountAllTime = customers.fold(0, (sum, c) => sum + c.visits.length);
+    totalVisitsCountAllTime = customers.fold(
+      0,
+      (sum, c) => sum + c.visits.length,
+    );
     currentMonthSalesAmount = salesRecords
         .where((saleRecord) {
           final saleDateStr = saleRecord['sale_date'] as String?;
           if (saleDateStr == null) return false;
           final saleDate = DateTime.tryParse(saleDateStr);
-          return saleDate != null && saleDate.month == thisMonth && saleDate.year == thisYear;
+          return saleDate != null &&
+              saleDate.month == thisMonth &&
+              saleDate.year == thisYear;
         })
         .fold(0.0, (sum, s) => sum + ((s['amount'] as num?)?.toDouble() ?? 0));
 
@@ -694,7 +715,9 @@ class AppState extends ChangeNotifier {
             final visitDateStr = visitRecord['date'] as String?;
             if (visitDateStr == null) return false;
             final visitDate = DateTime.tryParse(visitDateStr);
-            return visitDate != null && visitDate.month == thisMonth && visitDate.year == thisYear;
+            return visitDate != null &&
+                visitDate.month == thisMonth &&
+                visitDate.year == thisYear;
           }).length;
     });
 
@@ -722,7 +745,9 @@ class AppState extends ChangeNotifier {
             'total_amount': productSaleAmounts[entry.key] ?? 0,
           };
         }).toList()..sort(
-          (a, b) => ((b['sale_count'] as num?) ?? 0).compareTo((a['sale_count'] as num?) ?? 0),
+          (a, b) => ((b['sale_count'] as num?) ?? 0).compareTo(
+            (a['sale_count'] as num?) ?? 0,
+          ),
         );
 
     // Monthly sales
@@ -742,9 +767,15 @@ class AppState extends ChangeNotifier {
     }
     monthlySales =
         monthlySalesMap.entries
-            .map((entry) => {'month': entry.key, 'count': monthlySalesCountMap[entry.key] ?? 0, 'total_amount': entry.value})
+            .map(
+              (entry) => {
+                'month': entry.key,
+                'count': monthlySalesCountMap[entry.key] ?? 0,
+                'total_amount': entry.value,
+              },
+            )
             .toList()
-          ..sort((a, b) => ((a['month'] as num?) ?? 0).compareTo((b['month'] as num?) ?? 0));
+          ..sort((a, b) => (a['month'] ?? 0).compareTo(b['month'] ?? 0));
 
     // Monthly visits
     Map<int, int> monthlyVisitsMap = {};
@@ -754,7 +785,8 @@ class AppState extends ChangeNotifier {
         if (visitDateStr == null) continue;
         final visitDate = DateTime.tryParse(visitDateStr);
         if (visitDate != null && visitDate.year == thisYear) {
-          monthlyVisitsMap[visitDate.month] = (monthlyVisitsMap[visitDate.month] ?? 0) + 1;
+          monthlyVisitsMap[visitDate.month] =
+              (monthlyVisitsMap[visitDate.month] ?? 0) + 1;
         }
       }
     }
@@ -762,7 +794,7 @@ class AppState extends ChangeNotifier {
         monthlyVisitsMap.entries
             .map((e) => {'month': e.key, 'count': e.value})
             .toList()
-          ..sort((a, b) => ((a['month'] as num?) ?? 0).compareTo((b['month'] as num?) ?? 0));
+          ..sort((a, b) => (a['month'] ?? 0).compareTo(b['month'] ?? 0));
 
     // Quarterly sales
     Map<int, double> quarterlySalesMap = {};
@@ -773,21 +805,40 @@ class AppState extends ChangeNotifier {
       final saleDate = DateTime.tryParse(saleDateStr);
       if (saleDate != null && saleDate.year == thisYear) {
         final q = ((saleDate.month - 1) ~/ 3) + 1;
-        quarterlySalesMap[q] = (quarterlySalesMap[q] ?? 0) + ((saleRecord['amount'] as num?)?.toDouble() ?? 0);
+        quarterlySalesMap[q] =
+            (quarterlySalesMap[q] ?? 0) +
+            ((saleRecord['amount'] as num?)?.toDouble() ?? 0);
         quarterlySalesCountMap[q] = (quarterlySalesCountMap[q] ?? 0) + 1;
       }
     }
-    quarterlySales = quarterlySalesMap.entries
-        .map((e) => {'quarter': e.key, 'count': quarterlySalesCountMap[e.key] ?? 0, 'total_amount': e.value})
-        .toList()..sort((a, b) => ((a['quarter'] as num?) ?? 0).compareTo((b['quarter'] as num?) ?? 0));
+    quarterlySales =
+        quarterlySalesMap.entries
+            .map(
+              (e) => {
+                'quarter': e.key,
+                'count': quarterlySalesCountMap[e.key] ?? 0,
+                'total_amount': e.value,
+              },
+            )
+            .toList()
+          ..sort((a, b) => (a['quarter'] ?? 0).compareTo(b['quarter'] ?? 0));
 
     // Annual sales (only current year)
     final thisYearSales = salesRecords.where((s) {
       final d = DateTime.tryParse(s['sale_date'] as String? ?? '');
       return d != null && d.year == thisYear;
     }).toList();
-    final thisYearSalesAmount = thisYearSales.fold(0.0, (sum, s) => sum + ((s['amount'] as num?)?.toDouble() ?? 0));
-    annualSales = [{'year': thisYear, 'count': thisYearSales.length, 'total_amount': thisYearSalesAmount}];
+    final thisYearSalesAmount = thisYearSales.fold(
+      0.0,
+      (sum, s) => sum + ((s['amount'] as num?)?.toDouble() ?? 0),
+    );
+    annualSales = [
+      {
+        'year': thisYear,
+        'count': thisYearSales.length,
+        'total_amount': thisYearSalesAmount,
+      },
+    ];
 
     // Monthly commissions
     Map<int, double> monthlyCommMap = {};
@@ -799,12 +850,15 @@ class AppState extends ChangeNotifier {
       final rate = (saleRecord['commission_rate'] as num?)?.toDouble() ?? 0;
       final commission = amount * rate / 100;
       if (saleDate != null && saleDate.year == thisYear) {
-        monthlyCommMap[saleDate.month] = (monthlyCommMap[saleDate.month] ?? 0) + commission;
+        monthlyCommMap[saleDate.month] =
+            (monthlyCommMap[saleDate.month] ?? 0) + commission;
       }
     }
-    monthlyCommissions = monthlyCommMap.entries
-        .map((e) => {'month': e.key, 'total_commission': e.value})
-        .toList()          ..sort((a, b) => ((a['month'] as num?) ?? 0).compareTo((b['month'] as num?) ?? 0));
+    monthlyCommissions =
+        monthlyCommMap.entries
+            .map((e) => {'month': e.key, 'total_commission': e.value})
+            .toList()
+          ..sort((a, b) => (a['month'] ?? 0).compareTo(b['month'] ?? 0));
 
     // Quarterly commissions
     Map<int, double> quarterlyCommMap = {};
@@ -820,9 +874,11 @@ class AppState extends ChangeNotifier {
         quarterlyCommMap[q] = (quarterlyCommMap[q] ?? 0) + commission;
       }
     }
-    quarterlyCommissions = quarterlyCommMap.entries
-        .map((e) => {'quarter': e.key, 'total_commission': e.value})
-        .toList()..sort((a, b) => ((a['quarter'] as num?) ?? 0).compareTo((b['quarter'] as num?) ?? 0));
+    quarterlyCommissions =
+        quarterlyCommMap.entries
+            .map((e) => {'quarter': e.key, 'total_commission': e.value})
+            .toList()
+          ..sort((a, b) => (a['quarter'] ?? 0).compareTo(b['quarter'] ?? 0));
 
     // Annual commissions (only current year)
     final thisYearCommission = thisYearSales.fold(0.0, (sum, s) {
@@ -830,10 +886,19 @@ class AppState extends ChangeNotifier {
       final rate = (s['commission_rate'] as num?)?.toDouble() ?? 0;
       return sum + amount * rate / 100;
     });
-    annualCommissions = [{'year': thisYear, 'total_commission': thisYearCommission}];
+    annualCommissions = [
+      {'year': thisYear, 'total_commission': thisYearCommission},
+    ];
 
     // Conversion funnel (based on customer ratings) - optimized with Set for O(N+M) instead of O(N*M)
-    final ratingLabels = {0: '未评级', 1: '无意向', 2: '低意向', 3: '中意向', 4: '高意向', 5: '已成交'};
+    final ratingLabels = {
+      0: '未评级',
+      1: '无意向',
+      2: '低意向',
+      3: '中意向',
+      4: '高意向',
+      5: '已成交',
+    };
     final totalCustomers = customers.length;
     // Pre-compute Set of customer IDs that have sales for O(1) lookup
     final customerIdsWithSales = salesRecords
@@ -842,10 +907,12 @@ class AppState extends ChangeNotifier {
         .toSet();
     conversionFunnel = ratingLabels.entries.map((e) {
       final count = customers.where((c) => (c.rating ?? 0) == e.key).length;
-      final convertedInRating = customers.where((c) =>
-          (c.rating ?? 0) == e.key &&
-          customerIdsWithSales.contains(c.id)
-      ).length;
+      final convertedInRating = customers
+          .where(
+            (c) =>
+                (c.rating ?? 0) == e.key && customerIdsWithSales.contains(c.id),
+          )
+          .length;
       return {
         'rating': e.key,
         'label': e.value,
@@ -858,12 +925,16 @@ class AppState extends ChangeNotifier {
     // Visit efficiency (converted = rating 5 "已成交")
     final totalVisitsAll = customers.fold(0, (sum, c) => sum + c.visits.length);
     final convertedCustomers = customers.where((c) => c.rating == 5).length;
-    visitEfficiency = [{
-      'total_visits': totalVisitsAll,
-      'total_customers': totalCustomers,
-      'converted_customers': convertedCustomers,
-      'conversion_per_visit': totalVisitsAll > 0 ? convertedCustomers / totalVisitsAll * 100 : 0.0,
-    }];
+    visitEfficiency = [
+      {
+        'total_visits': totalVisitsAll,
+        'total_customers': totalCustomers,
+        'converted_customers': convertedCustomers,
+        'conversion_per_visit': totalVisitsAll > 0
+            ? convertedCustomers / totalVisitsAll * 100
+            : 0.0,
+      },
+    ];
   }
 
   // Helper: load all customers from database with relations (batch query - eliminates N+1 problem)
@@ -873,13 +944,18 @@ class AppState extends ChangeNotifier {
 
     // Batch load all customer-related data in 7 queries instead of 7*N queries
     final batchData = await db.batchLoadCustomerData();
-    final phonesByCustomer = batchData['phones'] as Map<int, List<Map<String, dynamic>>>;
-    final addressesByCustomer = batchData['addresses'] as Map<int, List<Map<String, dynamic>>>;
-    final visitsByCustomer = batchData['visits'] as Map<int, List<Map<String, dynamic>>>;
+    final phonesByCustomer =
+        batchData['phones'] as Map<int, List<Map<String, dynamic>>>;
+    final addressesByCustomer =
+        batchData['addresses'] as Map<int, List<Map<String, dynamic>>>;
+    final visitsByCustomer =
+        batchData['visits'] as Map<int, List<Map<String, dynamic>>>;
     final tagsByCustomer = batchData['tags'] as Map<int, List<String>>;
     final photosByCustomer = batchData['photos'] as Map<int, List<String>>;
-    final productsByCustomer = batchData['products'] as Map<int, List<Map<String, dynamic>>>;
-    final relationsByCustomer = batchData['relations'] as Map<int, List<Map<String, dynamic>>>;
+    final productsByCustomer =
+        batchData['products'] as Map<int, List<Map<String, dynamic>>>;
+    final relationsByCustomer =
+        batchData['relations'] as Map<int, List<Map<String, dynamic>>>;
 
     final List<Customer> result = [];
     for (var map in customerMaps) {
@@ -968,10 +1044,26 @@ class AppState extends ChangeNotifier {
       if (colleagues.isEmpty) {
         // 添加测试同事
         final testColleagues = [
-          Colleague(name: '张三', phone: '13800138001', departmentAndRole: '销售经理'),
-          Colleague(name: '李四', phone: '13800138002', departmentAndRole: '销售代表'),
-          Colleague(name: '王五', phone: '13800138003', departmentAndRole: '市场专员'),
-          Colleague(name: '赵六', phone: '13800138004', departmentAndRole: '客服经理'),
+          Colleague(
+            name: '张三',
+            phone: '13800138001',
+            departmentAndRole: '销售经理',
+          ),
+          Colleague(
+            name: '李四',
+            phone: '13800138002',
+            departmentAndRole: '销售代表',
+          ),
+          Colleague(
+            name: '王五',
+            phone: '13800138003',
+            departmentAndRole: '市场专员',
+          ),
+          Colleague(
+            name: '赵六',
+            phone: '13800138004',
+            departmentAndRole: '客服经理',
+          ),
         ];
 
         for (int i = 0; i < testColleagues.length; i++) {
@@ -997,10 +1089,11 @@ class AppState extends ChangeNotifier {
             longitude: 116.4074,
             persistentTagList: ['高意向', '重点客户'],
             birthday: '1991-05-15',
-            nextFollowUpDate:
-                now.add(Duration(days: 2)).toIso8601String().substring(0, 10),
-            createdAt:
-                now.subtract(Duration(days: 15)).toIso8601String(),
+            nextFollowUpDate: now
+                .add(Duration(days: 2))
+                .toIso8601String()
+                .substring(0, 10),
+            createdAt: now.subtract(Duration(days: 15)).toIso8601String(),
           ),
           Customer(
             id: 2,
@@ -1015,10 +1108,11 @@ class AppState extends ChangeNotifier {
             longitude: 121.4737,
             persistentTagList: ['中等意向'],
             birthday: '1998-08-22',
-            nextFollowUpDate:
-                now.add(Duration(days: 7)).toIso8601String().substring(0, 10),
-            createdAt:
-                now.subtract(Duration(days: 10)).toIso8601String(),
+            nextFollowUpDate: now
+                .add(Duration(days: 7))
+                .toIso8601String()
+                .substring(0, 10),
+            createdAt: now.subtract(Duration(days: 10)).toIso8601String(),
           ),
           Customer(
             id: 3,
@@ -1033,13 +1127,11 @@ class AppState extends ChangeNotifier {
             longitude: 113.2644,
             persistentTagList: ['低意向'],
             birthday: '1984-03-10',
-            nextFollowUpDate:
-                now.subtract(Duration(days: 3)).toIso8601String().substring(
-                  0,
-                  10,
-                ),
-            createdAt:
-                now.subtract(Duration(days: 30)).toIso8601String(),
+            nextFollowUpDate: now
+                .subtract(Duration(days: 3))
+                .toIso8601String()
+                .substring(0, 10),
+            createdAt: now.subtract(Duration(days: 30)).toIso8601String(),
           ),
           Customer(
             id: 4,
@@ -1054,10 +1146,11 @@ class AppState extends ChangeNotifier {
             longitude: 114.0579,
             persistentTagList: ['高意向', 'VIP客户'],
             birthday: '1996-11-08',
-            nextFollowUpDate:
-                now.add(Duration(days: 1)).toIso8601String().substring(0, 10),
-            createdAt:
-                now.subtract(Duration(days: 5)).toIso8601String(),
+            nextFollowUpDate: now
+                .add(Duration(days: 1))
+                .toIso8601String()
+                .substring(0, 10),
+            createdAt: now.subtract(Duration(days: 5)).toIso8601String(),
           ),
           Customer(
             id: 5,
@@ -1072,8 +1165,10 @@ class AppState extends ChangeNotifier {
             longitude: 120.1551,
             persistentTagList: ['中等意向', '重点客户'],
             birthday: '1988-07-25',
-            nextFollowUpDate:
-                now.add(Duration(days: 5)).toIso8601String().substring(0, 10),
+            nextFollowUpDate: now
+                .add(Duration(days: 5))
+                .toIso8601String()
+                .substring(0, 10),
             createdAt: now.toIso8601String(),
           ),
         ];
@@ -1090,442 +1185,468 @@ class AppState extends ChangeNotifier {
       final existingCustomers = await db.getAllCustomers();
       if (existingCustomers.isEmpty) {
         try {
-        final now = DateTime.now();
+          final now = DateTime.now();
 
-        // 添加测试客户（含birthday和next_follow_up_date）
-        final sampleCustomers = [
-          {
-            'name': '陈小明',
-            'alias': '小明',
-            'age': 35,
-            'gender': '男',
-            'rating': 5,
-            'latitude': 39.9042,
-            'longitude': 116.4074,
-            'tags': '高意向,重点客户',
-            'birthday': '1991-05-15',
-            'next_follow_up_date':
-                now.add(Duration(days: 2)).toIso8601String().substring(0, 10),
-            'created_at':
-                now.subtract(Duration(days: 15)).toIso8601String(),
-          },
-          {
-            'name': '刘小红',
-            'alias': '小红',
-            'age': 28,
-            'gender': '女',
-            'rating': 4,
-            'latitude': 31.2304,
-            'longitude': 121.4737,
-            'tags': '中等意向',
-            'birthday': '1998-08-22',
-            'next_follow_up_date':
-                now.add(Duration(days: 7)).toIso8601String().substring(0, 10),
-            'created_at':
-                now.subtract(Duration(days: 10)).toIso8601String(),
-          },
-          {
-            'name': '王大力',
-            'alias': '大力',
-            'age': 42,
-            'gender': '男',
-            'rating': 3,
-            'latitude': 23.1291,
-            'longitude': 113.2644,
-            'tags': '低意向',
-            'birthday': '1984-03-10',
-            'next_follow_up_date':
-                now.subtract(Duration(days: 3)).toIso8601String().substring(
-                  0,
-                  10,
-                ),
-            'created_at':
-                now.subtract(Duration(days: 30)).toIso8601String(),
-          },
-          {
-            'name': '张丽',
-            'alias': '丽丽',
-            'age': 30,
-            'gender': '女',
-            'rating': 5,
-            'latitude': 22.5431,
-            'longitude': 114.0579,
-            'tags': '高意向,VIP客户',
-            'birthday': '1996-11-08',
-            'next_follow_up_date':
-                now.add(Duration(days: 1)).toIso8601String().substring(0, 10),
-            'created_at':
-                now.subtract(Duration(days: 5)).toIso8601String(),
-          },
-          {
-            'name': '李强',
-            'alias': '强哥',
-            'age': 38,
-            'gender': '男',
-            'rating': 4,
-            'latitude': 30.2741,
-            'longitude': 120.1551,
-            'tags': '中等意向,重点客户',
-            'birthday': '1988-07-25',
-            'next_follow_up_date':
-                now.add(Duration(days: 5)).toIso8601String().substring(0, 10),
-            'created_at': now.toIso8601String(),
-          },
-        ];
-
-        // 客户联系方式
-        final customerPhones = [
-          ['13900139001', '13900139002'], // 陈小明
-          ['13900139003'], // 刘小红
-          ['13900139004'], // 王大力
-          ['13900139005', '13900139006'], // 张丽
-          ['13900139007'], // 李强
-        ];
-
-        // 客户地址
-        final customerAddresses = [
-          ['北京市朝阳区建国路88号'], // 陈小明
-          ['上海市浦东新区世纪大道100号'], // 刘小红
-          ['广州市天河区天河路123号'], // 王大力
-          ['深圳市南山区科技园路1号'], // 张丽
-          ['杭州市西湖区文二路100号'], // 李强
-        ];
-
-        // 插入客户数据并收集ID
-        final customerIds = <int>[];
-        for (int i = 0; i < sampleCustomers.length; i++) {
-          final customerId = await db.insertCustomer(sampleCustomers[i]);
-          customerIds.add(customerId);
-
-          for (final phone in customerPhones[i]) {
-            await db.insertCustomerPhone(customerId, phone);
-          }
-          for (final address in customerAddresses[i]) {
-            await db.insertCustomerAddress(customerId, address);
-          }
-        }
-
-        // 确保产品数据存在
-        final existingProducts = await db.getAllProducts();
-        if (existingProducts.isEmpty) {
-          final sampleProducts = [
+          // 添加测试客户（含birthday和next_follow_up_date）
+          final sampleCustomers = [
             {
-              'company': '平安保险',
-              'name': '平安福重疾险',
-              'description': '涵盖100种重疾和50种轻症，保障全面',
-              'advantages': '保障范围广，理赔速度快',
-              'category': '重疾险',
-              'start_date': '2026-01-01',
-              'end_date': '2026-12-31',
-              'created_at': now.toIso8601String(),
+              'name': '陈小明',
+              'alias': '小明',
+              'age': 35,
+              'gender': '男',
+              'rating': 5,
+              'latitude': 39.9042,
+              'longitude': 116.4074,
+              'tags': '高意向,重点客户',
+              'birthday': '1991-05-15',
+              'next_follow_up_date': now
+                  .add(Duration(days: 2))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'created_at': now.subtract(Duration(days: 15)).toIso8601String(),
             },
             {
-              'company': '太平洋保险',
-              'name': '太平洋健康险',
-              'description': '提供全面的健康保障',
-              'advantages': '保障全面，保费合理',
-              'category': '健康险',
-              'start_date': '2026-01-01',
-              'end_date': '2026-12-31',
-              'created_at': now.toIso8601String(),
+              'name': '刘小红',
+              'alias': '小红',
+              'age': 28,
+              'gender': '女',
+              'rating': 4,
+              'latitude': 31.2304,
+              'longitude': 121.4737,
+              'tags': '中等意向',
+              'birthday': '1998-08-22',
+              'next_follow_up_date': now
+                  .add(Duration(days: 7))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'created_at': now.subtract(Duration(days: 10)).toIso8601String(),
             },
             {
-              'company': '中国人寿',
-              'name': '国寿养老险',
-              'description': '为老年人提供稳定的养老保障',
-              'advantages': '收益稳定，安全可靠',
-              'category': '养老险',
-              'start_date': '2026-01-01',
-              'end_date': '2026-12-31',
-              'created_at': now.toIso8601String(),
+              'name': '王大力',
+              'alias': '大力',
+              'age': 42,
+              'gender': '男',
+              'rating': 3,
+              'latitude': 23.1291,
+              'longitude': 113.2644,
+              'tags': '低意向',
+              'birthday': '1984-03-10',
+              'next_follow_up_date': now
+                  .subtract(Duration(days: 3))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'created_at': now.subtract(Duration(days: 30)).toIso8601String(),
             },
             {
-              'company': '人保财险',
-              'name': '人保车险',
-              'description': '为车辆提供全面的保险保障',
-              'advantages': '理赔速度快，服务好',
-              'category': '财产险',
-              'start_date': '2026-01-01',
-              'end_date': '2026-12-31',
-              'created_at': now.toIso8601String(),
+              'name': '张丽',
+              'alias': '丽丽',
+              'age': 30,
+              'gender': '女',
+              'rating': 5,
+              'latitude': 22.5431,
+              'longitude': 114.0579,
+              'tags': '高意向,VIP客户',
+              'birthday': '1996-11-08',
+              'next_follow_up_date': now
+                  .add(Duration(days: 1))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'created_at': now.subtract(Duration(days: 5)).toIso8601String(),
             },
             {
-              'company': '泰康人寿',
-              'name': '泰康年金险',
-              'description': '提供稳定的年金收益',
-              'advantages': '收益稳定，安全可靠',
-              'category': '年金险',
-              'start_date': '2026-01-01',
-              'end_date': '2026-12-31',
+              'name': '李强',
+              'alias': '强哥',
+              'age': 38,
+              'gender': '男',
+              'rating': 4,
+              'latitude': 30.2741,
+              'longitude': 120.1551,
+              'tags': '中等意向,重点客户',
+              'birthday': '1988-07-25',
+              'next_follow_up_date': now
+                  .add(Duration(days: 5))
+                  .toIso8601String()
+                  .substring(0, 10),
               'created_at': now.toIso8601String(),
             },
           ];
-          for (final product in sampleProducts) {
-            await db.insertProduct(product);
-          }
-        }
 
-        // 确保同事数据存在
-        final existingColleagues = await db.getAllColleagues();
-        if (existingColleagues.isEmpty) {
-          final testColleagues = [
-            {'name': '张三', 'phone': '13800138001', 'specialty': '销售经理'},
-            {'name': '李四', 'phone': '13800138002', 'specialty': '销售代表'},
-            {'name': '王五', 'phone': '13800138003', 'specialty': '市场专员'},
-            {'name': '赵六', 'phone': '13800138004', 'specialty': '客服经理'},
+          // 客户联系方式
+          final customerPhones = [
+            ['13900139001', '13900139002'], // 陈小明
+            ['13900139003'], // 刘小红
+            ['13900139004'], // 王大力
+            ['13900139005', '13900139006'], // 张丽
+            ['13900139007'], // 李强
           ];
-          for (final colleague in testColleagues) {
-            await db.insertColleague(colleague);
+
+          // 客户地址
+          final customerAddresses = [
+            ['北京市朝阳区建国路88号'], // 陈小明
+            ['上海市浦东新区世纪大道100号'], // 刘小红
+            ['广州市天河区天河路123号'], // 王大力
+            ['深圳市南山区科技园路1号'], // 张丽
+            ['杭州市西湖区文二路100号'], // 李强
+          ];
+
+          // 插入客户数据并收集ID
+          final customerIds = <int>[];
+          for (int i = 0; i < sampleCustomers.length; i++) {
+            final customerId = await db.insertCustomer(sampleCustomers[i]);
+            customerIds.add(customerId);
+
+            for (final phone in customerPhones[i]) {
+              await db.insertCustomerPhone(customerId, phone);
+            }
+            for (final address in customerAddresses[i]) {
+              await db.insertCustomerAddress(customerId, address);
+            }
           }
-        }
 
-        // 获取产品和同事ID用于关联
-        final productMaps = await db.getAllProducts();
-        final colleagueMaps = await db.getAllColleagues();
-        final productIds = productMaps.map((p) => (p['id'] as num?)?.toInt() ?? 0).toList();
+          // 确保产品数据存在
+          final existingProducts = await db.getAllProducts();
+          if (existingProducts.isEmpty) {
+            final sampleProducts = [
+              {
+                'company': '平安保险',
+                'name': '平安福重疾险',
+                'description': '涵盖100种重疾和50种轻症，保障全面',
+                'advantages': '保障范围广，理赔速度快',
+                'category': '重疾险',
+                'start_date': '2026-01-01',
+                'end_date': '2026-12-31',
+                'created_at': now.toIso8601String(),
+              },
+              {
+                'company': '太平洋保险',
+                'name': '太平洋健康险',
+                'description': '提供全面的健康保障',
+                'advantages': '保障全面，保费合理',
+                'category': '健康险',
+                'start_date': '2026-01-01',
+                'end_date': '2026-12-31',
+                'created_at': now.toIso8601String(),
+              },
+              {
+                'company': '中国人寿',
+                'name': '国寿养老险',
+                'description': '为老年人提供稳定的养老保障',
+                'advantages': '收益稳定，安全可靠',
+                'category': '养老险',
+                'start_date': '2026-01-01',
+                'end_date': '2026-12-31',
+                'created_at': now.toIso8601String(),
+              },
+              {
+                'company': '人保财险',
+                'name': '人保车险',
+                'description': '为车辆提供全面的保险保障',
+                'advantages': '理赔速度快，服务好',
+                'category': '财产险',
+                'start_date': '2026-01-01',
+                'end_date': '2026-12-31',
+                'created_at': now.toIso8601String(),
+              },
+              {
+                'company': '泰康人寿',
+                'name': '泰康年金险',
+                'description': '提供稳定的年金收益',
+                'advantages': '收益稳定，安全可靠',
+                'category': '年金险',
+                'start_date': '2026-01-01',
+                'end_date': '2026-12-31',
+                'created_at': now.toIso8601String(),
+              },
+            ];
+            for (final product in sampleProducts) {
+              await db.insertProduct(product);
+            }
+          }
 
-        // 添加示例拜访记录
-        final sampleVisits = [
-          {
-            'customer_id': customerIds[0],
-            'date':
-                now.subtract(Duration(days: 5)).toIso8601String().substring(
-                  0,
-                  10,
-                ),
-            'location': '北京办公室',
-            'accompanying_persons': '张三',
-            'introduced_products': '平安福重疾险',
-            'interested_products': '平安福重疾险',
-            'notes': '客户对重疾险很感兴趣，希望了解更多细节',
-          },
-          {
-            'customer_id': customerIds[0],
-            'date':
-                now.subtract(Duration(days: 20)).toIso8601String().substring(
-                  0,
-                  10,
-                ),
-            'location': '客户家中',
-            'notes': '初次拜访，了解客户需求',
-          },
-          {
-            'customer_id': customerIds[1],
-            'date':
-                now.subtract(Duration(days: 3)).toIso8601String().substring(
-                  0,
-                  10,
-                ),
-            'location': '上海办公室',
-            'introduced_products': '太平洋健康险',
-            'notes': '客户对健康险有兴趣，需要进一步跟进',
-          },
-          {
-            'customer_id': customerIds[3],
-            'date':
-                now.subtract(Duration(days: 1)).toIso8601String().substring(
-                  0,
-                  10,
-                ),
-            'location': '深圳咖啡厅',
-            'accompanying_persons': '李四',
-            'introduced_products': '太平洋健康险,国寿养老险',
-            'interested_products': '太平洋健康险',
-            'notes': 'VIP客户，对健康险和养老险都有兴趣',
-          },
-          {
-            'customer_id': customerIds[4],
-            'date':
-                now.subtract(Duration(days: 8)).toIso8601String().substring(
-                  0,
-                  10,
-                ),
-            'location': '杭州茶馆',
-            'notes': '客户正在考虑养老规划',
-          },
-        ];
-        for (final visit in sampleVisits) {
-          await db.insertVisit(visit);
-        }
+          // 确保同事数据存在
+          final existingColleagues = await db.getAllColleagues();
+          if (existingColleagues.isEmpty) {
+            final testColleagues = [
+              {'name': '张三', 'phone': '13800138001', 'specialty': '销售经理'},
+              {'name': '李四', 'phone': '13800138002', 'specialty': '销售代表'},
+              {'name': '王五', 'phone': '13800138003', 'specialty': '市场专员'},
+              {'name': '赵六', 'phone': '13800138004', 'specialty': '客服经理'},
+            ];
+            for (final colleague in testColleagues) {
+              await db.insertColleague(colleague);
+            }
+          }
 
-        // 添加示例销售记录
-        if (productIds.isNotEmpty) {
-          final sampleSales = [
+          // 获取产品和同事ID用于关联
+          final productMaps = await db.getAllProducts();
+          final colleagueMaps = await db.getAllColleagues();
+          final productIds = productMaps
+              .map((p) => (p['id'] as num?)?.toInt() ?? 0)
+              .toList();
+
+          // 添加示例拜访记录
+          final sampleVisits = [
             {
               'customer_id': customerIds[0],
-              'product_id': productIds[0],
-              'amount': 50000.0,
-              'notes': '购买平安福重疾险，保额50万',
-              'sale_date':
-                  now.subtract(Duration(days: 3)).toIso8601String().substring(
-                    0,
-                    10,
-                  ),
-              'colleague_id': colleagueMaps.isNotEmpty
-                  ? colleagueMaps[0]['id']
-                  : null,
-              'commission_rate': 8.5,
+              'date': now
+                  .subtract(Duration(days: 5))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'location': '北京办公室',
+              'accompanying_persons': '张三',
+              'introduced_products': '平安福重疾险',
+              'interested_products': '平安福重疾险',
+              'notes': '客户对重疾险很感兴趣，希望了解更多细节',
+            },
+            {
+              'customer_id': customerIds[0],
+              'date': now
+                  .subtract(Duration(days: 20))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'location': '客户家中',
+              'notes': '初次拜访，了解客户需求',
+            },
+            {
+              'customer_id': customerIds[1],
+              'date': now
+                  .subtract(Duration(days: 3))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'location': '上海办公室',
+              'introduced_products': '太平洋健康险',
+              'notes': '客户对健康险有兴趣，需要进一步跟进',
             },
             {
               'customer_id': customerIds[3],
-              'product_id': productIds.length > 1 ? productIds[1] : productIds[0],
-              'amount': 8000.0,
-              'notes': '购买太平洋健康险，年缴保费8000元',
-              'sale_date':
-                  now.subtract(Duration(days: 1)).toIso8601String().substring(
-                    0,
-                    10,
-                  ),
-              'colleague_id': colleagueMaps.length > 1
-                  ? colleagueMaps[1]['id']
-                  : null,
-              'commission_rate': 5.0,
+              'date': now
+                  .subtract(Duration(days: 1))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'location': '深圳咖啡厅',
+              'accompanying_persons': '李四',
+              'introduced_products': '太平洋健康险,国寿养老险',
+              'interested_products': '太平洋健康险',
+              'notes': 'VIP客户，对健康险和养老险都有兴趣',
             },
             {
               'customer_id': customerIds[4],
-              'product_id': productIds.length > 2 ? productIds[2] : productIds[0],
-              'amount': 120000.0,
-              'notes': '购买国寿养老险，年缴保费12万',
-              'sale_date': now.toIso8601String().substring(0, 10),
-              'colleague_id': colleagueMaps.isNotEmpty
-                  ? colleagueMaps[0]['id']
-                  : null,
-              'commission_rate': 3.0,
+              'date': now
+                  .subtract(Duration(days: 8))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'location': '杭州茶馆',
+              'notes': '客户正在考虑养老规划',
             },
           ];
-          for (final sale in sampleSales) {
-            await db.insertSale(sale);
+          for (final visit in sampleVisits) {
+            await db.insertVisit(visit);
           }
-        }
 
-        // 添加示例提醒
-        final sampleReminders = [
-          {
-            'customer_id': customerIds[0],
-            'title': '跟进陈小明 - 重疾险方案',
-            'description': '发送详细的重疾险保障方案',
-            'reminder_date':
-                now.add(Duration(days: 2)).toIso8601String().substring(0, 10),
-            'reminder_time': '10:00',
-            'type': 'follow_up',
-            'status': 'pending',
-            'created_at': now.toIso8601String(),
-          },
-          {
-            'customer_id': customerIds[3],
-            'title': '张丽 - 健康险方案讲解',
-            'description': '上门讲解太平洋健康险方案',
-            'reminder_date': now.toIso8601String().substring(0, 10),
-            'reminder_time': '14:00',
-            'type': 'visit',
-            'status': 'pending',
-            'created_at': now.toIso8601String(),
-          },
-          {
-            'customer_id': customerIds[2],
-            'title': '跟进王大力 - 续保提醒',
-            'description': '车险即将到期，提醒续保',
-            'reminder_date':
-                now.subtract(Duration(days: 3)).toIso8601String().substring(
-                  0,
-                  10,
-                ),
-            'type': 'renewal',
-            'status': 'pending',
-            'created_at': now.toIso8601String(),
-          },
-          {
-            'customer_id': customerIds[1],
-            'title': '刘小红 - 健康险跟进',
-            'description': '跟进健康险意向，发送产品资料',
-            'reminder_date':
-                now.add(Duration(days: 7)).toIso8601String().substring(0, 10),
-            'reminder_time': '09:00',
-            'type': 'follow_up',
-            'status': 'pending',
-            'created_at': now.toIso8601String(),
-          },
-          {
-            'customer_id': customerIds[4],
-            'title': '李强 - 养老规划回访',
-            'description': '回访养老规划需求',
-            'reminder_date':
-                now.add(Duration(days: 5)).toIso8601String().substring(0, 10),
-            'type': 'follow_up',
-            'status': 'pending',
-            'created_at': now.toIso8601String(),
-          },
-        ];
-        for (final reminder in sampleReminders) {
-          await db.insertReminder(reminder);
-        }
+          // 添加示例销售记录
+          if (productIds.isNotEmpty) {
+            final sampleSales = [
+              {
+                'customer_id': customerIds[0],
+                'product_id': productIds[0],
+                'amount': 50000.0,
+                'notes': '购买平安福重疾险，保额50万',
+                'sale_date': now
+                    .subtract(Duration(days: 3))
+                    .toIso8601String()
+                    .substring(0, 10),
+                'colleague_id': colleagueMaps.isNotEmpty
+                    ? colleagueMaps[0]['id']
+                    : null,
+                'commission_rate': 8.5,
+              },
+              {
+                'customer_id': customerIds[3],
+                'product_id': productIds.length > 1
+                    ? productIds[1]
+                    : productIds[0],
+                'amount': 8000.0,
+                'notes': '购买太平洋健康险，年缴保费8000元',
+                'sale_date': now
+                    .subtract(Duration(days: 1))
+                    .toIso8601String()
+                    .substring(0, 10),
+                'colleague_id': colleagueMaps.length > 1
+                    ? colleagueMaps[1]['id']
+                    : null,
+                'commission_rate': 5.0,
+              },
+              {
+                'customer_id': customerIds[4],
+                'product_id': productIds.length > 2
+                    ? productIds[2]
+                    : productIds[0],
+                'amount': 120000.0,
+                'notes': '购买国寿养老险，年缴保费12万',
+                'sale_date': now.toIso8601String().substring(0, 10),
+                'colleague_id': colleagueMaps.isNotEmpty
+                    ? colleagueMaps[0]['id']
+                    : null,
+                'commission_rate': 3.0,
+              },
+            ];
+            for (final sale in sampleSales) {
+              await db.insertSale(sale);
+            }
+          }
 
-        // 添加示例客户-产品关联
-        if (productIds.isNotEmpty) {
-          final sampleCustomerProducts = [
+          // 添加示例提醒
+          final sampleReminders = [
             {
               'customer_id': customerIds[0],
-              'product_id': productIds[0],
-              'purchase_date':
-                  now.subtract(Duration(days: 3)).toIso8601String().substring(
-                    0,
-                    10,
-                  ),
+              'title': '跟进陈小明 - 重疾险方案',
+              'description': '发送详细的重疾险保障方案',
+              'reminder_date': now
+                  .add(Duration(days: 2))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'reminder_time': '10:00',
+              'type': 'follow_up',
+              'status': 'pending',
+              'created_at': now.toIso8601String(),
             },
             {
               'customer_id': customerIds[3],
-              'product_id':
-                  productIds.length > 1 ? productIds[1] : productIds[0],
-              'purchase_date':
-                  now.subtract(Duration(days: 1)).toIso8601String().substring(
-                    0,
-                    10,
-                  ),
+              'title': '张丽 - 健康险方案讲解',
+              'description': '上门讲解太平洋健康险方案',
+              'reminder_date': now.toIso8601String().substring(0, 10),
+              'reminder_time': '14:00',
+              'type': 'visit',
+              'status': 'pending',
+              'created_at': now.toIso8601String(),
+            },
+            {
+              'customer_id': customerIds[2],
+              'title': '跟进王大力 - 续保提醒',
+              'description': '车险即将到期，提醒续保',
+              'reminder_date': now
+                  .subtract(Duration(days: 3))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'type': 'renewal',
+              'status': 'pending',
+              'created_at': now.toIso8601String(),
+            },
+            {
+              'customer_id': customerIds[1],
+              'title': '刘小红 - 健康险跟进',
+              'description': '跟进健康险意向，发送产品资料',
+              'reminder_date': now
+                  .add(Duration(days: 7))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'reminder_time': '09:00',
+              'type': 'follow_up',
+              'status': 'pending',
+              'created_at': now.toIso8601String(),
             },
             {
               'customer_id': customerIds[4],
-              'product_id':
-                  productIds.length > 2 ? productIds[2] : productIds[0],
-              'purchase_date': now.toIso8601String().substring(0, 10),
+              'title': '李强 - 养老规划回访',
+              'description': '回访养老规划需求',
+              'reminder_date': now
+                  .add(Duration(days: 5))
+                  .toIso8601String()
+                  .substring(0, 10),
+              'type': 'follow_up',
+              'status': 'pending',
+              'created_at': now.toIso8601String(),
             },
           ];
-          for (final customerProductEntry in sampleCustomerProducts) {
-            await db.insertCustomerProduct(customerProductEntry);
+          for (final reminder in sampleReminders) {
+            await db.insertReminder(reminder);
           }
-        }
 
-        // 添加示例客户关系
-        if (customerIds.length >= 5) {
-          final sampleRelationships = [
+          // 添加示例客户-产品关联
+          if (productIds.isNotEmpty) {
+            final sampleCustomerProducts = [
+              {
+                'customer_id': customerIds[0],
+                'product_id': productIds[0],
+                'purchase_date': now
+                    .subtract(Duration(days: 3))
+                    .toIso8601String()
+                    .substring(0, 10),
+              },
+              {
+                'customer_id': customerIds[3],
+                'product_id': productIds.length > 1
+                    ? productIds[1]
+                    : productIds[0],
+                'purchase_date': now
+                    .subtract(Duration(days: 1))
+                    .toIso8601String()
+                    .substring(0, 10),
+              },
+              {
+                'customer_id': customerIds[4],
+                'product_id': productIds.length > 2
+                    ? productIds[2]
+                    : productIds[0],
+                'purchase_date': now.toIso8601String().substring(0, 10),
+              },
+            ];
+            for (final customerProductEntry in sampleCustomerProducts) {
+              await db.insertCustomerProduct(customerProductEntry);
+            }
+          }
+
+          // 添加示例客户关系
+          if (customerIds.length >= 5) {
+            final sampleRelationships = [
+              {
+                'customer_id': customerIds[0],
+                'related_customer_id': customerIds[1],
+                'relationship': '朋友',
+              },
+              {
+                'customer_id': customerIds[3],
+                'related_customer_id': customerIds[4],
+                'relationship': '同事',
+              },
+            ];
+            for (final rel in sampleRelationships) {
+              await db.insertCustomerRelationship(rel);
+            }
+          }
+
+          // 添加示例客户标签（到customer_tags表）
+          final sampleTags = [
             {
               'customer_id': customerIds[0],
-              'related_customer_id': customerIds[1],
-              'relationship': '朋友',
+              'tags': ['高意向', '重点客户'],
+            },
+            {
+              'customer_id': customerIds[1],
+              'tags': ['中等意向'],
+            },
+            {
+              'customer_id': customerIds[2],
+              'tags': ['低意向'],
             },
             {
               'customer_id': customerIds[3],
-              'related_customer_id': customerIds[4],
-              'relationship': '同事',
+              'tags': ['高意向', 'VIP客户'],
+            },
+            {
+              'customer_id': customerIds[4],
+              'tags': ['中等意向', '重点客户'],
             },
           ];
-          for (final rel in sampleRelationships) {
-            await db.insertCustomerRelationship(rel);
+          for (final tagEntry in sampleTags) {
+            for (final tag
+                in (tagEntry['tags'] as List?)?.cast<String>() ?? <String>[]) {
+              await db.insertCustomerTag(
+                (tagEntry['customer_id'] as num?)?.toInt() ?? 0,
+                tag,
+              );
+            }
           }
-        }
-
-        // 添加示例客户标签（到customer_tags表）
-        final sampleTags = [
-          {'customer_id': customerIds[0], 'tags': ['高意向', '重点客户']},
-          {'customer_id': customerIds[1], 'tags': ['中等意向']},
-          {'customer_id': customerIds[2], 'tags': ['低意向']},
-          {'customer_id': customerIds[3], 'tags': ['高意向', 'VIP客户']},
-          {'customer_id': customerIds[4], 'tags': ['中等意向', '重点客户']},
-        ];
-        for (final tagEntry in sampleTags) {
-          for (final tag in (tagEntry['tags'] as List?)?.cast<String>() ?? <String>[]) {
-            await db.insertCustomerTag((tagEntry['customer_id'] as num?)?.toInt() ?? 0, tag);
-          }
-        }
         } catch (e) {
           AppLogger.error('adding sample customers (mobile): $e');
         }
@@ -1556,7 +1677,9 @@ class AppState extends ChangeNotifier {
           addresses: List<String>.from(customer.addresses),
           visits: List<Map<String, dynamic>>.from(customer.visits),
           products: List<Map<String, dynamic>>.from(customer.products),
-          relationships: List<Map<String, dynamic>>.from(customer.relationships),
+          relationships: List<Map<String, dynamic>>.from(
+            customer.relationships,
+          ),
           birthday: customer.birthday,
           nextFollowUpDate: customer.nextFollowUpDate,
           createdAt: customer.createdAt ?? DateTime.now().toIso8601String(),
@@ -1719,15 +1842,14 @@ class AppState extends ChangeNotifier {
         // Delete orphaned photo files that are no longer in the new photo list
         for (final oldPath in oldPhotoPaths) {
           if (!customer.persistentPhotoList.contains(oldPath)) {
-            try { await File(oldPath).delete(); } catch (_) {}
+            try {
+              await File(oldPath).delete();
+            } catch (_) {}
           }
         }
 
         await loadCustomers();
-        await Future.wait([
-          loadTags(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadTags(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('updating customer: $e');
@@ -1739,7 +1861,9 @@ class AppState extends ChangeNotifier {
     try {
       if (kIsWeb) {
         // Also clean up orphaned sales records for this customer
-        salesRecords.removeWhere((s) => (s['customer_id'] as num?)?.toInt() == id);
+        salesRecords.removeWhere(
+          (s) => (s['customer_id'] as num?)?.toInt() == id,
+        );
         customers.removeWhere((c) => c.id == id);
         // Rebuild allTags from remaining customers
         allTags = customers.expand((c) => c.tagList).toSet().toList()..sort();
@@ -1749,11 +1873,7 @@ class AppState extends ChangeNotifier {
         final db = DatabaseHelper.instance;
         await db.deleteCustomer(id);
         await loadCustomers();
-        await Future.wait([
-          loadTags(),
-          loadSales(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadTags(), loadSales(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('deleting customer: $e');
@@ -1903,10 +2023,7 @@ class AppState extends ChangeNotifier {
       } else {
         final db = DatabaseHelper.instance;
         await db.updateProduct(product.toMap());
-        await Future.wait([
-          loadProducts(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadProducts(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('updating product: $e');
@@ -1924,11 +2041,7 @@ class AppState extends ChangeNotifier {
         final db = DatabaseHelper.instance;
         await db.deleteProduct(id);
         // Only reload what's actually affected by product deletion
-        await Future.wait([
-          loadProducts(),
-          loadSales(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadProducts(), loadSales(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('deleting product: $e');
@@ -1993,11 +2106,18 @@ class AppState extends ChangeNotifier {
     try {
       if (kIsWeb) {
         // For web platform, add to in-memory list
-        final customerIndex = customers.indexWhere((c) => c.id == visit.customerId);
+        final customerIndex = customers.indexWhere(
+          (c) => c.id == visit.customerId,
+        );
         if (customerIndex == -1) return;
         final customer = customers[customerIndex];
         final newVisit = {
-          'id': (customer.visits.fold(0, (max, v) { final id = (v['id'] as num?)?.toInt(); return id != null && id > max ? id : max; })) + 1,
+          'id':
+              (customer.visits.fold(0, (max, v) {
+                final id = (v['id'] as num?)?.toInt();
+                return id != null && id > max ? id : max;
+              })) +
+              1,
           'customer_id': visit.customerId,
           'date': visit.visitDate,
           'location': visit.location,
@@ -2043,10 +2163,7 @@ class AppState extends ChangeNotifier {
         // For mobile platforms, use database
         final db = DatabaseHelper.instance;
         await db.insertVisit(visit.toMap());
-        await Future.wait([
-          loadCustomers(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadCustomers(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('adding visit: $e');
@@ -2068,13 +2185,18 @@ class AppState extends ChangeNotifier {
           (p) => p.id == productId,
           orElse: () => Product(company: '', name: 'Unknown'),
         );
-        final updatedProducts = List<Map<String, dynamic>>.from(customer.products)
-          ..add({
-            'id': (customer.products.fold(0, (max, p) { final id = (p['id'] as num?)?.toInt(); return id != null && id > max ? id : max; })) + 1,
-            'product_id': productId,
-            'name': product.name,
-            'purchase_date': purchaseDate,
-          });
+        final updatedProducts =
+            List<Map<String, dynamic>>.from(customer.products)..add({
+              'id':
+                  (customer.products.fold(0, (max, p) {
+                    final id = (p['id'] as num?)?.toInt();
+                    return id != null && id > max ? id : max;
+                  })) +
+                  1,
+              'product_id': productId,
+              'name': product.name,
+              'purchase_date': purchaseDate,
+            });
         customers[customerIndex] = Customer(
           id: customer.id,
           name: customer.name,
@@ -2111,10 +2233,7 @@ class AppState extends ChangeNotifier {
           'product_id': productId,
           'purchase_date': purchaseDate,
         });
-        await Future.wait([
-          loadCustomers(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadCustomers(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('adding customer product: $e');
@@ -2133,11 +2252,18 @@ class AppState extends ChangeNotifier {
         final customerIndex = customers.indexWhere((c) => c.id == customerId);
         if (customerIndex == -1) return;
         final customer = customers[customerIndex];
-        final relatedCustomerIndex = customers.indexWhere((c) => c.id == relatedCustomerId);
+        final relatedCustomerIndex = customers.indexWhere(
+          (c) => c.id == relatedCustomerId,
+        );
         if (relatedCustomerIndex == -1) return;
         final relatedCustomer = customers[relatedCustomerIndex];
         final newRelationship = {
-          'id': (customer.relationships.fold(0, (max, r) { final id = (r['id'] as num?)?.toInt(); return id != null && id > max ? id : max; })) + 1,
+          'id':
+              (customer.relationships.fold(0, (max, r) {
+                final id = (r['id'] as num?)?.toInt();
+                return id != null && id > max ? id : max;
+              })) +
+              1,
           'related_customer_id': relatedCustomerId,
           'name': relatedCustomer.name,
           'relationship': relationship,
@@ -2186,10 +2312,7 @@ class AppState extends ChangeNotifier {
           'related_customer_id': relatedCustomerId,
           'relationship': relationship,
         });
-        await Future.wait([
-          loadCustomers(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadCustomers(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('adding customer relationship: $e');
@@ -2240,7 +2363,9 @@ class AppState extends ChangeNotifier {
               .firstWhere(
                 (c) => c.id == sale.customerId,
                 orElse: () {
-                  AppLogger.warning('Sale references non-existent customer_id: ${sale.customerId}');
+                  AppLogger.warning(
+                    'Sale references non-existent customer_id: ${sale.customerId}',
+                  );
                   return Customer(name: 'Unknown');
                 },
               )
@@ -2249,7 +2374,9 @@ class AppState extends ChangeNotifier {
               .firstWhere(
                 (p) => p.id == sale.productId,
                 orElse: () {
-                  AppLogger.warning('Sale references non-existent product_id: ${sale.productId}');
+                  AppLogger.warning(
+                    'Sale references non-existent product_id: ${sale.productId}',
+                  );
                   return Product(company: '', name: 'Unknown');
                 },
               )
@@ -2259,7 +2386,9 @@ class AppState extends ChangeNotifier {
                     .firstWhere(
                       (c) => c.id == sale.colleagueId,
                       orElse: () {
-                        AppLogger.warning('Sale references non-existent colleague_id: ${sale.colleagueId}');
+                        AppLogger.warning(
+                          'Sale references non-existent colleague_id: ${sale.colleagueId}',
+                        );
                         return Colleague(name: 'Unknown');
                       },
                     )
@@ -2273,10 +2402,7 @@ class AppState extends ChangeNotifier {
         // For mobile platforms, use database
         final db = DatabaseHelper.instance;
         await db.insertSale(sale.toMap());
-        await Future.wait([
-          loadSales(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadSales(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('adding sale: $e');
@@ -2289,7 +2415,9 @@ class AppState extends ChangeNotifier {
       if (kIsWeb) {
         // For web platform, filter from in-memory list
         return salesRecords
-            .where((sale) => (sale['customer_id'] as num?)?.toInt() == customerId)
+            .where(
+              (sale) => (sale['customer_id'] as num?)?.toInt() == customerId,
+            )
             .toList();
       } else {
         // For mobile platforms, use database
@@ -2313,11 +2441,21 @@ class AppState extends ChangeNotifier {
       final addressMatch = customer.addresses.any(
         (address) => address.toLowerCase().contains(q),
       );
-      final tagMatch = customer.tagList.any((tag) => tag.toLowerCase().contains(q));
+      final tagMatch = customer.tagList.any(
+        (tag) => tag.toLowerCase().contains(q),
+      );
       final wechatMatch = customer.wechatId?.toLowerCase().contains(q) ?? false;
       final notesMatch = customer.notes?.toLowerCase().contains(q) ?? false;
-      final occupationMatch = customer.occupation?.toLowerCase().contains(q) ?? false;
-      return nameMatch || aliasMatch || phoneMatch || addressMatch || tagMatch || wechatMatch || notesMatch || occupationMatch;
+      final occupationMatch =
+          customer.occupation?.toLowerCase().contains(q) ?? false;
+      return nameMatch ||
+          aliasMatch ||
+          phoneMatch ||
+          addressMatch ||
+          tagMatch ||
+          wechatMatch ||
+          notesMatch ||
+          occupationMatch;
     }).toList();
   }
 
@@ -2361,7 +2499,9 @@ class AppState extends ChangeNotifier {
         .toList();
 
     customersWithDist.sort(
-      (a, b) => ((a['distance'] as num?) ?? 0).compareTo((b['distance'] as num?) ?? 0),
+      (a, b) => ((a['distance'] as num?) ?? 0).compareTo(
+        (b['distance'] as num?) ?? 0,
+      ),
     );
 
     if (limit != null && limit < customersWithDist.length) {
@@ -2404,7 +2544,8 @@ class AppState extends ChangeNotifier {
             math.cos(_degreesToRadians(lat2)) *
             math.sin(dLon / 2) *
             math.sin(dLon / 2);
-    final haversineAngle = 2 * math.atan2(math.sqrt(haversineA), math.sqrt(1 - haversineA));
+    final haversineAngle =
+        2 * math.atan2(math.sqrt(haversineA), math.sqrt(1 - haversineA));
     final distanceKm = earthRadiusKm * haversineAngle;
     return distanceKm;
   }
@@ -2435,12 +2576,15 @@ class AppState extends ChangeNotifier {
 
     // Remove duplicates (by product id) and limit to 5 recommendations
     final seenIds = <int>{};
-    return recommended.where((p) {
-      final id = p.id;
-      if (id == null || seenIds.contains(id)) return false;
-      seenIds.add(id);
-      return true;
-    }).take(5).toList();
+    return recommended
+        .where((p) {
+          final id = p.id;
+          if (id == null || seenIds.contains(id)) return false;
+          seenIds.add(id);
+          return true;
+        })
+        .take(5)
+        .toList();
   }
 
   // 切换主题模式
@@ -2450,7 +2594,10 @@ class AppState extends ChangeNotifier {
   }
 
   // 更新AI引擎配置
-  Future<void> updateAIConfig(String provider, Map<String, dynamic> config) async {
+  Future<void> updateAIConfig(
+    String provider,
+    Map<String, dynamic> config,
+  ) async {
     aiProviderConfigs[provider] = config;
     if (!kIsWeb) {
       await _saveAIConfigToDb(provider, config);
@@ -2476,15 +2623,17 @@ class AppState extends ChangeNotifier {
   List<Map<String, dynamic>> get enabledAIEngines {
     return aiProviderConfigs.entries
         .where((e) => e.value['enabled'] == true)
-        .map((e) => {
-              'key': e.key,
-              'name': e.value['name'] ?? e.key,
-              'apiKey': e.value['apiKey'] ?? '',
-              'baseUrl': e.value['baseUrl'] ?? '',
-              'model': e.value['model'] ?? '',
-              'category': e.value['category'] ?? 'chat',
-              'enabled': true,
-            })
+        .map(
+          (e) => {
+            'key': e.key,
+            'name': e.value['name'] ?? e.key,
+            'apiKey': e.value['apiKey'] ?? '',
+            'baseUrl': e.value['baseUrl'] ?? '',
+            'model': e.value['model'] ?? '',
+            'category': e.value['category'] ?? 'chat',
+            'enabled': true,
+          },
+        )
         .toList();
   }
 
@@ -2499,7 +2648,10 @@ class AppState extends ChangeNotifier {
   }
 
   // 保存单个AI配置到数据库
-  Future<void> _saveAIConfigToDb(String provider, Map<String, dynamic> config) async {
+  Future<void> _saveAIConfigToDb(
+    String provider,
+    Map<String, dynamic> config,
+  ) async {
     try {
       final db = DatabaseHelper.instance;
       final now = DateTime.now().toIso8601String();
@@ -2571,8 +2723,8 @@ class AppState extends ChangeNotifier {
                 config[kvParts[0]] = kvParts[1] == 'true'
                     ? true
                     : kvParts[1] == 'false'
-                        ? false
-                        : kvParts[1];
+                    ? false
+                    : kvParts[1];
               }
             }
             loaded[key] = config;
@@ -2583,7 +2735,12 @@ class AppState extends ChangeNotifier {
           notifyListeners();
           // Migrate to database
           for (final entry in loaded.entries) {
-            await _saveAIConfigToDb(entry.key, (entry.value is Map<String, dynamic>) ? entry.value as Map<String, dynamic> : <String, dynamic>{});
+            await _saveAIConfigToDb(
+              entry.key,
+              (entry.value is Map<String, dynamic>)
+                  ? entry.value as Map<String, dynamic>
+                  : <String, dynamic>{},
+            );
           }
           // Clear legacy SharedPreferences
           await prefs.remove('ai_configs');
@@ -2607,10 +2764,7 @@ class AppState extends ChangeNotifier {
       } else {
         final db = DatabaseHelper.instance;
         await db.updateColleague(colleague.toMap());
-        await Future.wait([
-          loadColleagues(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadColleagues(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('updating colleague: $e');
@@ -2627,11 +2781,7 @@ class AppState extends ChangeNotifier {
       } else {
         final db = DatabaseHelper.instance;
         await db.deleteColleague(id);
-        await Future.wait([
-          loadColleagues(),
-          loadSales(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadColleagues(), loadSales(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('deleting colleague: $e');
@@ -2647,7 +2797,9 @@ class AppState extends ChangeNotifier {
           final customer = customers[i];
           final vIdx = customer.visits.indexWhere((v) => v['id'] == visit.id);
           if (vIdx != -1) {
-            final updatedVisits = List<Map<String, dynamic>>.from(customer.visits);
+            final updatedVisits = List<Map<String, dynamic>>.from(
+              customer.visits,
+            );
             updatedVisits[vIdx] = visit.toMap()..['id'] = visit.id;
             customers[i] = Customer(
               id: customer.id,
@@ -2684,10 +2836,7 @@ class AppState extends ChangeNotifier {
       } else {
         final db = DatabaseHelper.instance;
         await db.updateVisit(visit.toMap()..['id'] = visit.id);
-        await Future.wait([
-          loadCustomers(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadCustomers(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('updating visit: $e');
@@ -2701,8 +2850,9 @@ class AppState extends ChangeNotifier {
           final customer = customers[i];
           final hadVisit = customer.visits.any((v) => v['id'] == id);
           if (hadVisit) {
-            final updatedVisits = List<Map<String, dynamic>>.from(customer.visits)
-              ..removeWhere((v) => v['id'] == id);
+            final updatedVisits = List<Map<String, dynamic>>.from(
+              customer.visits,
+            )..removeWhere((v) => v['id'] == id);
             customers[i] = Customer(
               id: customer.id,
               name: customer.name,
@@ -2738,10 +2888,7 @@ class AppState extends ChangeNotifier {
       } else {
         final db = DatabaseHelper.instance;
         await db.deleteVisit(id);
-        await Future.wait([
-          loadCustomers(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadCustomers(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('deleting visit: $e');
@@ -2791,10 +2938,7 @@ class AppState extends ChangeNotifier {
       } else {
         final db = DatabaseHelper.instance;
         await db.updateSale(sale.toMap()..['id'] = sale.id);
-        await Future.wait([
-          loadSales(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadSales(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('updating sale: $e');
@@ -2810,10 +2954,7 @@ class AppState extends ChangeNotifier {
       } else {
         final db = DatabaseHelper.instance;
         await db.deleteSale(id);
-        await Future.wait([
-          loadSales(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadSales(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('deleting sale: $e');
@@ -2827,10 +2968,13 @@ class AppState extends ChangeNotifier {
       if (kIsWeb) {
         for (int i = 0; i < customers.length; i++) {
           final customer = customers[i];
-          final hadRelationship = customer.relationships.any((r) => r['id'] == id);
+          final hadRelationship = customer.relationships.any(
+            (r) => r['id'] == id,
+          );
           if (hadRelationship) {
-            final updatedRelationships = List<Map<String, dynamic>>.from(customer.relationships)
-              ..removeWhere((r) => r['id'] == id);
+            final updatedRelationships = List<Map<String, dynamic>>.from(
+              customer.relationships,
+            )..removeWhere((r) => r['id'] == id);
             customers[i] = Customer(
               id: customer.id,
               name: customer.name,
@@ -2866,10 +3010,7 @@ class AppState extends ChangeNotifier {
       } else {
         final db = DatabaseHelper.instance;
         await db.deleteCustomerRelationship(id);
-        await Future.wait([
-          loadCustomers(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadCustomers(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('deleting customer relationship: $e');
@@ -2885,8 +3026,9 @@ class AppState extends ChangeNotifier {
           final customer = customers[i];
           final hadProduct = customer.products.any((p) => p['id'] == id);
           if (hadProduct) {
-            final updatedProducts = List<Map<String, dynamic>>.from(customer.products)
-              ..removeWhere((p) => p['id'] == id);
+            final updatedProducts = List<Map<String, dynamic>>.from(
+              customer.products,
+            )..removeWhere((p) => p['id'] == id);
             customers[i] = Customer(
               id: customer.id,
               name: customer.name,
@@ -2922,10 +3064,7 @@ class AppState extends ChangeNotifier {
       } else {
         final db = DatabaseHelper.instance;
         await db.deleteCustomerProduct(id);
-        await Future.wait([
-          loadCustomers(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadCustomers(), loadStatistics()]);
       }
     } catch (e) {
       AppLogger.error('deleting customer product: $e');
@@ -2979,10 +3118,7 @@ class AppState extends ChangeNotifier {
         await DatabaseHelper.instance.deleteTag(tag);
         // Refresh customers to update persistentTagList
         await loadCustomers();
-        await Future.wait([
-          loadTags(),
-          loadStatistics(),
-        ]);
+        await Future.wait([loadTags(), loadStatistics()]);
       } catch (e) {
         AppLogger.error('removeTag failed: $e');
         return;
@@ -2992,7 +3128,8 @@ class AppState extends ChangeNotifier {
       allTags.remove(tag);
       for (int i = 0; i < customers.length; i++) {
         if (customers[i].persistentTagList.contains(tag)) {
-          final updatedTags = List<String>.from(customers[i].persistentTagList)..remove(tag);
+          final updatedTags = List<String>.from(customers[i].persistentTagList)
+            ..remove(tag);
           customers[i] = Customer(
             id: customers[i].id,
             name: customers[i].name,

@@ -18,22 +18,51 @@ class AppLogger {
   }
 
   /// 警告日志
-  static void warning(String message, {String tag = _defaultTag, Object? error}) {
+  static void warning(
+    String message, {
+    String tag = _defaultTag,
+    Object? error,
+  }) {
     _log(LogLevel.warning, message, tag: tag, error: error);
   }
 
   /// 错误日志
-  static void error(String message, {String tag = _defaultTag, Object? error, StackTrace? stackTrace}) {
-    _log(LogLevel.error, message, tag: tag, error: error, stackTrace: stackTrace);
+  static void error(
+    String message, {
+    String tag = _defaultTag,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    _log(
+      LogLevel.error,
+      message,
+      tag: tag,
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 
-  static void _log(LogLevel level, String message, {String tag = _defaultTag, Object? error, StackTrace? stackTrace}) {
+  static void _log(
+    LogLevel level,
+    String message, {
+    String tag = _defaultTag,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
     final timestamp = DateTime.now().toIso8601String();
     final prefix = '[$timestamp] [${level.name.toUpperCase()}] [$tag]';
-    final fullMessage = error != null ? '$prefix $message | Error: $error' : '$prefix $message';
+    final fullMessage = error != null
+        ? '$prefix $message | Error: $error'
+        : '$prefix $message';
 
     // Always log to developer.log
-    developer.log(fullMessage, name: tag, level: level.value, error: error, stackTrace: stackTrace);
+    developer.log(
+      fullMessage,
+      name: tag,
+      level: level.value,
+      error: error,
+      stackTrace: stackTrace,
+    );
 
     // In debug mode, also print to console for visibility
     if (kDebugMode) {

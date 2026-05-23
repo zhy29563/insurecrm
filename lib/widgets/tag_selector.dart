@@ -22,7 +22,8 @@ class TagSelector extends StatelessWidget {
     final hex = colorStr.startsWith('#') ? colorStr.substring(1) : colorStr;
     if (hex.length == 3) {
       // Expand #RGB to #RRGGBB
-      final expanded = 'FF${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}';
+      final expanded =
+          'FF${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}';
       final value = int.tryParse(expanded, radix: 16);
       return value != null ? Color(value) : const Color(0xFF1565C0);
     }

@@ -110,7 +110,10 @@ class BackupService {
     final encoder = ZipFileEncoder();
     final backupDir = await _backupDir;
     final backupTime = DateTime.now();
-    final timestamp = backupTime.toString().replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final timestamp = backupTime.toString().replaceAll(
+      RegExp(r'[\\/:*?"<>|]'),
+      '_',
+    );
     final zipPath = path.join(
       backupDir.path,
       '${isAutoBackup ? "auto_" : "manual_"}backup_$timestamp.zip',
@@ -150,7 +153,11 @@ class BackupService {
         'db_version': DatabaseHelper.databaseVersion,
         'db_checksum': dbChecksum,
         'files': [
-          {'name': 'insurance_manager.db', 'type': 'database', 'checksum': dbChecksum},
+          {
+            'name': 'insurance_manager.db',
+            'type': 'database',
+            'checksum': dbChecksum,
+          },
           ...dirsToBackup.map((d) => {'name': d, 'type': 'directory'}),
         ],
       };
@@ -160,11 +167,15 @@ class BackupService {
       await metaFile.writeAsString(metaJson, flush: true);
       encoder.addFile(metaFile, 'metadata.json');
       await metaFile.delete();
-      try { await tempDir.delete(); } catch (_) {}
+      try {
+        await tempDir.delete();
+      } catch (_) {}
     } catch (e) {
       encoder.close();
       // Delete incomplete ZIP file on failure
-      try { if (File(zipPath).existsSync()) File(zipPath).deleteSync(); } catch (_) {}
+      try {
+        if (File(zipPath).existsSync()) File(zipPath).deleteSync();
+      } catch (_) {}
       rethrow;
     }
 
@@ -179,15 +190,23 @@ class BackupService {
     return zipPath;
   }
 
-  void _addDirectoryToZip(ZipFileEncoder encoder, Directory dir, String basePath) {
+  void _addDirectoryToZip(
+    ZipFileEncoder encoder,
+    Directory dir,
+    String basePath,
+  ) {
     dir.listSync(recursive: true, followLinks: false).forEach((entity) {
       if (entity is File) {
         try {
           // ZIP spec requires forward slashes for internal paths
-          final relativePath = '$basePath/${path.relative(entity.path, from: dir.parent.path)}'.replaceAll('\\', '/');
+          final relativePath =
+              '$basePath/${path.relative(entity.path, from: dir.parent.path)}'
+                  .replaceAll('\\', '/');
           encoder.addFile(entity, relativePath);
         } catch (e) {
-          AppLogger.warning('Failed to add file to backup: ${entity.path}, error: $e');
+          AppLogger.warning(
+            'Failed to add file to backup: ${entity.path}, error: $e',
+          );
         }
       }
     });
@@ -197,21 +216,28 @@ class BackupService {
   Future<void> _cleanupOldBackups() async {
     final maxCount = await getMaxBackupsCount();
     final backupDir = await _backupDir;
-    final files = backupDir.listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.zip'))
-        .toList()
-      ..sort((a, b) =>
-          b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+    final files =
+        backupDir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.zip'))
+            .toList()
+          ..sort(
+            (a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()),
+          );
 
     while (files.length > maxCount && maxCount > 0) {
       final oldest = files.removeLast();
-      try { await oldest.delete(); } catch (_) {}
+      try {
+        await oldest.delete();
+      } catch (_) {}
     }
   }
 
   /// Restore from a backup .zip file
-  Future<(bool success, String message)> restoreFromBackup(String zipPath) async {
+  Future<(bool success, String message)> restoreFromBackup(
+    String zipPath,
+  ) async {
     if (kIsWeb) return (false, 'Web平台不支持恢复');
 
     try {
@@ -238,7 +264,8 @@ class BackupService {
         if (file.name == 'metadata.json' && file.isFile) {
           try {
             final metaBytes = file.content as List<int>;
-            metadata = jsonDecode(utf8.decode(metaBytes)) as Map<String, dynamic>;
+            metadata =
+                jsonDecode(utf8.decode(metaBytes)) as Map<String, dynamic>;
           } catch (e) {
             return (false, '备份元数据损坏，无法读取版本信息');
           }
@@ -249,8 +276,12 @@ class BackupService {
       if (metadata != null) {
         // Check version compatibility — refuse to restore from newer versions
         final backupDbVersion = metadata['db_version'] as int?;
-        if (backupDbVersion != null && backupDbVersion > DatabaseHelper.databaseVersion) {
-          return (false, '备份来自更新版本(v$backupDbVersion)，当前应用(v${DatabaseHelper.databaseVersion})不支持降级恢复，请更新应用后再试');
+        if (backupDbVersion != null &&
+            backupDbVersion > DatabaseHelper.databaseVersion) {
+          return (
+            false,
+            '备份来自更新版本(v$backupDbVersion)，当前应用(v${DatabaseHelper.databaseVersion})不支持降级恢复，请更新应用后再试',
+          );
         }
       }
 
@@ -278,7 +309,9 @@ class BackupService {
         try {
           await originalDbFile.copy(safetyBackupPath);
         } catch (e) {
-          AppLogger.warning('Failed to create safety backup before restore: $e');
+          AppLogger.warning(
+            'Failed to create safety backup before restore: $e',
+          );
         }
       }
 
@@ -297,7 +330,8 @@ class BackupService {
           // Zip Slip protection: ensure the resolved path is still under docsDir
           final canonicalDocs = path.canonicalize(docsDir.path);
           final canonicalTarget = path.canonicalize(filePath);
-          if (!path.isWithin(canonicalDocs, canonicalTarget) && canonicalTarget != canonicalDocs) {
+          if (!path.isWithin(canonicalDocs, canonicalTarget) &&
+              canonicalTarget != canonicalDocs) {
             continue;
           }
           if (file.isFile) {
@@ -329,7 +363,12 @@ class BackupService {
             final actualChecksum = sha256.convert(extractedBytes).toString();
             if (actualChecksum != expectedChecksum) {
               // Checksum mismatch — restore safety backup
-              await _restoreSafetyBackup(dbPath, safetyBackupPath, hadOriginalDb, dbHelper);
+              await _restoreSafetyBackup(
+                dbPath,
+                safetyBackupPath,
+                hadOriginalDb,
+                dbHelper,
+              );
               return (false, '备份文件校验失败，数据库可能在传输过程中损坏，请重新获取备份文件');
             }
           }
@@ -342,45 +381,79 @@ class BackupService {
         final extractedDbFile = File(dbPath);
         if (extractedDbFile.existsSync()) {
           final header = await _readFileHeader(extractedDbFile, 16);
-          if (header == null || !utf8.decode(header, allowMalformed: true).startsWith('SQLite format 3')) {
-            await _restoreSafetyBackup(dbPath, safetyBackupPath, hadOriginalDb, dbHelper);
+          if (header == null ||
+              !utf8
+                  .decode(header, allowMalformed: true)
+                  .startsWith('SQLite format 3')) {
+            await _restoreSafetyBackup(
+              dbPath,
+              safetyBackupPath,
+              hadOriginalDb,
+              dbHelper,
+            );
             return (false, '导入的文件不是有效的数据库文件');
           }
         }
       } catch (e) {
-        await _restoreSafetyBackup(dbPath, safetyBackupPath, hadOriginalDb, dbHelper);
+        await _restoreSafetyBackup(
+          dbPath,
+          safetyBackupPath,
+          hadOriginalDb,
+          dbHelper,
+        );
         return (false, '数据库文件验证失败：$e');
       }
 
       // 6. Reopen DB and validate core tables exist
       try {
         final db = await dbHelper.database;
-        final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+        final tables = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+        );
         final tableNames = tables.map((r) => r['name'] as String).toSet();
         final requiredTables = {'customers', 'products', 'tags'};
         final missingTables = requiredTables.difference(tableNames);
         if (missingTables.isNotEmpty) {
           await dbHelper.closeDatabase();
-          await _restoreSafetyBackup(dbPath, safetyBackupPath, hadOriginalDb, dbHelper);
+          await _restoreSafetyBackup(
+            dbPath,
+            safetyBackupPath,
+            hadOriginalDb,
+            dbHelper,
+          );
           return (false, '备份数据不完整，缺少必要的数据表：${missingTables.join(', ')}');
         }
 
         // Run integrity check
         final integrityResult = await db.rawQuery('PRAGMA integrity_check');
-        final integrityOk = integrityResult.isNotEmpty && integrityResult.first.values.first == 'ok';
+        final integrityOk =
+            integrityResult.isNotEmpty &&
+            integrityResult.first.values.first == 'ok';
         if (!integrityOk) {
           await dbHelper.closeDatabase();
-          await _restoreSafetyBackup(dbPath, safetyBackupPath, hadOriginalDb, dbHelper);
+          await _restoreSafetyBackup(
+            dbPath,
+            safetyBackupPath,
+            hadOriginalDb,
+            dbHelper,
+          );
           return (false, '数据库完整性检查失败，备份文件可能已损坏');
         }
       } catch (e) {
-        await _restoreSafetyBackup(dbPath, safetyBackupPath, hadOriginalDb, dbHelper);
+        await _restoreSafetyBackup(
+          dbPath,
+          safetyBackupPath,
+          hadOriginalDb,
+          dbHelper,
+        );
         return (false, '数据库打开失败：$e');
       }
 
       // Success — clean up safety backup
       if (safetyBackupPath != null) {
-        try { await File(safetyBackupPath).delete(); } catch (_) {}
+        try {
+          await File(safetyBackupPath).delete();
+        } catch (_) {}
       }
 
       return (true, '恢复成功！请重启应用以确保所有数据正确加载');
@@ -428,10 +501,14 @@ class BackupService {
       }
     } else {
       // No original DB existed — delete the invalid file so app recreates empty DB
-      try { await File(dbPath).delete(); } catch (_) {}
+      try {
+        await File(dbPath).delete();
+      } catch (_) {}
     }
     // Try to reopen database
-    try { await dbHelper.database; } catch (_) {}
+    try {
+      await dbHelper.database;
+    } catch (_) {}
   }
 
   /// Check if auto backup should run
@@ -462,12 +539,15 @@ class BackupService {
     if (kIsWeb) return [];
 
     final backupDir = await _backupDir;
-    final files = backupDir.listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.zip'))
-        .toList()
-      ..sort((a, b) =>
-          b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+    final files =
+        backupDir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.zip'))
+            .toList()
+          ..sort(
+            (a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()),
+          );
 
     List<BackupInfo> result = [];
     for (final file in files) {
@@ -481,7 +561,8 @@ class BackupService {
           for (final entry in archive) {
             if (entry.name == 'metadata.json' && entry.isFile) {
               final metaBytes = entry.content as List<int>;
-              final meta = jsonDecode(utf8.decode(metaBytes)) as Map<String, dynamic>;
+              final meta =
+                  jsonDecode(utf8.decode(metaBytes)) as Map<String, dynamic>;
               dbVersion = meta['db_version'] as int?;
               break;
             }
@@ -490,15 +571,17 @@ class BackupService {
           inputStream.close();
         }
       } catch (_) {}
-      result.add(BackupInfo(
-        path: file.path,
-        fileName: path.basename(file.path),
-        sizeBytes: size,
-        sizeFormatted: _formatFileSize(size),
-        created: file.lastModifiedSync(),
-        isAuto: path.basename(file.path).startsWith('auto_'),
-        dbVersion: dbVersion,
-      ));
+      result.add(
+        BackupInfo(
+          path: file.path,
+          fileName: path.basename(file.path),
+          sizeBytes: size,
+          sizeFormatted: _formatFileSize(size),
+          created: file.lastModifiedSync(),
+          isAuto: path.basename(file.path).startsWith('auto_'),
+          dbVersion: dbVersion,
+        ),
+      );
     }
     return result;
   }
@@ -523,9 +606,13 @@ class BackupService {
     final file = File(backupPath);
     if (!file.existsSync()) throw Exception('备份不存在');
 
-    final shareDir = Directory(path.join(
-      (await getApplicationDocumentsDirectory()).path, 'exports', 'backups',
-    ));
+    final shareDir = Directory(
+      path.join(
+        (await getApplicationDocumentsDirectory()).path,
+        'exports',
+        'backups',
+      ),
+    );
     shareDir.createSync(recursive: true);
 
     final targetPath = path.join(shareDir.path, path.basename(backupPath));
@@ -536,13 +623,18 @@ class BackupService {
   Future<String> importBackupFromExternal(File sourceFile) async {
     if (kIsWeb) throw Exception('Web平台不支持导入备份');
     final backupDir = await _backupDir;
-    final targetPath = path.join(backupDir.path, path.basename(sourceFile.path));
+    final targetPath = path.join(
+      backupDir.path,
+      path.basename(sourceFile.path),
+    );
     // Avoid overwriting existing backup with same name
     if (File(targetPath).existsSync()) {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final ext = path.extension(sourceFile.path);
       final base = path.basenameWithoutExtension(sourceFile.path);
-      return (await sourceFile.copy(path.join(backupDir.path, '${base}_$timestamp$ext'))).path;
+      return (await sourceFile.copy(
+        path.join(backupDir.path, '${base}_$timestamp$ext'),
+      )).path;
     }
     await sourceFile.copy(targetPath);
     return targetPath;
@@ -551,7 +643,9 @@ class BackupService {
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 }
@@ -577,7 +671,8 @@ class BackupInfo {
   });
 
   /// Whether this backup is compatible with the current app version
-  bool get isCompatible => dbVersion == null || dbVersion! <= DatabaseHelper.databaseVersion;
+  bool get isCompatible =>
+      dbVersion == null || dbVersion! <= DatabaseHelper.databaseVersion;
 
   /// Version display text
   String get versionText => dbVersion != null ? 'v$dbVersion' : '未知';

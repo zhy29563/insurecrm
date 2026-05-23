@@ -63,7 +63,8 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
   Map<String, List<Customer>> _groupByLocation(List<Customer> customers) {
     final groups = <String, List<Customer>>{};
     for (var c in customers) {
-      final addr = (c.addresses.isNotEmpty && c.addresses.first.trim().isNotEmpty)
+      final addr =
+          (c.addresses.isNotEmpty && c.addresses.first.trim().isNotEmpty)
           ? c.addresses.first.trim()
           : '未知地区';
       String key;
@@ -146,13 +147,20 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
                               color: primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Icon(Icons.category_rounded,
-                                size: 18, color: primaryColor),
+                            child: Icon(
+                              Icons.category_rounded,
+                              size: 18,
+                              color: primaryColor,
+                            ),
                           ),
                           const SizedBox(width: 10),
-                          Text('分组方式',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 15)),
+                          Text(
+                            '分组方式',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -193,7 +201,9 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
                       Text(
                         '共 ${groupedCustomers.length} 个分组',
                         style: TextStyle(
-                            fontSize: 13, color: Colors.grey.shade500),
+                          fontSize: 13,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                       const Spacer(),
                       Text(
@@ -219,10 +229,10 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
                           padding: const EdgeInsets.only(bottom: 20),
                           itemCount: groupedCustomers.keys.length,
                           itemBuilder: (context, groupIndex) {
-                            final groupName =
-                                groupedCustomers.keys.elementAt(groupIndex);
-                            final groupCustomers =
-                                groupedCustomers[groupName]!;
+                            final groupName = groupedCustomers.keys.elementAt(
+                              groupIndex,
+                            );
+                            final groupCustomers = groupedCustomers[groupName]!;
 
                             if (groupCustomers.isEmpty) {
                               return const SizedBox.shrink();
@@ -233,21 +243,26 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
                               child: AppCard(
                                 padding: EdgeInsets.zero,
                                 child: Theme(
-                                  data: Theme.of(context).copyWith(
-                                    dividerColor: Colors.transparent,
-                                  ),
+                                  data: Theme.of(
+                                    context,
+                                  ).copyWith(dividerColor: Colors.transparent),
                                   child: ExpansionTile(
                                     tilePadding: const EdgeInsets.fromLTRB(
-                                        14, 8, 14, 8),
+                                      14,
+                                      8,
+                                      14,
+                                      8,
+                                    ),
                                     childrenPadding: const EdgeInsets.only(
-                                        bottom: 8),
+                                      bottom: 8,
+                                    ),
                                     leading: Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: primaryColor
-                                            .withValues(alpha: 0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(10),
+                                        color: primaryColor.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Icon(
                                         _groupIcons[_selectedGroupBy] ??
@@ -259,10 +274,13 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
                                     title: Row(
                                       children: [
                                         Flexible(
-                                          child: Text(groupName,
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 15)),
+                                          child: Text(
+                                            groupName,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
+                                            ),
+                                          ),
                                         ),
                                         const SizedBox(width: 8),
                                         Container(
@@ -271,10 +289,12 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
                                             vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: primaryColor
-                                                .withValues(alpha: 0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(10),
+                                            color: primaryColor.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
                                           ),
                                           child: Text(
                                             '${groupCustomers.length}人',
@@ -293,20 +313,20 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
                                         physics:
                                             const NeverScrollableScrollPhysics(),
                                         itemCount: groupCustomers.length,
-                                        itemBuilder:
-                                            (context, customerIndex) {
+                                        itemBuilder: (context, customerIndex) {
                                           final customer =
                                               groupCustomers[customerIndex];
                                           return Padding(
-                                            padding: const EdgeInsets
-                                                .symmetric(
-                                                horizontal: 10,
-                                                vertical: 3),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 3,
+                                            ),
                                             child: Row(
                                               children: [
                                                 CustomerAvatar(
-                                                    name: customer.name,
-                                                    radius: 18),
+                                                  name: customer.name,
+                                                  radius: 18,
+                                                ),
                                                 const SizedBox(width: 12),
                                                 Expanded(
                                                   child: Column(
@@ -317,26 +337,27 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
                                                       Text(
                                                         customer.name,
                                                         style: const TextStyle(
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w500,
-                                                            fontSize: 14),
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                          fontSize: 14,
+                                                        ),
                                                       ),
-                                                      const SizedBox(
-                                                          height: 2),
+                                                      const SizedBox(height: 2),
                                                       Text(
                                                         '${customer.age != null ? '${customer.age}岁' : '年龄未知'} • ${customer.gender ?? '性别未知'}',
                                                         style: TextStyle(
                                                           fontSize: 12,
                                                           color: Colors
-                                                              .grey.shade500,
+                                                              .grey
+                                                              .shade500,
                                                         ),
                                                       ),
                                                     ],
                                                   ),
                                                 ),
                                                 RatingBadge(
-                                                    rating: customer.rating),
+                                                  rating: customer.rating,
+                                                ),
                                               ],
                                             ),
                                           );

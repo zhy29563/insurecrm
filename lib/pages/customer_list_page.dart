@@ -11,7 +11,11 @@ class CustomerListPage extends StatefulWidget {
   final bool addMode;
   final bool visitMode;
 
-  const CustomerListPage({super.key, this.addMode = false, this.visitMode = false});
+  const CustomerListPage({
+    super.key,
+    this.addMode = false,
+    this.visitMode = false,
+  });
 
   @override
   _CustomerListPageState createState() => _CustomerListPageState();
@@ -189,7 +193,9 @@ class _CustomerListPageState extends State<CustomerListPage>
                               onSelected: (_) {
                                 setState(() => _selectedTag = null);
                               },
-                              selectedColor: primaryColor.withValues(alpha: 0.2),
+                              selectedColor: primaryColor.withValues(
+                                alpha: 0.2,
+                              ),
                               checkmarkColor: primaryColor,
                             ),
                           ),
@@ -206,7 +212,9 @@ class _CustomerListPageState extends State<CustomerListPage>
                                         : tag;
                                   });
                                 },
-                                selectedColor: primaryColor.withValues(alpha: 0.2),
+                                selectedColor: primaryColor.withValues(
+                                  alpha: 0.2,
+                                ),
                                 checkmarkColor: primaryColor,
                               ),
                             ),
@@ -282,29 +290,28 @@ class _CustomerListPageState extends State<CustomerListPage>
                                           ),
                                         ),
                                       ),
-                                      ...customers
-                                          .map<Widget>(
-                                            (customer) => FadeTransition(
-                                              opacity: animation,
-                                              child: SlideTransition(
-                                                position: Tween<Offset>(
-                                                  begin: Offset(0, 0.05),
-                                                  end: Offset(0, 0),
-                                                ).animate(animation),
-                                                child: Padding(
-                                                  padding: EdgeInsets.symmetric(
-                                                    horizontal: 16,
-                                                    vertical: 4,
-                                                  ),
-                                                  child: _buildCustomerCard(
-                                                    context,
-                                                    customer,
-                                                    isDark,
-                                                  ),
-                                                ),
+                                      ...customers.map<Widget>(
+                                        (customer) => FadeTransition(
+                                          opacity: animation,
+                                          child: SlideTransition(
+                                            position: Tween<Offset>(
+                                              begin: Offset(0, 0.05),
+                                              end: Offset(0, 0),
+                                            ).animate(animation),
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 4,
+                                              ),
+                                              child: _buildCustomerCard(
+                                                context,
+                                                customer,
+                                                isDark,
                                               ),
                                             ),
                                           ),
+                                        ),
+                                      ),
                                     ],
                                   );
                                 },
@@ -330,7 +337,8 @@ class _CustomerListPageState extends State<CustomerListPage>
                                             child: InkWell(
                                               onTap: () =>
                                                   _scrollToSection(letter),
-                                              borderRadius: BorderRadius.circular(4),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                               child: Container(
                                                 width: 24,
                                                 height: 20,
@@ -382,7 +390,10 @@ class _CustomerListPageState extends State<CustomerListPage>
               children: [
                 Text(
                   customer.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -458,5 +469,4 @@ class _CustomerListPageState extends State<CustomerListPage>
       }
     }
   }
-
 }

@@ -26,9 +26,9 @@ class _ProductListPageState extends State<ProductListPage> {
     super.initState();
     if (widget.addMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _navigateToProductDetail();
-    });
+        if (!mounted) return;
+        _navigateToProductDetail();
+      });
     }
   }
 
@@ -52,8 +52,6 @@ class _ProductListPageState extends State<ProductListPage> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).primaryColor;
-
     if (_searchQuery.isEmpty) {
       _filteredProducts = List.from(appState.products);
     } else {
@@ -158,7 +156,10 @@ class _ProductListPageState extends State<ProductListPage> {
               children: [
                 Text(
                   product.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -183,7 +184,10 @@ class _ProductListPageState extends State<ProductListPage> {
                 if (product.category != null) ...[
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),

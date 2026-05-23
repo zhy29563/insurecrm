@@ -46,12 +46,15 @@ class RelationshipGraphPainter extends CustomPainter {
 
     // 绘制背景装饰 - 中心光晕
     final bgPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          const Color(0xFF1565C0).withValues(alpha: 0.06),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(center: Offset(centerX, centerY), radius: 120));
+      ..shader =
+          RadialGradient(
+            colors: [
+              const Color(0xFF1565C0).withValues(alpha: 0.06),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(center: Offset(centerX, centerY), radius: 120),
+          );
     canvas.drawCircle(Offset(centerX, centerY), 120, bgPaint);
 
     // 绘制连线（先画线，后画节点覆盖）
@@ -70,7 +73,11 @@ class RelationshipGraphPainter extends CustomPainter {
         ..color = relColor.withValues(alpha: 0.35)
         ..strokeWidth = 2.0
         ..style = PaintingStyle.stroke;
-      canvas.drawLine(Offset(centerX, centerY), Offset(nodeX, nodeY), linePaint);
+      canvas.drawLine(
+        Offset(centerX, centerY),
+        Offset(nodeX, nodeY),
+        linePaint,
+      );
 
       // 关系标签 - 在连线中点
       final midX = (centerX + nodeX) / 2;
@@ -98,11 +105,17 @@ class RelationshipGraphPainter extends CustomPainter {
           const Radius.circular(4),
         );
         canvas.drawRRect(bgRect, Paint()..color = Colors.white);
-        canvas.drawRRect(bgRect, Paint()
-          ..color = relColor.withValues(alpha: 0.15)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1);
-        labelTp.paint(canvas, Offset(midX - labelTp.width / 2, midY - labelTp.height / 2));
+        canvas.drawRRect(
+          bgRect,
+          Paint()
+            ..color = relColor.withValues(alpha: 0.15)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1,
+        );
+        labelTp.paint(
+          canvas,
+          Offset(midX - labelTp.width / 2, midY - labelTp.height / 2),
+        );
       }
     }
 
@@ -115,22 +128,34 @@ class RelationshipGraphPainter extends CustomPainter {
 
     // 中心圆
     final centerPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF1565C0), Color(0xFF1E88E5)],
-      ).createShader(Rect.fromCircle(center: Offset(centerX, centerY), radius: centerRadius));
+      ..shader =
+          const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1565C0), Color(0xFF1E88E5)],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(centerX, centerY),
+              radius: centerRadius,
+            ),
+          );
     canvas.drawCircle(Offset(centerX, centerY), centerRadius, centerPaint);
 
     // 中心白色描边
-    canvas.drawCircle(Offset(centerX, centerY), centerRadius, Paint()
-      ..color = Colors.white
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke);
+    canvas.drawCircle(
+      Offset(centerX, centerY),
+      centerRadius,
+      Paint()
+        ..color = Colors.white
+        ..strokeWidth = 2.5
+        ..style = PaintingStyle.stroke,
+    );
 
     // 中心文字
     final centerName = centerCustomer.name;
-    final centerDisplay = centerName.length > 3 ? '${centerName.substring(0, 2)}…' : centerName;
+    final centerDisplay = centerName.length > 3
+        ? '${centerName.substring(0, 2)}…'
+        : centerName;
     final centerTp = TextPainter(
       text: TextSpan(
         text: centerDisplay,
@@ -143,10 +168,10 @@ class RelationshipGraphPainter extends CustomPainter {
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: centerRadius * 2 - 8);
-    centerTp.paint(canvas, Offset(
-      centerX - centerTp.width / 2,
-      centerY - centerTp.height / 2,
-    ));
+    centerTp.paint(
+      canvas,
+      Offset(centerX - centerTp.width / 2, centerY - centerTp.height / 2),
+    );
 
     // 绘制周围关系节点
     for (int i = 0; i < relationships.length; i++) {
@@ -159,27 +184,40 @@ class RelationshipGraphPainter extends CustomPainter {
 
       final relColor = _relColor(relationship['relationship'] as String?);
       final rating = (relationship['rating'] as num?)?.toInt();
-      final nodeColor = rating != null && rating > 0 ? _ratingColor(rating) : relColor;
+      final nodeColor = rating != null && rating > 0
+          ? _ratingColor(rating)
+          : relColor;
 
       // 节点阴影
-      canvas.drawCircle(Offset(nodeX, nodeY + 2), nodeRadius, Paint()
-        ..color = Colors.black.withValues(alpha: 0.08)
-        ..style = PaintingStyle.fill);
+      canvas.drawCircle(
+        Offset(nodeX, nodeY + 2),
+        nodeRadius,
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.08)
+          ..style = PaintingStyle.fill,
+      );
 
       // 节点圆 - 渐变
       final nodePaint = Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [nodeColor, nodeColor.withValues(alpha: 0.8)],
-        ).createShader(Rect.fromCircle(center: Offset(nodeX, nodeY), radius: nodeRadius));
+        ..shader =
+            LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [nodeColor, nodeColor.withValues(alpha: 0.8)],
+            ).createShader(
+              Rect.fromCircle(center: Offset(nodeX, nodeY), radius: nodeRadius),
+            );
       canvas.drawCircle(Offset(nodeX, nodeY), nodeRadius, nodePaint);
 
       // 节点白色描边
-      canvas.drawCircle(Offset(nodeX, nodeY), nodeRadius, Paint()
-        ..color = Colors.white
-        ..strokeWidth = 2
-        ..style = PaintingStyle.stroke);
+      canvas.drawCircle(
+        Offset(nodeX, nodeY),
+        nodeRadius,
+        Paint()
+          ..color = Colors.white
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke,
+      );
 
       // 节点名称
       final name = relationship['name'] as String? ?? '';
@@ -196,10 +234,7 @@ class RelationshipGraphPainter extends CustomPainter {
         textAlign: TextAlign.center,
         textDirection: TextDirection.ltr,
       )..layout(maxWidth: nodeRadius * 2 - 6);
-      tp.paint(canvas, Offset(
-        nodeX - tp.width / 2,
-        nodeY - tp.height / 2,
-      ));
+      tp.paint(canvas, Offset(nodeX - tp.width / 2, nodeY - tp.height / 2));
     }
   }
 
@@ -294,12 +329,20 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         phones: _phones,
         addresses: _addresses,
         persistentPhotoList: _photos,
-        birthday: _birthdayController.text.isEmpty ? null : _birthdayController.text,
+        birthday: _birthdayController.text.isEmpty
+            ? null
+            : _birthdayController.text,
         createdAt:
             widget.customer?.createdAt ?? DateTime.now().toIso8601String(),
-        wechatId: _wechatIdController.text.isEmpty ? null : _wechatIdController.text,
-        idCardNumber: _idCardNumberController.text.isEmpty ? null : _idCardNumberController.text,
-        occupation: _occupationController.text.isEmpty ? null : _occupationController.text,
+        wechatId: _wechatIdController.text.isEmpty
+            ? null
+            : _wechatIdController.text,
+        idCardNumber: _idCardNumberController.text.isEmpty
+            ? null
+            : _idCardNumberController.text,
+        occupation: _occupationController.text.isEmpty
+            ? null
+            : _occupationController.text,
         source: _source,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
         purchaseIntentionLevel: _rating,
@@ -319,9 +362,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         Navigator.pop(context);
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }
@@ -363,13 +406,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       if (kIsWeb ||
           (!kIsWeb &&
               (Platform.isLinux || Platform.isWindows || Platform.isMacOS))) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('身份证扫描功能在当前平台暂不可用')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('身份证扫描功能在当前平台暂不可用')));
         return;
       }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('身份证扫描功能在当前平台暂不可用')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('身份证扫描功能在当前平台暂不可用')));
       return;
     }
 
@@ -388,7 +433,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               children: [
                 Padding(
                   padding: EdgeInsets.only(bottom: 12),
-                  child: Text('扫描身份证', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    '扫描身份证',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                  ),
                 ),
                 ListTile(
                   leading: Icon(Icons.camera_alt, color: primaryColor),
@@ -433,14 +481,22 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               children: [
                 CircularProgressIndicator(strokeWidth: 3),
                 SizedBox(width: 16),
-                Expanded(child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('正在识别...', style: TextStyle(fontWeight: FontWeight.w600)),
-                    Text('请稍候', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                )),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '正在识别...',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        '请稍候',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -449,7 +505,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
       // 使用 ML Kit 识别文字
       final inputImage = InputImage.fromFilePath(picked.path);
-      final textRecognizer = TextRecognizer(script: TextRecognitionScript.chinese);
+      final textRecognizer = TextRecognizer(
+        script: TextRecognitionScript.chinese,
+      );
       final recognizedText = await textRecognizer.processImage(inputImage);
       textRecognizer.close();
 
@@ -460,9 +518,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       final fullText = recognizedText.text;
       if (fullText.trim().isEmpty) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('未识别到文字，请重新拍摄清晰的身份证照片')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('未识别到文字，请重新拍摄清晰的身份证照片')));
         return;
       }
 
@@ -473,7 +531,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       String? address;
 
       // 提取姓名 - 身份证上"姓名"关键字后面
-      final nameMatch = RegExp(r'姓\s*名\s*([^\x00-\xff]{1,4})').firstMatch(fullText);
+      final nameMatch = RegExp(
+        r'姓\s*名\s*([^\x00-\xff]{1,4})',
+      ).firstMatch(fullText);
       if (nameMatch != null) {
         name = nameMatch.group(1)?.trim();
       }
@@ -491,7 +551,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       }
 
       // 提取地址 - "住址"后面的内容
-      final addrMatch = RegExp(r'住\s*址\s*([\s\S]*?)(?:\d{17}[\dXx]|公民身份号码|$)').firstMatch(fullText);
+      final addrMatch = RegExp(
+        r'住\s*址\s*([\s\S]*?)(?:\d{17}[\dXx]|公民身份号码|$)',
+      ).firstMatch(fullText);
       if (addrMatch != null) {
         address = addrMatch.group(1)?.trim();
         // 去除换行
@@ -518,7 +580,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           final now = DateTime.now();
           int age = now.year - birthDateTime.year;
           if (now.month < birthDateTime.month ||
-              (now.month == birthDateTime.month && now.day < birthDateTime.day)) {
+              (now.month == birthDateTime.month &&
+                  now.day < birthDateTime.day)) {
             age--;
           }
           if (_ageController.text.isEmpty) {
@@ -545,9 +608,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               if (gender != null) _buildScanResultRow('性别', gender),
               if (idNumber != null) _buildScanResultRow('证件号', idNumber),
               if (address != null) _buildScanResultRow('地址', address),
-              if (_birthdayController.text.isNotEmpty) _buildScanResultRow('生日', _birthdayController.text),
+              if (_birthdayController.text.isNotEmpty)
+                _buildScanResultRow('生日', _birthdayController.text),
               SizedBox(height: 12),
-              Text('确认将以上信息填入客户资料？', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+              Text(
+                '确认将以上信息填入客户资料？',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
             ],
           ),
           actions: [
@@ -576,14 +643,16 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           if (idNumber != null) {
             _idCardNumberController.text = idNumber;
           }
-          if (address != null && address.isNotEmpty && !_addresses.any((a) => a == address)) {
+          if (address != null &&
+              address.isNotEmpty &&
+              !_addresses.any((a) => a == address)) {
             _addresses.add(address);
           }
         });
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('身份证信息已填入')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('身份证信息已填入')));
       }
     } catch (e) {
       AppLogger.error('scanning ID card: $e');
@@ -595,8 +664,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         }
       } catch (_) {}
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('身份证扫描失败: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('身份证扫描失败: $e')));
     }
   }
 
@@ -608,10 +678,16 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         children: [
           SizedBox(
             width: 56,
-            child: Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            ),
           ),
           Expanded(
-            child: Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),
@@ -623,13 +699,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       if (kIsWeb ||
           (!kIsWeb &&
               (Platform.isLinux || Platform.isWindows || Platform.isMacOS))) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('照片选择功能在当前平台暂不可用')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('照片选择功能在当前平台暂不可用')));
         return;
       }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('照片选择功能在当前平台暂不可用')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('照片选择功能在当前平台暂不可用')));
       return;
     }
 
@@ -648,14 +726,16 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         await _extractInfoFromImage(savedPath);
         if (!context.mounted) return;
 
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('照片添加成功')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('照片添加成功')));
       }
     } catch (e) {
       AppLogger.error('picking image: $e');
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('照片添加失败，请重试')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('照片添加失败，请重试')));
     }
   }
 
@@ -696,13 +776,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         await launchUrl(phoneUri);
       } else {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('无法拨打电话')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('无法拨打电话')));
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('拨打电话失败: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('拨打电话失败: $e')));
     }
   }
 
@@ -714,13 +796,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         await launchUrl(smsUri);
       } else {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('无法发送短信')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('无法发送短信')));
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('发送短信失败: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('发送短信失败: $e')));
     }
   }
 
@@ -732,13 +816,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         await launchUrl(wechatUri, mode: LaunchMode.externalApplication);
       } else {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('未安装微信或无法打开')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('未安装微信或无法打开')));
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('打开微信失败: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('打开微信失败: $e')));
     }
   }
 
@@ -851,8 +937,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               Navigator.pop(context);
               if (!mounted) return;
               // No setState needed - Provider will auto-rebuild when data changes
-              ScaffoldMessenger.of(this.context)
-                  .showSnackBar(SnackBar(content: Text('拜访记录已添加')));
+              ScaffoldMessenger.of(
+                this.context,
+              ).showSnackBar(SnackBar(content: Text('拜访记录已添加')));
             },
             child: Text('添加'),
           ),
@@ -922,7 +1009,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       selectedProduct = value;
                     });
                   },
-                  items: appState.products.map<DropdownMenuItem<Product>>((Product product) {
+                  items: appState.products.map<DropdownMenuItem<Product>>((
+                    Product product,
+                  ) {
                     return DropdownMenuItem<Product>(
                       value: product,
                       child: Text(product.name),
@@ -963,7 +1052,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       selectedColleague = value;
                     });
                   },
-                  items: appState.colleagues.map<DropdownMenuItem<Colleague>>((Colleague colleague) {
+                  items: appState.colleagues.map<DropdownMenuItem<Colleague>>((
+                    Colleague colleague,
+                  ) {
                     return DropdownMenuItem<Colleague>(
                       value: colleague,
                       child: Text(colleague.name),
@@ -989,27 +1080,35 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             TextButton(
               onPressed: () async {
                 if (selectedProduct == null) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text('请选择产品')));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('请选择产品')));
                   return;
                 }
 
                 final amount = double.tryParse(amountController.text);
                 if (amount == null || amount <= 0) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text('请输入有效的销售金额')));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('请输入有效的销售金额')));
                   return;
                 }
                 if (selectedColleague != null) {
-                  final commissionRate = double.tryParse(commissionController.text);
-                  if (commissionController.text.isNotEmpty && commissionRate == null) {
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(SnackBar(content: Text('请输入有效的分成比例')));
+                  final commissionRate = double.tryParse(
+                    commissionController.text,
+                  );
+                  if (commissionController.text.isNotEmpty &&
+                      commissionRate == null) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('请输入有效的分成比例')));
                     return;
                   }
-                  if (commissionRate != null && (commissionRate < 0 || commissionRate > 100)) {
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(SnackBar(content: Text('分成比例应在0-100之间')));
+                  if (commissionRate != null &&
+                      (commissionRate < 0 || commissionRate > 100)) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('分成比例应在0-100之间')));
                     return;
                   }
                 }
@@ -1029,8 +1128,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 Navigator.pop(context);
                 if (!mounted) return;
                 // No setState needed - Provider will auto-rebuild when data changes
-                ScaffoldMessenger.of(this.context)
-                    .showSnackBar(SnackBar(content: Text('销售记录已添加')));
+                ScaffoldMessenger.of(
+                  this.context,
+                ).showSnackBar(SnackBar(content: Text('销售记录已添加')));
               },
               child: Text('添加'),
             ),
@@ -1049,7 +1149,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     if (widget.customer?.id == null) return;
     final appState = Provider.of<AppState>(context, listen: false);
     Customer? selectedCustomer;
-    String relationshipType = appState.relationshipLabels.isNotEmpty ? appState.relationshipLabels.first : '其他';
+    String relationshipType = appState.relationshipLabels.isNotEmpty
+        ? appState.relationshipLabels.first
+        : '其他';
 
     showDialog(
       context: context,
@@ -1074,11 +1176,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                   items: appState.customers
                       .where((customer) => customer.id != widget.customer!.id)
                       .map<DropdownMenuItem<Customer>>((Customer customer) {
-                    return DropdownMenuItem<Customer>(
-                      value: customer,
-                      child: Text(customer.name),
-                    );
-                  }).toList(),
+                        return DropdownMenuItem<Customer>(
+                          value: customer,
+                          child: Text(customer.name),
+                        );
+                      })
+                      .toList(),
                 ),
                 SizedBox(height: 10),
                 Row(
@@ -1090,9 +1193,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                         Navigator.pop(context); // 先关闭当前对话框
                         await Navigator.push(
                           this.context,
-                          MaterialPageRoute(
-                            builder: (_) => SettingsPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => SettingsPage()),
                         );
                         // 返回后重新打开添加关系对话框（此时标签已更新）
                         if (mounted) {
@@ -1102,8 +1203,20 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.settings_outlined, size: 14, color: primaryColor),                          SizedBox(width: 2),
-                          Text('管理标签', style: TextStyle(fontSize: 12, color: primaryColor, fontWeight: FontWeight.w500)),
+                          Icon(
+                            Icons.settings_outlined,
+                            size: 14,
+                            color: primaryColor,
+                          ),
+                          SizedBox(width: 2),
+                          Text(
+                            '管理标签',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: primaryColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1111,7 +1224,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 ),
                 SizedBox(height: 5),
                 DropdownButton<String>(
-                  value: appState.relationshipLabels.contains(relationshipType) ? relationshipType : null,
+                  value: appState.relationshipLabels.contains(relationshipType)
+                      ? relationshipType
+                      : null,
                   hint: Text('选择关系类型'),
                   isExpanded: true,
                   onChanged: (String? value) {
@@ -1119,12 +1234,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       relationshipType = value ?? relationshipType;
                     });
                   },
-                  items: appState.relationshipLabels.map<DropdownMenuItem<String>>((String type) {
-                    return DropdownMenuItem<String>(
-                      value: type,
-                      child: Text(type),
-                    );
-                  }).toList(),
+                  items: appState.relationshipLabels
+                      .map<DropdownMenuItem<String>>((String type) {
+                        return DropdownMenuItem<String>(
+                          value: type,
+                          child: Text(type),
+                        );
+                      })
+                      .toList(),
                 ),
               ],
             ),
@@ -1137,8 +1254,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             TextButton(
               onPressed: () async {
                 if (selectedCustomer == null) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text('请选择客户')));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('请选择客户')));
                   return;
                 }
 
@@ -1151,8 +1269,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 Navigator.pop(context);
                 if (!mounted) return;
                 // No setState needed - Provider will auto-rebuild when data changes
-                ScaffoldMessenger.of(this.context)
-                    .showSnackBar(SnackBar(content: Text('客户关系已添加')));
+                ScaffoldMessenger.of(
+                  this.context,
+                ).showSnackBar(SnackBar(content: Text('客户关系已添加')));
               },
               child: Text('添加'),
             ),
@@ -1179,13 +1298,18 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       for (final p in appState.products) {
         if (p.id != null) productById[p.id!] = p;
       }
-      return productIds.map<Product?>((id) => productById[id]).whereType<Product>().toList();
+      return productIds
+          .map<Product?>((id) => productById[id])
+          .whereType<Product>()
+          .toList();
     } else {
       final db = DatabaseHelper.instance;
       final customerProductMaps = await db.getCustomerProducts(
         widget.customer!.id!,
       );
-      return customerProductMaps.map<Product>((map) => Product.fromMap(map)).toList();
+      return customerProductMaps
+          .map<Product>((map) => Product.fromMap(map))
+          .toList();
     }
   }
 
@@ -1225,7 +1349,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                                   fit: BoxFit.cover,
                                   width: 80,
                                   height: 80,
-                                  errorBuilder: (_, _, _) => _buildAvatarInitial(initial),
+                                  errorBuilder: (_, _, _) =>
+                                      _buildAvatarInitial(initial),
                                 ),
                         )
                       : _buildAvatarInitial(initial),
@@ -1242,7 +1367,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
-                      child: Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                      child: Icon(
+                        Icons.camera_alt,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
               ],
@@ -1268,10 +1397,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                       focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).primaryColor,
+                        ),
                       ),
                       hintText: '输入姓名',
-                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 18),
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 18,
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -1297,7 +1431,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     child: TextFormField(
                       controller: _aliasController,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 15,
+                      ),
                       decoration: InputDecoration(
                         isDense: true,
                         contentPadding: EdgeInsets.symmetric(vertical: 2),
@@ -1308,7 +1445,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           borderSide: BorderSide(color: primaryColor),
                         ),
                         hintText: '别名/公司',
-                        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   )
@@ -1316,7 +1456,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     padding: EdgeInsets.only(top: 2),
                     child: Text(
                       _aliasController.text,
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
           // 评级
@@ -1326,11 +1469,16 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('意向: ', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                  Text(
+                    '意向: ',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  ),
                   ...List.generate(5, (index) {
                     return Icon(
                       index < _rating ? Icons.star : Icons.star_border,
-                      color: index < _rating ? Colors.amber : Colors.grey.shade300,
+                      color: index < _rating
+                          ? Colors.amber
+                          : Colors.grey.shade300,
                       size: 16,
                     );
                   }),
@@ -1378,10 +1526,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 ),
               ),
               Spacer(),
-              if (trailing != null) ...[
-                trailing,
-                SizedBox(width: 16),
-              ],
+              if (trailing != null) ...[trailing, SizedBox(width: 16)],
             ],
           ),
         ),
@@ -1391,9 +1536,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
       ],
     );
@@ -1422,10 +1565,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 width: 56,
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
                 ),
               ),
               Expanded(child: child),
@@ -1435,7 +1575,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         if (showDivider)
           Padding(
             padding: EdgeInsets.only(left: icon != null ? 48 : 84),
-            child: Divider(height: 1, color: Colors.grey.shade200, thickness: 0.5),
+            child: Divider(
+              height: 1,
+              color: Colors.grey.shade200,
+              thickness: 0.5,
+            ),
           ),
       ],
     );
@@ -1520,10 +1664,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         style: TextStyle(fontSize: 15, color: _textPrimary),
         onChanged: onChanged,
         items: options.map<DropdownMenuItem<String>>((option) {
-          return DropdownMenuItem(
-            value: option,
-            child: Text(option),
-          );
+          return DropdownMenuItem(value: option, child: Text(option));
         }).toList(),
       ),
     );
@@ -1539,7 +1680,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             children: [
               Padding(
                 padding: EdgeInsets.only(right: 12),
-                child: Icon(Icons.phone_android, size: 20, color: Colors.green.shade600),
+                child: Icon(
+                  Icons.phone_android,
+                  size: 20,
+                  color: Colors.green.shade600,
+                ),
               ),
               SizedBox(
                 width: 56,
@@ -1553,31 +1698,55 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     ? Row(
                         children: [
                           Expanded(
-                            child: Text(phone, style: TextStyle(fontSize: 15, color: _textPrimary)),
+                            child: Text(
+                              phone,
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: _textPrimary,
+                              ),
+                            ),
                           ),
                           GestureDetector(
                             onTap: () => _removePhone(index),
-                            child: Icon(Icons.remove_circle_outline, size: 20, color: Colors.red.shade300),
+                            child: Icon(
+                              Icons.remove_circle_outline,
+                              size: 20,
+                              color: Colors.red.shade300,
+                            ),
                           ),
                         ],
                       )
                     : Row(
                         children: [
                           Expanded(
-                            child: Text(phone, style: TextStyle(fontSize: 15, color: primaryColor)),
+                            child: Text(
+                              phone,
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: primaryColor,
+                              ),
+                            ),
                           ),
                           GestureDetector(
                             onTap: () => _makePhoneCall(phone),
                             child: Padding(
                               padding: EdgeInsets.only(left: 8),
-                              child: Icon(Icons.phone, size: 18, color: Colors.green.shade600),
+                              child: Icon(
+                                Icons.phone,
+                                size: 18,
+                                color: Colors.green.shade600,
+                              ),
                             ),
                           ),
                           GestureDetector(
                             onTap: () => _sendSms(phone),
                             child: Padding(
                               padding: EdgeInsets.only(left: 12),
-                              child: Icon(Icons.message, size: 18, color: Colors.blue.shade600),
+                              child: Icon(
+                                Icons.message,
+                                size: 18,
+                                color: Colors.blue.shade600,
+                              ),
                             ),
                           ),
                         ],
@@ -1589,14 +1758,22 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         if (showDivider)
           Padding(
             padding: EdgeInsets.only(left: 48),
-            child: Divider(height: 1, color: Colors.grey.shade200, thickness: 0.5),
+            child: Divider(
+              height: 1,
+              color: Colors.grey.shade200,
+              thickness: 0.5,
+            ),
           ),
       ],
     );
   }
 
   /// 地址列表行
-  Widget _buildAddressRow(int index, String address, {bool showDivider = true}) {
+  Widget _buildAddressRow(
+    int index,
+    String address, {
+    bool showDivider = true,
+  }) {
     return Column(
       children: [
         Padding(
@@ -1606,7 +1783,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             children: [
               Padding(
                 padding: EdgeInsets.only(right: 12, top: 2),
-                child: Icon(Icons.location_on, size: 20, color: Colors.red.shade400),
+                child: Icon(
+                  Icons.location_on,
+                  size: 20,
+                  color: Colors.red.shade400,
+                ),
               ),
               SizedBox(
                 width: 56,
@@ -1621,15 +1802,28 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(address, style: TextStyle(fontSize: 15, color: _textPrimary)),
+                            child: Text(
+                              address,
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: _textPrimary,
+                              ),
+                            ),
                           ),
                           GestureDetector(
                             onTap: () => _removeAddress(index),
-                            child: Icon(Icons.remove_circle_outline, size: 20, color: Colors.red.shade300),
+                            child: Icon(
+                              Icons.remove_circle_outline,
+                              size: 20,
+                              color: Colors.red.shade300,
+                            ),
                           ),
                         ],
                       )
-                    : Text(address, style: TextStyle(fontSize: 15, color: _textPrimary)),
+                    : Text(
+                        address,
+                        style: TextStyle(fontSize: 15, color: _textPrimary),
+                      ),
               ),
             ],
           ),
@@ -1637,7 +1831,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         if (showDivider)
           Padding(
             padding: EdgeInsets.only(left: 48),
-            child: Divider(height: 1, color: Colors.grey.shade200, thickness: 0.5),
+            child: Divider(
+              height: 1,
+              color: Colors.grey.shade200,
+              thickness: 0.5,
+            ),
           ),
       ],
     );
@@ -1652,11 +1850,18 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         children: [
           Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Icon(Icons.add_circle_outline, size: 20, color: primaryColor),
+            child: Icon(
+              Icons.add_circle_outline,
+              size: 20,
+              color: primaryColor,
+            ),
           ),
           SizedBox(
             width: 56,
-            child: Text('手机', style: TextStyle(fontSize: 15, color: primaryColor)),
+            child: Text(
+              '手机',
+              style: TextStyle(fontSize: 15, color: primaryColor),
+            ),
           ),
           Expanded(
             child: TextFormField(
@@ -1678,16 +1883,23 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             borderRadius: BorderRadius.circular(6),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-            onTap: _addPhone,
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: primaryColor,
-                borderRadius: BorderRadius.circular(6),
+              onTap: _addPhone,
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '添加',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-              child: Text('添加', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
-            ),
             ),
           ),
         ],
@@ -1704,11 +1916,18 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         children: [
           Padding(
             padding: EdgeInsets.only(right: 12),
-            child: Icon(Icons.add_circle_outline, size: 20, color: primaryColor),
+            child: Icon(
+              Icons.add_circle_outline,
+              size: 20,
+              color: primaryColor,
+            ),
           ),
           SizedBox(
             width: 56,
-            child: Text('地址', style: TextStyle(fontSize: 15, color: primaryColor)),
+            child: Text(
+              '地址',
+              style: TextStyle(fontSize: 15, color: primaryColor),
+            ),
           ),
           Expanded(
             child: TextFormField(
@@ -1729,16 +1948,23 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             borderRadius: BorderRadius.circular(6),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-            onTap: _addAddress,
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: primaryColor,
-                borderRadius: BorderRadius.circular(6),
+              onTap: _addAddress,
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '添加',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-              child: Text('添加', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
-            ),
             ),
           ),
         ],
@@ -1764,13 +1990,17 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             icon: Icons.phone,
             label: '电话',
             color: Colors.green,
-            onPressed: primaryPhone != null ? () => _makePhoneCall(primaryPhone) : null,
+            onPressed: primaryPhone != null
+                ? () => _makePhoneCall(primaryPhone)
+                : null,
           ),
           _buildQuickActionButton(
             icon: Icons.message,
             label: '短信',
             color: Colors.blue,
-            onPressed: primaryPhone != null ? () => _sendSms(primaryPhone) : null,
+            onPressed: primaryPhone != null
+                ? () => _sendSms(primaryPhone)
+                : null,
           ),
           _buildQuickActionButton(
             icon: Icons.chat,
@@ -1813,10 +2043,16 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: enabled ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
+              color: enabled
+                  ? color.withValues(alpha: 0.1)
+                  : Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: enabled ? color : Colors.grey.shade400, size: 22),
+            child: Icon(
+              icon,
+              color: enabled ? color : Colors.grey.shade400,
+              size: 22,
+            ),
           ),
           SizedBox(height: 4),
           Text(
@@ -1838,11 +2074,24 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
     // 手机号列表
     for (int i = 0; i < _phones.length; i++) {
-      rows.add(_buildPhoneRow(i, _phones[i], showDivider: i < _phones.length - 1 || _addresses.isNotEmpty || _isEditing));
+      rows.add(
+        _buildPhoneRow(
+          i,
+          _phones[i],
+          showDivider:
+              i < _phones.length - 1 || _addresses.isNotEmpty || _isEditing,
+        ),
+      );
     }
     // 地址列表
     for (int i = 0; i < _addresses.length; i++) {
-      rows.add(_buildAddressRow(i, _addresses[i], showDivider: i < _addresses.length - 1 || _isEditing));
+      rows.add(
+        _buildAddressRow(
+          i,
+          _addresses[i],
+          showDivider: i < _addresses.length - 1 || _isEditing,
+        ),
+      );
     }
     // 添加手机号/地址（编辑模式）
     if (_isEditing) {
@@ -1850,18 +2099,30 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         // Add divider before add rows if there are existing entries
       }
       rows.add(_buildAddPhoneRow());
-      rows.add(Padding(
-        padding: EdgeInsets.only(left: 48),
-        child: Divider(height: 1, color: Colors.grey.shade200, thickness: 0.5),
-      ));
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(left: 48),
+          child: Divider(
+            height: 1,
+            color: Colors.grey.shade200,
+            thickness: 0.5,
+          ),
+        ),
+      );
       rows.add(_buildAddAddressRow());
     }
 
     if (rows.isEmpty && !_isEditing) {
-      rows.add(Padding(
-        padding: EdgeInsets.all(16),
-        child: EmptyStatePlaceholder(icon: Icons.contact_phone_rounded, message: '暂无联系信息', iconSize: 48),
-      ));
+      rows.add(
+        Padding(
+          padding: EdgeInsets.all(16),
+          child: EmptyStatePlaceholder(
+            icon: Icons.contact_phone_rounded,
+            message: '暂无联系信息',
+            iconSize: 48,
+          ),
+        ),
+      );
     }
 
     return _buildGroupedSection(title: '联系信息', children: rows);
@@ -1873,111 +2134,139 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
     // 别名/公司
     if (_isEditing || _aliasController.text.isNotEmpty) {
-      rows.add(_buildTextFieldRow(
-        label: '别名',
-        controller: _aliasController,
-        enabled: _isEditing,
-        hintText: '别名/公司',
-        icon: Icons.badge,
-        showDivider: true,
-      ));
+      rows.add(
+        _buildTextFieldRow(
+          label: '别名',
+          controller: _aliasController,
+          enabled: _isEditing,
+          hintText: '别名/公司',
+          icon: Icons.badge,
+          showDivider: true,
+        ),
+      );
     }
 
     // 性别
-    rows.add(_buildPickerRow(
-      label: '性别',
-      value: _gender,
-      options: ['男', '女'],
-      onChanged: _isEditing ? (v) { if (v != null) setState(() => _gender = v); } : (_) {},
-      icon: _gender == '男' ? Icons.male : Icons.female,
-      showDivider: true,
-    ));
+    rows.add(
+      _buildPickerRow(
+        label: '性别',
+        value: _gender,
+        options: ['男', '女'],
+        onChanged: _isEditing
+            ? (v) {
+                if (v != null) setState(() => _gender = v);
+              }
+            : (_) {},
+        icon: _gender == '男' ? Icons.male : Icons.female,
+        showDivider: true,
+      ),
+    );
 
     // 年龄
     if (_isEditing) {
-      rows.add(_buildFieldRow(
-        label: '年龄',
-        icon: Icons.cake,
-        showDivider: true,
-        child: DropdownButtonFormField<String>(
-          value: (_ageController.text.isNotEmpty &&
-                  int.tryParse(_ageController.text) != null &&
-                  int.parse(_ageController.text) >= 1 &&
-                  int.parse(_ageController.text) <= 80)
-              ? _ageController.text
-              : null,
-          decoration: InputDecoration(
+      rows.add(
+        _buildFieldRow(
+          label: '年龄',
+          icon: Icons.cake,
+          showDivider: true,
+          child: DropdownButtonFormField<String>(
+            initialValue:
+                (_ageController.text.isNotEmpty &&
+                    int.tryParse(_ageController.text) != null &&
+                    int.parse(_ageController.text) >= 1 &&
+                    int.parse(_ageController.text) <= 80)
+                ? _ageController.text
+                : null,
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              hintText: '选择',
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+            ),
             isDense: true,
-            contentPadding: EdgeInsets.zero,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            hintText: '选择',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+            items: List.generate(80, (index) {
+              final age = index + 1;
+              return DropdownMenuItem(
+                value: age.toString(),
+                child: Text(age.toString()),
+              );
+            }),
+            onChanged: (value) {
+              setState(() => _ageController.text = value ?? '');
+            },
           ),
-          isDense: true,
-          items: List.generate(80, (index) {
-            final age = index + 1;
-            return DropdownMenuItem(value: age.toString(), child: Text(age.toString()));
-          }),
-          onChanged: (value) {
-            setState(() => _ageController.text = value ?? '');
-          },
         ),
-      ));
+      );
     } else if (_ageController.text.isNotEmpty) {
-      rows.add(_buildDisplayRow(
-        label: '年龄',
-        displayText: '${_ageController.text} 岁',
-        icon: Icons.cake,
-        showDivider: _birthdayController.text.isNotEmpty,
-      ));
+      rows.add(
+        _buildDisplayRow(
+          label: '年龄',
+          displayText: '${_ageController.text} 岁',
+          icon: Icons.cake,
+          showDivider: _birthdayController.text.isNotEmpty,
+        ),
+      );
     }
 
     // 生日
     if (_isEditing) {
-      rows.add(_buildFieldRow(
-        label: '生日',
-        icon: Icons.card_giftcard,
-        showDivider: false,
-        child: InkWell(
-          onTap: () async {
-            final DateTime? picked = await showDatePicker(
-              context: context,
-              initialDate: DateTime.now(),
-              firstDate: DateTime(1930),
-              lastDate: DateTime.now(),
-            );
-            if (picked != null && mounted) {
-              setState(() {
-                _birthdayController.text =
-                    '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-              });
-            }
-          },
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _birthdayController.text.isEmpty ? '选择生日' : _birthdayController.text,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: _birthdayController.text.isEmpty ? Colors.grey.shade400 : _textPrimary,
+      rows.add(
+        _buildFieldRow(
+          label: '生日',
+          icon: Icons.card_giftcard,
+          showDivider: false,
+          child: InkWell(
+            onTap: () async {
+              final DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(1930),
+                lastDate: DateTime.now(),
+              );
+              if (picked != null && mounted) {
+                setState(() {
+                  _birthdayController.text =
+                      '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                });
+              }
+            },
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _birthdayController.text.isEmpty
+                        ? '选择生日'
+                        : _birthdayController.text,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: _birthdayController.text.isEmpty
+                          ? Colors.grey.shade400
+                          : _textPrimary,
+                    ),
                   ),
                 ),
-              ),
-              Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
-            ],
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: Colors.grey.shade400,
+                ),
+              ],
+            ),
           ),
         ),
-      ));
+      );
     } else if (_birthdayController.text.isNotEmpty) {
-      rows.add(_buildDisplayRow(
-        label: '生日',
-        displayText: _birthdayController.text,
-        icon: Icons.card_giftcard,
-        showDivider: false,
-      ));
+      rows.add(
+        _buildDisplayRow(
+          label: '生日',
+          displayText: _birthdayController.text,
+          icon: Icons.card_giftcard,
+          showDivider: false,
+        ),
+      );
     }
 
     return _buildGroupedSection(title: '基本信息', children: rows);
@@ -1988,63 +2277,88 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     final List<Widget> rows = [];
 
     // 微信
-    rows.add(_buildTextFieldRow(
-      label: '微信',
-      controller: _wechatIdController,
-      enabled: _isEditing,
-      hintText: '微信号',
-      icon: Icons.chat_bubble,
-      showDivider: true,
-    ));
+    rows.add(
+      _buildTextFieldRow(
+        label: '微信',
+        controller: _wechatIdController,
+        enabled: _isEditing,
+        hintText: '微信号',
+        icon: Icons.chat_bubble,
+        showDivider: true,
+      ),
+    );
 
     // 职业
-    rows.add(_buildTextFieldRow(
-      label: '职业',
-      controller: _occupationController,
-      enabled: _isEditing,
-      hintText: '职业',
-      icon: Icons.work,
-      showDivider: true,
-    ));
+    rows.add(
+      _buildTextFieldRow(
+        label: '职业',
+        controller: _occupationController,
+        enabled: _isEditing,
+        hintText: '职业',
+        icon: Icons.work,
+        showDivider: true,
+      ),
+    );
 
     // 客户来源
     if (_isEditing) {
-      rows.add(_buildFieldRow(
-        label: '来源',
-        icon: Icons.source,
-        showDivider: true,
-        child: DropdownButton<String>(
-          value: _source != null && ['线上推广', '线下活动', '转介绍', '主动咨询', '其他'].contains(_source) ? _source : null,
-          underline: SizedBox(),
-          isDense: true,
-          isExpanded: true,
-          icon: Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
-          hint: Text('选择来源', style: TextStyle(color: Colors.grey.shade400, fontSize: 15)),
-          style: TextStyle(fontSize: 15, color: _textPrimary),
-          onChanged: (v) { if (v != null) setState(() => _source = v); },
-          items: ['线上推广', '线下活动', '转介绍', '主动咨询', '其他'].map<DropdownMenuItem<String>>((s) {
-            return DropdownMenuItem(value: s, child: Text(s));
-          }).toList(),
+      rows.add(
+        _buildFieldRow(
+          label: '来源',
+          icon: Icons.source,
+          showDivider: true,
+          child: DropdownButton<String>(
+            value:
+                _source != null &&
+                    ['线上推广', '线下活动', '转介绍', '主动咨询', '其他'].contains(_source)
+                ? _source
+                : null,
+            underline: SizedBox(),
+            isDense: true,
+            isExpanded: true,
+            icon: Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: Colors.grey.shade400,
+            ),
+            hint: Text(
+              '选择来源',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+            ),
+            style: TextStyle(fontSize: 15, color: _textPrimary),
+            onChanged: (v) {
+              if (v != null) setState(() => _source = v);
+            },
+            items: ['线上推广', '线下活动', '转介绍', '主动咨询', '其他']
+                .map<DropdownMenuItem<String>>((s) {
+                  return DropdownMenuItem(value: s, child: Text(s));
+                })
+                .toList(),
+          ),
         ),
-      ));
+      );
     } else if (_source != null) {
-      rows.add(_buildDisplayRow(
-        label: '来源',
-        displayText: _source!,
-        icon: Icons.source,
-        showDivider: true,
-      ));
+      rows.add(
+        _buildDisplayRow(
+          label: '来源',
+          displayText: _source!,
+          icon: Icons.source,
+          showDivider: true,
+        ),
+      );
     }
 
     // 身份证
-    rows.add(_buildTextFieldRow(
-      label: '证件',
-      controller: _idCardNumberController,
-      enabled: _isEditing,
-      hintText: '身份证号',
-      icon: Icons.credit_card,
-      showDivider: false,
-    ));
+    rows.add(
+      _buildTextFieldRow(
+        label: '证件',
+        controller: _idCardNumberController,
+        enabled: _isEditing,
+        hintText: '身份证号',
+        icon: Icons.credit_card,
+        showDivider: false,
+      ),
+    );
 
     return _buildGroupedSection(title: '更多信息', children: rows);
   }
@@ -2066,7 +2380,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               ),
               SizedBox(
                 width: 56,
-                child: Text('意向', style: TextStyle(fontSize: 15, color: Colors.grey.shade600)),
+                child: Text(
+                  '意向',
+                  style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                ),
               ),
               Expanded(
                 child: _isEditing
@@ -2079,8 +2396,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                             child: Padding(
                               padding: EdgeInsets.only(right: 4),
                               child: Icon(
-                                ratingVal <= _rating ? Icons.star : Icons.star_border,
-                                color: ratingVal <= _rating ? Colors.amber : Colors.grey.shade300,
+                                ratingVal <= _rating
+                                    ? Icons.star
+                                    : Icons.star_border,
+                                color: ratingVal <= _rating
+                                    ? Colors.amber
+                                    : Colors.grey.shade300,
                                 size: 28,
                               ),
                             ),
@@ -2092,16 +2413,27 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           ...List.generate(5, (index) {
                             return Icon(
                               index < _rating ? Icons.star : Icons.star_border,
-                              color: index < _rating ? Colors.amber : Colors.grey.shade300,
+                              color: index < _rating
+                                  ? Colors.amber
+                                  : Colors.grey.shade300,
                               size: 20,
                             );
                           }),
                           SizedBox(width: 8),
                           Text(
                             _rating >= 1 && _rating <= 5
-                                ? ['低意向', '中低意向', '中等意向', '中高意向', '高意向'][_rating - 1]
+                                ? [
+                                    '低意向',
+                                    '中低意向',
+                                    '中等意向',
+                                    '中高意向',
+                                    '高意向',
+                                  ][_rating - 1]
                                 : (_rating == 0 ? '无意向' : ''),
-                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                         ],
                       ),
@@ -2148,19 +2480,40 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              style: BorderStyle.solid,
+                            ),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.add_a_photo, color: Colors.grey.shade400, size: 24),
+                              Icon(
+                                Icons.add_a_photo,
+                                color: Colors.grey.shade400,
+                                size: 24,
+                              ),
                               SizedBox(height: 2),
-                              Text('添加', style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
+                              Text(
+                                '添加',
+                                style: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 11,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       )
-                    : Text('暂无照片', style: TextStyle(color: AppDesign.subtitleColor(Theme.of(context).brightness == Brightness.dark), fontSize: 14)),
+                    : Text(
+                        '暂无照片',
+                        style: TextStyle(
+                          color: AppDesign.subtitleColor(
+                            Theme.of(context).brightness == Brightness.dark,
+                          ),
+                          fontSize: 14,
+                        ),
+                      ),
               )
             : Padding(
                 padding: EdgeInsets.fromLTRB(12, 12, 12, 16),
@@ -2180,14 +2533,27 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                             decoration: BoxDecoration(
                               color: Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                style: BorderStyle.solid,
+                              ),
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.add_a_photo, color: Colors.grey.shade400, size: 24),
+                                Icon(
+                                  Icons.add_a_photo,
+                                  color: Colors.grey.shade400,
+                                  size: 24,
+                                ),
                                 SizedBox(height: 2),
-                                Text('添加', style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
+                                Text(
+                                  '添加',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 11,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -2203,7 +2569,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                                     width: 80,
                                     height: 80,
                                     color: Colors.grey.shade200,
-                                    child: Icon(Icons.image_not_supported, color: Colors.grey),
+                                    child: Icon(
+                                      Icons.image_not_supported,
+                                      color: Colors.grey,
+                                    ),
                                   )
                                 : Image.file(
                                     File(photo),
@@ -2211,15 +2580,18 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                                     width: 80,
                                     height: 80,
                                     errorBuilder: (_, _, _) => Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(Icons.broken_image, color: Colors.grey.shade400),
-                              ),
-                            ),
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    ),
+                                  ),
                           ),
                           if (_isEditing)
                             Positioned(
@@ -2232,7 +2604,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                                     color: Colors.red,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(Icons.close, color: Colors.white, size: 14),
+                                  child: Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
                                 ),
                               ),
                             ),
@@ -2262,16 +2638,30 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               children: [
                 Padding(
                   padding: EdgeInsets.only(right: 12),
-                  child: Icon(Icons.document_scanner, size: 20, color: Colors.teal),
+                  child: Icon(
+                    Icons.document_scanner,
+                    size: 20,
+                    color: Colors.teal,
+                  ),
                 ),
                 SizedBox(
                   width: 56,
-                  child: Text('证件', style: TextStyle(fontSize: 15, color: Colors.grey.shade600)),
+                  child: Text(
+                    '证件',
+                    style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                  ),
                 ),
                 Expanded(
-                  child: Text('扫描身份证', style: TextStyle(fontSize: 15, color: primaryColor)),
+                  child: Text(
+                    '扫描身份证',
+                    style: TextStyle(fontSize: 15, color: primaryColor),
+                  ),
                 ),
-                Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: Colors.grey.shade400,
+                ),
               ],
             ),
           ),
@@ -2291,11 +2681,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
               );
             } else if (snapshot.hasError) {
               return Padding(
@@ -2305,7 +2697,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return Padding(
                 padding: EdgeInsets.all(16),
-                child: EmptyStatePlaceholder(icon: Icons.inventory_2_rounded, message: '暂无已购产品', iconSize: 48),
+                child: EmptyStatePlaceholder(
+                  icon: Icons.inventory_2_rounded,
+                  message: '暂无已购产品',
+                  iconSize: 48,
+                ),
               );
             } else {
               return Column(
@@ -2318,38 +2714,63 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ProductDetailPage(product: product),
+                          builder: (context) =>
+                              ProductDetailPage(product: product),
                         ),
                       );
                     },
                     child: Column(
                       children: [
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           child: Row(
                             children: [
                               Padding(
                                 padding: EdgeInsets.only(right: 12),
-                                child: Icon(Icons.inventory_2, size: 20, color: Colors.teal),
+                                child: Icon(
+                                  Icons.inventory_2,
+                                  size: 20,
+                                  color: Colors.teal,
+                                ),
                               ),
                               SizedBox(
                                 width: 56,
                                 child: Text(
                                   product.category ?? '产品',
-                                  style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.grey.shade600,
+                                  ),
                                 ),
                               ),
                               Expanded(
-                                child: Text(product.name, style: TextStyle(fontSize: 15, color: _textPrimary)),
+                                child: Text(
+                                  product.name,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: _textPrimary,
+                                  ),
+                                ),
                               ),
-                              Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 18,
+                                color: Colors.grey.shade400,
+                              ),
                             ],
                           ),
                         ),
                         if (!isLast)
                           Padding(
                             padding: EdgeInsets.only(left: 48),
-                            child: Divider(height: 1, color: Colors.grey.shade200, thickness: 0.5),
+                            child: Divider(
+                              height: 1,
+                              color: Colors.grey.shade200,
+                              thickness: 0.5,
+                            ),
                           ),
                       ],
                     ),
@@ -2385,7 +2806,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             if (relationships.isEmpty) {
               return Padding(
                 padding: EdgeInsets.all(16),
-                child: EmptyStatePlaceholder(icon: Icons.diversity_3_rounded, message: '暂无客户关系', iconSize: 48),
+                child: EmptyStatePlaceholder(
+                  icon: Icons.diversity_3_rounded,
+                  message: '暂无客户关系',
+                  iconSize: 48,
+                ),
               );
             }
             return Column(
@@ -2404,23 +2829,33 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                             final centerX = constraints.maxWidth / 2;
                             final centerY = constraints.maxHeight / 2;
                             final nodeRadius = 24.0;
-                            final r = math.min(centerX, centerY) - nodeRadius - 16;
+                            final r =
+                                math.min(centerX, centerY) - nodeRadius - 16;
                             for (int i = 0; i < relationships.length; i++) {
-                              final angleStep = 2 * math.pi / relationships.length;
+                              final angleStep =
+                                  2 * math.pi / relationships.length;
                               final angle = i * angleStep - math.pi / 2;
                               final nodeX = centerX + r * math.cos(angle);
                               final nodeY = centerY + r * math.sin(angle);
                               final dx = pos.dx - nodeX;
                               final dy = pos.dy - nodeY;
-                              if (dx * dx + dy * dy <= (nodeRadius + 4) * (nodeRadius + 4)) {
-                                final relatedId = (relationships[i]['related_customer_id'] as num?)?.toInt() ?? (relationships[i]['id'] as num?)?.toInt();
+                              if (dx * dx + dy * dy <=
+                                  (nodeRadius + 4) * (nodeRadius + 4)) {
+                                final relatedId =
+                                    (relationships[i]['related_customer_id']
+                                            as num?)
+                                        ?.toInt() ??
+                                    (relationships[i]['id'] as num?)?.toInt();
                                 if (relatedId != null) {
-                                  final relatedCustomer = customerById[relatedId];
+                                  final relatedCustomer =
+                                      customerById[relatedId];
                                   if (relatedCustomer != null) {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => CustomerDetailPage(customer: relatedCustomer),
+                                        builder: (_) => CustomerDetailPage(
+                                          customer: relatedCustomer,
+                                        ),
                                       ),
                                     );
                                   } else {
@@ -2437,9 +2872,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                             painter: RelationshipGraphPainter(
                               centerCustomer: updatedCustomer,
                               relationships: relationships,
-                              scaffoldBgColor: Theme.of(context).scaffoldBackgroundColor,
+                              scaffoldBgColor: Theme.of(
+                                context,
+                              ).scaffoldBackgroundColor,
                             ),
-                            size: Size(constraints.maxWidth, constraints.maxHeight),
+                            size: Size(
+                              constraints.maxWidth,
+                              constraints.maxHeight,
+                            ),
                           ),
                         );
                       },
@@ -2477,19 +2917,28 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, true),
-                              child: Text('删除', style: TextStyle(color: Colors.red)),
+                              child: Text(
+                                '删除',
+                                style: TextStyle(color: Colors.red),
+                              ),
                             ),
                           ],
                         ),
                       );
                     },
                     onDismissed: (direction) async {
-                      final appState = Provider.of<AppState>(context, listen: false);
+                      final appState = Provider.of<AppState>(
+                        context,
+                        listen: false,
+                      );
                       if (rel['id'] != null) {
-                        await appState.deleteCustomerRelationship((rel['id'] as num?)?.toInt() ?? -1);
+                        await appState.deleteCustomerRelationship(
+                          (rel['id'] as num?)?.toInt() ?? -1,
+                        );
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text('客户关系已删除')));
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('客户关系已删除')));
                       }
                     },
                     child: InkWell(
@@ -2497,51 +2946,80 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                         // Use related_customer_id if available (DB mode returns customer fields via JOIN),
                         // otherwise fall back to 'id' which in Web in-memory mode stores the related customer id too
                         // because DB mode: SELECT c.* gives customer id; Web mode: we now store related_customer_id
-                        final relatedCustomerId = (rel['related_customer_id'] as num?)?.toInt() ?? (rel['id'] as num?)?.toInt();
+                        final relatedCustomerId =
+                            (rel['related_customer_id'] as num?)?.toInt() ??
+                            (rel['id'] as num?)?.toInt();
                         if (relatedCustomerId != null) {
-                          final relatedCustomer = customerById[relatedCustomerId];
+                          final relatedCustomer =
+                              customerById[relatedCustomerId];
                           if (relatedCustomer != null) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => CustomerDetailPage(customer: relatedCustomer),
+                                builder: (context) => CustomerDetailPage(
+                                  customer: relatedCustomer,
+                                ),
                               ),
                             );
                           } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('该客户已被删除')),
-                            );
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(SnackBar(content: Text('该客户已被删除')));
                           }
                         }
                       },
                       child: Column(
                         children: [
                           Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
                             child: Row(
                               children: [
                                 Padding(
                                   padding: EdgeInsets.only(right: 12),
-                                  child: Icon(Icons.person_outline, size: 20, color: Colors.blue),
+                                  child: Icon(
+                                    Icons.person_outline,
+                                    size: 20,
+                                    color: Colors.blue,
+                                  ),
                                 ),
                                 SizedBox(
                                   width: 56,
                                   child: Text(
                                     rel['relationship'] ?? '',
-                                    style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: Colors.grey.shade600,
+                                    ),
                                   ),
                                 ),
                                 Expanded(
-                                  child: Text(rel['name'] ?? '', style: TextStyle(fontSize: 15, color: _textPrimary)),
+                                  child: Text(
+                                    rel['name'] ?? '',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: _textPrimary,
+                                    ),
+                                  ),
                                 ),
-                                Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                                Icon(
+                                  Icons.chevron_right,
+                                  size: 18,
+                                  color: Colors.grey.shade400,
+                                ),
                               ],
                             ),
                           ),
                           if (!isLast)
                             Padding(
                               padding: EdgeInsets.only(left: 48),
-                              child: Divider(height: 1, color: Colors.grey.shade200, thickness: 0.5),
+                              child: Divider(
+                                height: 1,
+                                color: Colors.grey.shade200,
+                                thickness: 0.5,
+                              ),
                             ),
                         ],
                       ),
@@ -2571,7 +3049,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         visits.isEmpty
             ? Padding(
                 padding: EdgeInsets.all(16),
-                child: EmptyStatePlaceholder(icon: Icons.directions_walk_rounded, message: '暂无拜访记录', iconSize: 48),
+                child: EmptyStatePlaceholder(
+                  icon: Icons.directions_walk_rounded,
+                  message: '暂无拜访记录',
+                  iconSize: 48,
+                ),
               )
             : Column(
                 children: visits.asMap().entries.map<Widget>((entry) {
@@ -2603,19 +3085,28 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, true),
-                              child: Text('删除', style: TextStyle(color: Colors.red)),
+                              child: Text(
+                                '删除',
+                                style: TextStyle(color: Colors.red),
+                              ),
                             ),
                           ],
                         ),
                       );
                     },
                     onDismissed: (direction) async {
-                      final appState = Provider.of<AppState>(context, listen: false);
+                      final appState = Provider.of<AppState>(
+                        context,
+                        listen: false,
+                      );
                       if (visit['id'] != null) {
-                        await appState.deleteVisit((visit['id'] as num?)?.toInt() ?? -1);
+                        await appState.deleteVisit(
+                          (visit['id'] as num?)?.toInt() ?? -1,
+                        );
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text('拜访记录已删除')));
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('拜访记录已删除')));
                       }
                     },
                     child: _buildVisitItem(visit, index),
@@ -2638,9 +3129,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               SizedBox(width: 6),
               Text(
                 visit['date'] ?? '',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: primaryColor),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: primaryColor,
+                ),
               ),
-              if (visit['location'] != null && visit['location'].toString().isNotEmpty) ...[
+              if (visit['location'] != null &&
+                  visit['location'].toString().isNotEmpty) ...[
                 SizedBox(width: 12),
                 Icon(Icons.location_on, size: 14, color: Colors.grey.shade500),
                 SizedBox(width: 4),
@@ -2654,23 +3150,31 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               ],
             ],
           ),
-          if (visit['introduced_products'] != null && visit['introduced_products'].toString().isNotEmpty)
+          if (visit['introduced_products'] != null &&
+              visit['introduced_products'].toString().isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 4, left: 22),
-              child: Text('介绍: ${visit['introduced_products']}',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+              child: Text(
+                '介绍: ${visit['introduced_products']}',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+              ),
             ),
-          if (visit['interested_products'] != null && visit['interested_products'].toString().isNotEmpty)
+          if (visit['interested_products'] != null &&
+              visit['interested_products'].toString().isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 2, left: 22),
-              child: Text('意向: ${visit['interested_products']}',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+              child: Text(
+                '意向: ${visit['interested_products']}',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+              ),
             ),
           if (visit['notes'] != null && visit['notes'].toString().isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 2, left: 22),
-              child: Text('备注: ${visit['notes']}',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+              child: Text(
+                '备注: ${visit['notes']}',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+              ),
             ),
         ],
       ),
@@ -2689,11 +3193,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
               );
             } else if (snapshot.hasError) {
               return Padding(
@@ -2703,7 +3209,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return Padding(
                 padding: EdgeInsets.all(16),
-                child: EmptyStatePlaceholder(icon: Icons.receipt_long_rounded, message: '暂无销售记录', iconSize: 48),
+                child: EmptyStatePlaceholder(
+                  icon: Icons.receipt_long_rounded,
+                  message: '暂无销售记录',
+                  iconSize: 48,
+                ),
               );
             } else {
               return Column(
@@ -2736,19 +3246,28 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, true),
-                              child: Text('删除', style: TextStyle(color: Colors.red)),
+                              child: Text(
+                                '删除',
+                                style: TextStyle(color: Colors.red),
+                              ),
                             ),
                           ],
                         ),
                       );
                     },
                     onDismissed: (direction) async {
-                      final appState = Provider.of<AppState>(context, listen: false);
+                      final appState = Provider.of<AppState>(
+                        context,
+                        listen: false,
+                      );
                       if (sale['id'] != null) {
-                        await appState.deleteSale((sale['id'] as num?)?.toInt() ?? -1);
+                        await appState.deleteSale(
+                          (sale['id'] as num?)?.toInt() ?? -1,
+                        );
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text('销售记录已删除')));
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('销售记录已删除')));
                       }
                     },
                     child: _buildSaleItem(sale, index, snapshot.data!.length),
@@ -2774,26 +3293,36 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               SizedBox(width: 6),
               Text(
                 sale['sale_date'] ?? '',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.green.shade700),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: Colors.green.shade700,
+                ),
               ),
             ],
           ),
           Padding(
             padding: EdgeInsets.only(top: 4, left: 22),
-            child: Text('产品: ${sale['product_name'] ?? ''}',
-                style: TextStyle(fontSize: 14, color: Colors.black87)),
+            child: Text(
+              '产品: ${sale['product_name'] ?? ''}',
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
           ),
           if (sale['notes'] != null && sale['notes'].toString().isNotEmpty)
             Padding(
               padding: EdgeInsets.only(top: 2, left: 22),
-              child: Text('备注: ${sale['notes']}',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+              child: Text(
+                '备注: ${sale['notes']}',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+              ),
             ),
           if (sale['colleague_name'] != null)
             Padding(
               padding: EdgeInsets.only(top: 2, left: 22),
-              child: Text('合作: ${sale['colleague_name']}${sale['commission_rate'] != null ? ' (${sale['commission_rate']}%)' : ''}',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+              child: Text(
+                '合作: ${sale['colleague_name']}${sale['commission_rate'] != null ? ' (${sale['commission_rate']}%)' : ''}',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+              ),
             ),
         ],
       ),
@@ -2867,7 +3396,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           if (!isEditMode && _isEditing)
             TextButton(
               onPressed: _saveCustomer,
-              child: Text('保存', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+              child: Text(
+                '保存',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
         ],
       ),

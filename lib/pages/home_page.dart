@@ -131,8 +131,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-
-
 class _HomeData {
   final int customerCount;
   final int productCount;
@@ -184,7 +182,6 @@ class _HomeContentState extends State<_HomeContent> {
   }
 
   Widget _buildContent(BuildContext context, _HomeData data, bool isDark) {
-    final appState = Provider.of<AppState>(context, listen: false);
     return CustomScrollView(
       slivers: [
         SliverAppBar(
@@ -211,16 +208,16 @@ class _HomeContentState extends State<_HomeContent> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => NotificationCenterPage(),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NotificationCenterPage(),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
                     children: [
                       Icon(
                         Icons.notifications_none_rounded,
@@ -266,8 +263,16 @@ class _HomeContentState extends State<_HomeContent> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: isDark
-                      ? [Color(0xFF1E1E1E), Color(0xFF2C2C2C), Color(0xFF37474F)]
-                      : [Color(0xFF0D47A1), Color(0xFF1565C0), Color(0xFF1E88E5)],
+                      ? [
+                          Color(0xFF1E1E1E),
+                          Color(0xFF2C2C2C),
+                          Color(0xFF37474F),
+                        ]
+                      : [
+                          Color(0xFF0D47A1),
+                          Color(0xFF1565C0),
+                          Color(0xFF1E88E5),
+                        ],
                 ),
               ),
             ),
@@ -430,73 +435,73 @@ class _HomeContentState extends State<_HomeContent> {
                   borderRadius: BorderRadius.circular(16),
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => StatisticsDashboardPage(),
-                    ),
-                  ),
-                  child: Container(
-                    padding: EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StatisticsDashboardPage(),
                       ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0xFF1565C0).withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.bar_chart_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
+                    child: Container(
+                      padding: EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
                         ),
-                        SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '数据看板',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0xFF1565C0).withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.bar_chart_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '数据看板',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                '销售业绩 · 客户分析 · 拜访统计',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.8),
+                                SizedBox(height: 2),
+                                Text(
+                                  '销售业绩 · 客户分析 · 拜访统计',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: Colors.white.withValues(alpha: 0.7),
-                          size: 18,
-                        ),
-                      ],
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white.withValues(alpha: 0.7),
+                            size: 18,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                   ),
                 ),
                 SizedBox(height: 28),
@@ -605,7 +610,9 @@ class _HomeContentState extends State<_HomeContent> {
                                 '请尽快处理超期提醒',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFFE53935).withValues(alpha: 0.7),
+                                  color: Color(
+                                    0xFFE53935,
+                                  ).withValues(alpha: 0.7),
                                 ),
                               ),
                             ],
@@ -624,7 +631,9 @@ class _HomeContentState extends State<_HomeContent> {
                 else
                   ...data.todayReminders
                       .take(3)
-                      .map<Widget>((r) => _buildReminderItem(context, r, isDark)),
+                      .map<Widget>(
+                        (r) => _buildReminderItem(context, r, isDark),
+                      ),
                 SizedBox(height: 32),
                 // 最近客户
                 Text(
@@ -724,44 +733,44 @@ class _HomeContentState extends State<_HomeContent> {
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppDesign.cardBg(isDark),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppDesign.cardBg(isDark),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: Offset(0, 2),
               ),
-              child: Icon(icon, size: 24, color: color),
-            ),
-            SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white70 : Colors.black87,
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 24, color: color),
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              SizedBox(height: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -785,7 +794,10 @@ class _HomeContentState extends State<_HomeContent> {
               children: [
                 Text(
                   customer.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -864,7 +876,8 @@ class _HomeContentState extends State<_HomeContent> {
           Container(
             padding: EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: (AppDesign.reminderTypeColors[rType] ?? Color(0xFF78909C)).withValues(alpha: 0.1),
+              color: (AppDesign.reminderTypeColors[rType] ?? Color(0xFF78909C))
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -900,5 +913,3 @@ class _HomeContentState extends State<_HomeContent> {
     );
   }
 }
-
-

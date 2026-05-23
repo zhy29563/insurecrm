@@ -60,13 +60,13 @@ class Customer {
     this.source,
     this.notes,
     this.purchaseIntentionLevel,
-  })  : phones = phones ?? [],
-        addresses = addresses ?? [],
-        visits = visits ?? [],
-        products = products ?? [],
-        relationships = relationships ?? [],
-        persistentTagList = persistentTagList ?? [],
-        persistentPhotoList = persistentPhotoList ?? [];
+  }) : phones = phones ?? [],
+       addresses = addresses ?? [],
+       visits = visits ?? [],
+       products = products ?? [],
+       relationships = relationships ?? [],
+       persistentTagList = persistentTagList ?? [],
+       persistentPhotoList = persistentPhotoList ?? [];
 
   /// Unified tag list from persistentTagList (cached).
   List<String> get tagList {
@@ -99,7 +99,8 @@ class Customer {
     };
   }
 
-  factory Customer.fromMap(Map<String, dynamic> map, {
+  factory Customer.fromMap(
+    Map<String, dynamic> map, {
     List<String> phones = const [],
     List<String> addresses = const [],
     List<Map<String, dynamic>> visits = const [],
@@ -133,7 +134,8 @@ class Customer {
       occupation: map['occupation'] as String?,
       source: map['source'] as String?,
       notes: map['remark'] as String?,
-      purchaseIntentionLevel: ((map['purchase_intention'] as num?)?.toInt())?.clamp(0, 5),
+      purchaseIntentionLevel: ((map['purchase_intention'] as num?)?.toInt())
+          ?.clamp(0, 5),
     );
   }
 }

@@ -39,23 +39,30 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
   void _updateCachedNotifications() {
     final appState = Provider.of<AppState>(context);
     _cachedOverdue = appState.overdueReminders;
-    _cachedToday = appState.todayReminders.where((r) => r['status'] == 'pending').toList();
+    _cachedToday = appState.todayReminders
+        .where((r) => r['status'] == 'pending')
+        .toList();
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
-    _cachedUpcoming = appState.reminders.where((r) {
-      final date = r['reminder_date'] as String?;
-      if (date == null) return false;
-      return date.compareTo(todayStr) > 0 && r['status'] == 'pending';
-    }).toList()..sort((a, b) {
-      final aDate = a['reminder_date'] as String? ?? '';
-      final bDate = b['reminder_date'] as String? ?? '';
-      return aDate.compareTo(bDate);
-    });
+    _cachedUpcoming =
+        appState.reminders.where((r) {
+          final date = r['reminder_date'] as String?;
+          if (date == null) return false;
+          return date.compareTo(todayStr) > 0 && r['status'] == 'pending';
+        }).toList()..sort((a, b) {
+          final aDate = a['reminder_date'] as String? ?? '';
+          final bDate = b['reminder_date'] as String? ?? '';
+          return aDate.compareTo(bDate);
+        });
 
     final sysNotifs = appState.systemNotifications;
     _cachedFollowUp = sysNotifs.where((n) => n['type'] == 'follow_up').toList();
-    _cachedPolicyExpiry = sysNotifs.where((n) => n['type'] == 'policy_expiry').toList();
+    _cachedPolicyExpiry = sysNotifs
+        .where((n) => n['type'] == 'policy_expiry')
+        .toList();
     _cachedBirthday = sysNotifs.where((n) => n['type'] == 'birthday').toList();
-    _cachedTotalUnread = _cachedOverdue.length + sysNotifs.where((n) => n['isRead'] != true).length;
+    _cachedTotalUnread =
+        _cachedOverdue.length +
+        sysNotifs.where((n) => n['isRead'] != true).length;
   }
 
   @override
@@ -184,7 +191,9 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                 count: today.length,
               ),
               SizedBox(height: 12),
-              ...today.map<Widget>((r) => _buildReminderCard(r, isDark, primaryColor)),
+              ...today.map<Widget>(
+                (r) => _buildReminderCard(r, isDark, primaryColor),
+              ),
               SizedBox(height: 24),
             ],
 
@@ -199,7 +208,9 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
               SizedBox(height: 12),
               ...upcoming
                   .take(10)
-                  .map<Widget>((r) => _buildReminderCard(r, isDark, primaryColor)),
+                  .map<Widget>(
+                    (r) => _buildReminderCard(r, isDark, primaryColor),
+                  ),
             ],
 
             // ====== 空状态 ======
@@ -210,10 +221,10 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                 policyExpiryNotifs.isEmpty &&
                 birthdayNotifs.isEmpty)
               const EmptyStatePlaceholder(
-                  icon: Icons.notifications_none_rounded,
-                  message: '暂无通知',
-                  actionHint: '所有待办和系统通知将在这里显示',
-                ),
+                icon: Icons.notifications_none_rounded,
+                message: '暂无通知',
+                actionHint: '所有待办和系统通知将在这里显示',
+              ),
           ],
         ),
       ),

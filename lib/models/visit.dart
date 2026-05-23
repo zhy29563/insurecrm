@@ -4,7 +4,8 @@ class Visit {
   String visitDate; // 拜访日期
   String? location;
   String? accompanyingPersons; // 随行人员
-  String? productsPresented; // 已介绍产品 (Products presented/introduced to customer)
+  String?
+  productsPresented; // 已介绍产品 (Products presented/introduced to customer)
   String? interestedProducts; // 感兴趣产品
   String? competitors; // 竞品信息
   String? notes; // 拜访备注

@@ -18,17 +18,19 @@ class AppDesign {
   static const double radiusAvatar = 12;
 
   // ── Card Background Color ──
-  static Color cardBg(bool isDark) => isDark ? const Color(0xFF2C2C2C) : Colors.white;
+  static Color cardBg(bool isDark) =>
+      isDark ? const Color(0xFF2C2C2C) : Colors.white;
 
   // ── Subtitle Text Color ──
-  static Color subtitleColor(bool isDark) => isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+  static Color subtitleColor(bool isDark) =>
+      isDark ? Colors.grey.shade400 : Colors.grey.shade600;
 
   // ── Card Shadow ──
   static BoxShadow cardShadow(BuildContext context) => BoxShadow(
-        color: Colors.black.withValues(alpha: 0.04),
-        blurRadius: 8,
-        offset: Offset(0, 2),
-      );
+    color: Colors.black.withValues(alpha: 0.04),
+    blurRadius: 8,
+    offset: Offset(0, 2),
+  );
 
   // ── Rating Colors & Labels ──
   static const Map<int, Color> ratingColors = {
@@ -47,11 +49,9 @@ class AppDesign {
     1: '无意向',
   };
 
-  static Color ratingColor(int? rating) =>
-      ratingColors[rating] ?? Colors.grey;
+  static Color ratingColor(int? rating) => ratingColors[rating] ?? Colors.grey;
 
-  static String ratingLabel(int? rating) =>
-      ratingLabels[rating] ?? '未评级';
+  static String ratingLabel(int? rating) => ratingLabels[rating] ?? '未评级';
 
   // ── Relationship Colors & Labels ──
   static const Map<String, Color> relationshipColors = {
@@ -131,10 +131,12 @@ class AppDesign {
       reminderTypeLabels[type] ?? '其他';
 
   // ── Grouped Section Background ──
-  static Color groupedBg(bool isDark) => isDark ? const Color(0xFF1E1E1E) : Colors.white;
+  static Color groupedBg(bool isDark) =>
+      isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
   // ── iOS-style background (0xFFF2F2F7 light, dark mode equivalent) ──
-  static Color iosBg(bool isDark) => isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7);
+  static Color iosBg(bool isDark) =>
+      isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7);
 }
 
 /// Unified card container with consistent styling, optional InkWell for tap.
@@ -177,9 +179,7 @@ class AppCard extends StatelessWidget {
                   offset: Offset(0, 2),
                 ),
               ]
-            : [
-                AppDesign.cardShadow(context),
-              ],
+            : [AppDesign.cardShadow(context)],
       ),
       child: child,
     );
@@ -250,8 +250,10 @@ class AppSearchBar extends StatelessWidget {
                 )
               : null,
           border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
       ),
     );
@@ -311,10 +313,7 @@ class EmptyStatePlaceholder extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 actionHint!,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade300,
-                ),
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade300),
               ),
             ],
           ],
@@ -354,11 +353,7 @@ class RatingBadge extends StatelessWidget {
 class CustomerAvatar extends StatelessWidget {
   final String name;
   final double radius;
-  const CustomerAvatar({
-    super.key,
-    required this.name,
-    this.radius = 24,
-  });
+  const CustomerAvatar({super.key, required this.name, this.radius = 24});
 
   @override
   Widget build(BuildContext context) {
@@ -392,10 +387,7 @@ class TagChip extends StatelessWidget {
         color: primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(
-        tag,
-        style: TextStyle(fontSize: 10, color: primaryColor),
-      ),
+      child: Text(tag, style: TextStyle(fontSize: 10, color: primaryColor)),
     );
   }
 }
@@ -442,7 +434,7 @@ class SectionHeader extends StatelessWidget {
           title,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        if (trailing != null) trailing!,
+        ?trailing,
       ],
     );
   }
@@ -483,30 +475,36 @@ class AppSnackBar {
   AppSnackBar._();
 
   static void success(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.green.shade700,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   static void error(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.red.shade700,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   static void info(BuildContext context, String message) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade700,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 }

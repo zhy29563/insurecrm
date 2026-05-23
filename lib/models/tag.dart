@@ -33,8 +33,12 @@ class Tag {
       name: map['name'] as String? ?? '',
       color: map['color'] as String? ?? '#1565C0',
       description: map['description'] as String?,
-      createdAt: DateTime.tryParse(map['created_at'] as String? ?? '') ?? DateTime(2000),
-      updatedAt: DateTime.tryParse(map['updated_at'] as String? ?? '') ?? DateTime(2000),
+      createdAt:
+          DateTime.tryParse(map['created_at'] as String? ?? '') ??
+          DateTime(2000),
+      updatedAt:
+          DateTime.tryParse(map['updated_at'] as String? ?? '') ??
+          DateTime(2000),
     );
   }
 }

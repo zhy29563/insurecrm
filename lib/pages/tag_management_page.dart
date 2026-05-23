@@ -60,9 +60,7 @@ class _TagManagementPageState extends State<TagManagementPage>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             Container(
@@ -71,8 +69,11 @@ class _TagManagementPageState extends State<TagManagementPage>
                 color: Theme.of(ctx).primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.label_rounded,
-                  color: Theme.of(ctx).primaryColor, size: 20),
+              child: Icon(
+                Icons.label_rounded,
+                color: Theme.of(ctx).primaryColor,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             const Text('添加标签'),
@@ -88,29 +89,29 @@ class _TagManagementPageState extends State<TagManagementPage>
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
           ElevatedButton(
             onPressed: () async {
               final name = _nameController.text.trim();
               if (name.isEmpty) {
                 Navigator.pop(ctx);
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('标签名称不能为空')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('标签名称不能为空')));
                 return;
               }
               if (_allTags.contains(name)) {
                 Navigator.pop(ctx);
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('该标签已存在')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('该标签已存在')));
                 return;
               }
-              final appState =
-                  Provider.of<AppState>(context, listen: false);
+              final appState = Provider.of<AppState>(context, listen: false);
               await appState.addTag(name);
               if (!mounted) return;
               _loadTags();
@@ -127,9 +128,7 @@ class _TagManagementPageState extends State<TagManagementPage>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             Container(
@@ -138,8 +137,11 @@ class _TagManagementPageState extends State<TagManagementPage>
                 color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.delete_outline_rounded,
-                  color: Colors.red, size: 20),
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.red,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             const Text('确认删除'),
@@ -147,7 +149,10 @@ class _TagManagementPageState extends State<TagManagementPage>
         ),
         content: Text('确定要删除标签「$tag」吗？\n所有客户的该标签关联也会被删除，此操作无法撤销。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -155,8 +160,7 @@ class _TagManagementPageState extends State<TagManagementPage>
             ),
             onPressed: () async {
               Navigator.pop(ctx);
-              final appState =
-                  Provider.of<AppState>(context, listen: false);
+              final appState = Provider.of<AppState>(context, listen: false);
               await appState.removeTag(tag);
               if (!mounted) return;
               _loadTags();
@@ -179,7 +183,6 @@ class _TagManagementPageState extends State<TagManagementPage>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
@@ -211,8 +214,7 @@ class _TagManagementPageState extends State<TagManagementPage>
             children: [
               // Search bar
               Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: AppSearchBar(
                   controller: _searchController,
                   hintText: '搜索标签',
@@ -224,16 +226,20 @@ class _TagManagementPageState extends State<TagManagementPage>
                   onChanged: (value) {
                     _debounceTimer?.cancel();
                     _debounceTimer = Timer(
-                        const Duration(milliseconds: 300), () {
-                      if (mounted) setState(() => _searchQuery = value);
-                    });
+                      const Duration(milliseconds: 300),
+                      () {
+                        if (mounted) setState(() => _searchQuery = value);
+                      },
+                    );
                   },
                 ),
               ),
               // Stats bar
               Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 4),
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 child: Row(
                   children: [
                     Text(
@@ -261,9 +267,7 @@ class _TagManagementPageState extends State<TagManagementPage>
                 child: _filteredTags.isEmpty
                     ? EmptyStatePlaceholder(
                         icon: Icons.label_off_rounded,
-                        message: _searchQuery.isEmpty
-                            ? '暂无标签'
-                            : '没有找到标签',
+                        message: _searchQuery.isEmpty ? '暂无标签' : '没有找到标签',
                         actionHint: _searchQuery.isEmpty
                             ? '点击右上角添加标签'
                             : '尝试其他关键词',
@@ -275,10 +279,14 @@ class _TagManagementPageState extends State<TagManagementPage>
                           final tag = _filteredTags[index];
                           return Padding(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 4),
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
                             child: AppCard(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 4),
+                                horizontal: 14,
+                                vertical: 4,
+                              ),
                               onTap: () => _showTagOptions(tag),
                               child: Row(
                                 children: [
@@ -286,10 +294,10 @@ class _TagManagementPageState extends State<TagManagementPage>
                                     width: 36,
                                     height: 36,
                                     decoration: BoxDecoration(
-                                      color: primaryColor
-                                          .withValues(alpha: 0.1),
-                                      borderRadius:
-                                          BorderRadius.circular(10),
+                                      color: primaryColor.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Icon(
                                       Icons.label_rounded,
@@ -308,9 +316,11 @@ class _TagManagementPageState extends State<TagManagementPage>
                                     ),
                                   ),
                                   IconButton(
-                                    icon: Icon(Icons.delete_outline_rounded,
-                                        size: 20,
-                                        color: Colors.red.shade300),
+                                    icon: Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 20,
+                                      color: Colors.red.shade300,
+                                    ),
                                     onPressed: () => _deleteTag(tag),
                                   ),
                                 ],

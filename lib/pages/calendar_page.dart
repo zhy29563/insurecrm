@@ -28,7 +28,12 @@ class _CalendarPageState extends State<CalendarPage> {
     final appState = Provider.of<AppState>(context, listen: false);
     final dateStr = day.toIso8601String().substring(0, 10);
     return appState.reminders
-        .where((r) => r['reminder_date'] == dateStr && r['status'] != 'completed' && r['status'] != 'dismissed')
+        .where(
+          (r) =>
+              r['reminder_date'] == dateStr &&
+              r['status'] != 'completed' &&
+              r['status'] != 'dismissed',
+        )
         .toList();
   }
 
@@ -387,7 +392,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
                 SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedType,
+                  initialValue: selectedType,
                   decoration: InputDecoration(
                     labelText: '类型',
                     prefixIcon: Icon(Icons.category_rounded),
@@ -404,7 +409,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
                 SizedBox(height: 12),
                 DropdownButtonFormField<int>(
-                  value: selectedCustomerId,
+                  initialValue: selectedCustomerId,
                   decoration: InputDecoration(
                     labelText: '关联客户',
                     prefixIcon: Icon(Icons.person_rounded),

@@ -28,7 +28,8 @@ class ImageUtils {
 
   /// 压缩图片并保存到应用目录，返回保存后的路径
   /// 如果不需要压缩，直接复制原文件
-  static Future<String> compressAndSave(File originalFile, {
+  static Future<String> compressAndSave(
+    File originalFile, {
     String? subDir,
     String? fileName,
     int? maxWidth,
@@ -43,7 +44,8 @@ class ImageUtils {
 
     if (!targetDir.existsSync()) targetDir.createSync(recursive: true);
 
-    final outputName = fileName ??
+    final outputName =
+        fileName ??
         '${DateTime.now().millisecondsSinceEpoch}${path.extension(originalFile.path)}';
 
     final outputPath = path.join(targetDir.path, outputName);
@@ -125,10 +127,11 @@ class ImageUtils {
       );
 
       final outputPath = path.join(
-          thumbDir.path, 'thumb_${DateTime.now().millisecondsSinceEpoch}.jpg');
+        thumbDir.path,
+        'thumb_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
       final thumbEncoder = img.JpegEncoder(quality: thumbnailQuality);
-      await File(outputPath)
-          .writeAsBytes(thumbEncoder.encode(resized));
+      await File(outputPath).writeAsBytes(thumbEncoder.encode(resized));
       return outputPath;
     } catch (e) {
       AppLogger.error('generateThumbnail error: $e');
@@ -157,7 +160,9 @@ class ImageUtils {
   static void deleteFiles(List<String> paths) {
     if (kIsWeb) return;
     for (var filePath in paths) {
-      try { File(filePath).deleteSync(); } catch (_) {}
+      try {
+        File(filePath).deleteSync();
+      } catch (_) {}
     }
   }
 
