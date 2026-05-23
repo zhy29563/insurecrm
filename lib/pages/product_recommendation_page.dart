@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:insurance_manager/providers/app_state.dart';
 import 'package:insurance_manager/models/product.dart';
 import 'package:insurance_manager/widgets/app_components.dart';
+import 'package:insurance_manager/services/sherpa_asr_service.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:image_picker/image_picker.dart';
 import 'package:insurance_manager/pages/settings_page.dart';
@@ -82,12 +83,15 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       }
     }
 
-    // 检查是否有启用的自定义ASR引擎
+    // 优先级：Sherpa离线ASR > 自定义在线ASR > 系统ASR
     final appState = Provider.of<AppState>(context, listen: false);
     final asrEngines = appState.enabledASREngines;
-
-    if (asrEngines.isNotEmpty) {
-      // 使用自定义ASR引擎
+    final sherpaASR = SherpaASRService.instance;
+    if (sherpaASR.isInitialized) {
+      // 使用 Sherpa-ONNX 离线 ASR
+      await _startRecordingForOfflineASR();
+    } else if (asrEngines.isNotEmpty) {
+      // 使用自定义在线 ASR 引擎
       await _startRecordingForCustomASR(asrEngines);
     } else {
       // 使用系统级ASR
@@ -218,6 +222,146 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
           const SnackBar(
             content: Text('录音启动失败'),
             duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  /// 使用 Sherpa-ONNX 离线 ASR 录音识别
+  Future<void> _startRecordingForOfflineASR() async {
+    try {
+      if (kIsWeb) {
+        await _startSystemASR();
+        return;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      _recordingPath =
+          '${tempDir.path}/asr_offline_${DateTime.now().millisecondsSinceEpoch}.wav';
+
+      if (await _audioRecorder.hasPermission()) {
+        await _audioRecorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.wav,
+            sampleRate: 16000,
+            numChannels: 1,
+          ),
+          path: _recordingPath!,
+        );
+        if (!mounted) return;
+        setState(() => _isRecordingForASR = true);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('麦克风权限未授权'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      AppLogger.error('starting recording for offline ASR: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('录音启动失败'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  /// 停止录音并使用 Sherpa-ONNX 离线识别
+  Future<void> _stopRecordingAndOfflineASR() async {
+    if (!_isRecordingForASR || _recordingPath == null) return;
+
+    try {
+      final path = await _audioRecorder.stop();
+      if (!mounted) return;
+      setState(() => _isRecordingForASR = false);
+
+      if (path == null || (kIsWeb ? false : !File(path).existsSync())) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('录音文件不存在'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      // 显示处理中提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  height: 16,
+                  width: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('正在离线识别语音...'),
+              ],
+            ),
+            duration: Duration(seconds: 30),
+          ),
+        );
+      }
+
+      // 使用 Sherpa-ONNX 离线识别
+      final sherpaASR = SherpaASRService.instance;
+      final transcript = await sherpaASR.recognizeFile(path);
+
+      // 关闭处理中提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+
+      if (transcript != null && transcript.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _requirementController.text = transcript;
+            _requirementController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _requirementController.text.length),
+            );
+          });
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('语音识别结果为空，请重试'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+
+      // 清理录音文件
+      try {
+        if (!kIsWeb) {
+          final file = File(path);
+          if (file.existsSync()) file.deleteSync();
+        }
+      } catch (_) {}
+    } catch (e) {
+      AppLogger.error('offline ASR error: $e');
+      if (mounted) {
+        setState(() => _isRecordingForASR = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('离线语音识别失败：$e'),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -402,7 +546,12 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
   void _stopListening() {
     if (_isRecordingForASR) {
-      _stopRecordingAndTranscribe();
+      final sherpaASR = SherpaASRService.instance;
+      if (sherpaASR.isInitialized) {
+        _stopRecordingAndOfflineASR();
+      } else {
+        _stopRecordingAndTranscribe();
+      }
       return;
     }
     _speech.stop();
@@ -1120,6 +1269,10 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
   }
 
   String _getAsrLabel(AppState appState) {
+    final sherpaASR = SherpaASRService.instance;
+    if (sherpaASR.isInitialized) {
+      return '语音输入(${sherpaASR.currentModel?.displayName ?? '离线'})';
+    }
     final asrEngines = appState.enabledASREngines;
     if (asrEngines.isNotEmpty) {
       final name = asrEngines.first['name'] as String? ?? 'ASR';

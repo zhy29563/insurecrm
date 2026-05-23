@@ -7,6 +7,8 @@ import 'package:insurance_manager/providers/app_state.dart';
 import 'package:insurance_manager/pages/colleague_management_page.dart';
 import 'package:insurance_manager/pages/backup_restore_page.dart';
 import 'package:insurance_manager/services/backup_service.dart';
+import 'package:insurance_manager/services/sherpa_asr_service.dart';
+import 'package:insurance_manager/utils/app_logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
@@ -267,6 +269,10 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
+          // 离线ASR配置
+          _buildOfflineASRSection(isDark, appState),
           const SizedBox(height: 16),
 
           // AI语音ASR配置
@@ -882,6 +888,226 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  /// 离线 ASR 配置区
+  Widget _buildOfflineASRSection(bool isDark, AppState appState) {
+    final sherpaASR = SherpaASRService.instance;
+    return _buildSectionCard(
+      isDark: isDark,
+      icon: Icons.offline_bolt_rounded,
+      iconColor: const Color(0xFF00897B),
+      title: '离线语音识别',
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Sherpa-ONNX 离线语音识别，无需网络，数据不离开设备。',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline, size: 24),
+              color: const Color(0xFF00897B),
+              onPressed: () => _showOfflineASRModelDialog(isDark),
+              tooltip: '下载模型',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        FutureBuilder<List<OfflineASRModel>>(
+          future: sherpaASR.getDownloadedModels(),
+          builder: (context, snapshot) {
+            final downloaded = snapshot.data ?? [];
+            if (downloaded.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  '未下载离线模型，点击 + 下载模型',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  ),
+                ),
+              );
+            }
+            return Column(
+              children: downloaded.map((model) {
+                final isActive =
+                    sherpaASR.isInitialized && sherpaASR.currentModel == model;
+                return ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  leading: Icon(
+                    isActive
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: isActive
+                        ? const Color(0xFF00897B)
+                        : (isDark ? Colors.grey[600] : Colors.grey[400]),
+                  ),
+                  title: Text(
+                    model.displayName,
+                    style: TextStyle(
+                      fontWeight: isActive
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${model.sizeMB} MB · ${isActive ? "使用中" : "已下载"}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: isActive
+                      ? TextButton(
+                          onPressed: () {
+                            sherpaASR.dispose();
+                            setState(() {});
+                          },
+                          child: const Text('停用'),
+                        )
+                      : TextButton(
+                          onPressed: () async {
+                            final ok = await sherpaASR.initialize(model: model);
+                            if (ok && mounted) {
+                              setState(() {});
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('已启用 ${model.displayName}'),
+                                ),
+                              );
+                            } else if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('启用 ${model.displayName} 失败'),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('启用'),
+                        ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  /// 离线 ASR 模型下载对话框
+  void _showOfflineASRModelDialog(bool isDark) {
+    final sherpaASR = SherpaASRService.instance;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.download_rounded, color: Color(0xFF00897B)),
+              SizedBox(width: 8),
+              Text('下载离线模型'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: OfflineASRModel.values.map((model) {
+              return FutureBuilder<bool>(
+                future: sherpaASR.isModelDownloaded(model),
+                builder: (ctx, snap) {
+                  final downloaded = snap.data ?? false;
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(
+                      downloaded ? Icons.cloud_done : Icons.cloud_download,
+                      color: downloaded ? const Color(0xFF00897B) : Colors.grey,
+                    ),
+                    title: Text(model.displayName),
+                    subtitle: Text('${model.sizeMB} MB'),
+                    trailing: downloaded
+                        ? const Text(
+                            '已下载',
+                            style: TextStyle(color: Color(0xFF00897B)),
+                          )
+                        : const Text('下载'),
+                    onTap: downloaded
+                        ? null
+                        : () async {
+                            setDialogState(() {});
+                            final ok = await _downloadModel(model);
+                            if (ok && mounted) {
+                              setDialogState(() {});
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('${model.displayName} 下载完成'),
+                                ),
+                              );
+                            } else if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${model.displayName} 下载失败，请检查网络',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                  );
+                },
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('关闭'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 下载模型文件
+  Future<bool> _downloadModel(OfflineASRModel model) async {
+    try {
+      final modelDir = await SherpaASRService.instance.getModelPath(model);
+      final dir = Directory(modelDir);
+      if (!dir.existsSync()) {
+        dir.createSync(recursive: true);
+      }
+
+      // 从 HuggingFace 下载模型文件
+      final baseUrl = 'https://huggingface.co/${model.repoId}/resolve/main';
+      final filesToDownload = [model.modelFile, model.tokensFile];
+
+      for (final fileName in filesToDownload) {
+        final url = '$baseUrl/$fileName';
+        final savePath = '$modelDir/$fileName';
+        final file = File(savePath);
+
+        if (file.existsSync()) continue;
+
+        final request = await HttpClient().getUrl(Uri.parse(url));
+        final response = await request.close();
+        if (response.statusCode != 200) {
+          AppLogger.error('下载模型文件失败: $url (HTTP ${response.statusCode})');
+          return false;
+        }
+        final sink = file.openWrite();
+        await response.pipe(sink);
+        await sink.close();
+      }
+
+      return true;
+    } catch (e) {
+      AppLogger.error('下载模型失败: $e');
+      return false;
+    }
   }
 
   Widget _buildAICategorySection({

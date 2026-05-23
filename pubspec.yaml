@@ -36,6 +36,7 @@ dependencies:
   google_mlkit_text_recognition: ^0.15.1
   record: ^6.2.0
   http: ^1.2.2
+  sherpa_onnx: ^1.13.2
 
 dev_dependencies:
   flutter_test:
