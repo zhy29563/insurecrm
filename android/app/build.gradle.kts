@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.insurance_manager"
+    namespace = "com.weapon.insurer"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.insurance_manager"
+        applicationId = "com.weapon.insurer"
         minSdk = 24
         targetSdk = 35
         versionCode = flutter.versionCode

@@ -11,7 +11,7 @@ import 'dart:convert';
 class DatabaseHelper {
   static final _databaseFileName = "insurance_manager.db"; // 数据库文件名
   static final _legacyDatabaseFileName = "insurance_app.db"; // 旧版数据库文件名（用于迁移）
-  static final _databaseVersion = 12;
+  static final _databaseVersion = 13;
   static int get databaseVersion => _databaseVersion;
 
   // Database table names
@@ -100,17 +100,23 @@ class DatabaseHelper {
         }
       }
 
-      return await openDatabase(
+      final db = await openDatabase(
         newPath,
         version: _databaseVersion,
         onCreate: _createDatabaseTables,
         onUpgrade: _upgradeDatabaseSchema,
       );
+      // Enable foreign key constraints for referential integrity
+      await db.execute('PRAGMA foreign_keys = ON');
+      return db;
     }
   }
 
   // SQL code to create the database table
   Future _createDatabaseTables(Database db, int version) async {
+    // Enable foreign keys for referential integrity
+    await db.execute('PRAGMA foreign_keys = ON');
+
     // Create customers table
     await db.execute('''
           CREATE TABLE $tableCustomers (
@@ -118,14 +124,12 @@ class DatabaseHelper {
             name TEXT NOT NULL,
             alias TEXT,
             age INTEGER,
-            gender TEXT,
-            rating INTEGER,
+            gender TEXT CHECK (gender IS NULL OR gender IN ('男', '女', '其他')),
+            rating INTEGER CHECK (rating IS NULL OR (rating >= 0 AND rating <= 5)),
             latitude REAL,
             longitude REAL,
             address TEXT,
             birthday TEXT,
-            tags TEXT,
-            photos TEXT,
             next_follow_up_date TEXT,
             created_at TEXT,
             wechat TEXT,
@@ -133,7 +137,7 @@ class DatabaseHelper {
             occupation TEXT,
             source TEXT,
             remark TEXT,
-            purchase_intention INTEGER
+            purchase_intention INTEGER CHECK (purchase_intention IS NULL OR (purchase_intention >= 0 AND purchase_intention <= 5))
           )''');
 
     // Create phones table
@@ -142,7 +146,7 @@ class DatabaseHelper {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_id INTEGER NOT NULL,
             phone TEXT NOT NULL,
-            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id)
+            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
           )''');
 
     // Create addresses table
@@ -151,7 +155,7 @@ class DatabaseHelper {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_id INTEGER NOT NULL,
             address TEXT NOT NULL,
-            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id)
+            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
           )''');
 
     // Create products table
@@ -180,7 +184,7 @@ class DatabaseHelper {
             interested_products TEXT,
             competitors TEXT,
             notes TEXT,
-            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id)
+            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
           )''');
 
     // Create colleagues table (must be created before sales table due to foreign key)
@@ -199,20 +203,20 @@ class DatabaseHelper {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_id INTEGER NOT NULL,
             product_id INTEGER NOT NULL,
-            amount REAL,
+            amount REAL CHECK (amount IS NULL OR amount >= 0),
             notes TEXT,
             sale_date TEXT NOT NULL,
             colleague_id INTEGER,
-            commission_rate REAL,
+            commission_rate REAL CHECK (commission_rate IS NULL OR (commission_rate >= 0 AND commission_rate <= 100)),
             policy_number TEXT,
-            policy_status TEXT DEFAULT '有效',
+            policy_status TEXT DEFAULT '有效' CHECK (policy_status IS NULL OR policy_status IN ('有效', '待生效', '已失效', '已退保')),
             payment_method TEXT,
             payment_term INTEGER,
             guarantee_period INTEGER,
             renewal_date TEXT,
-            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id),
-            FOREIGN KEY (product_id) REFERENCES $tableProducts (id),
-            FOREIGN KEY (colleague_id) REFERENCES $tableColleagues (id)
+            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES $tableProducts (id) ON DELETE CASCADE,
+            FOREIGN KEY (colleague_id) REFERENCES $tableColleagues (id) ON DELETE SET NULL
           )''');
 
     // Create customer-products relationship table
@@ -222,8 +226,8 @@ class DatabaseHelper {
             customer_id INTEGER NOT NULL,
             product_id INTEGER NOT NULL,
             purchase_date TEXT,
-            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id),
-            FOREIGN KEY (product_id) REFERENCES $tableProducts (id)
+            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES $tableProducts (id) ON DELETE CASCADE
           )''');
 
     // Create customer-customer relationship table
@@ -233,8 +237,8 @@ class DatabaseHelper {
             customer_id INTEGER NOT NULL,
             related_customer_id INTEGER NOT NULL,
             relationship TEXT,
-            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id),
-            FOREIGN KEY (related_customer_id) REFERENCES $tableCustomers (id)
+            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE,
+            FOREIGN KEY (related_customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
           )''');
 
     // Create reminders table
@@ -246,19 +250,32 @@ class DatabaseHelper {
             description TEXT,
             reminder_date TEXT NOT NULL,
             reminder_time TEXT,
-            type TEXT NOT NULL DEFAULT 'follow_up',
-            status TEXT NOT NULL DEFAULT 'pending',
+            type TEXT NOT NULL DEFAULT 'follow_up' CHECK (type IN ('follow_up', 'birthday', 'renewal', 'custom')),
+            status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
             created_at TEXT,
-            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id)
+            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
           )''');
 
-    // Create customer tags table
+    // Create tags definition table (must be created before customer_tags due to foreign key)
+    await db.execute('''
+          CREATE TABLE IF NOT EXISTS $tableTags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            color TEXT NOT NULL DEFAULT '#1565C0',
+            description TEXT,
+            created_at TEXT,
+            updated_at TEXT
+          )''');
+
+    // Create customer tags table (using tag_id FK instead of tag text)
     await db.execute('''
           CREATE TABLE $tableCustomerTags (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_id INTEGER NOT NULL,
-            tag TEXT NOT NULL,
-            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id)
+            tag_id INTEGER NOT NULL,
+            UNIQUE(customer_id, tag_id),
+            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES $tableTags (id) ON DELETE CASCADE
           )''');
 
     // Create product_attachments table (v4)
@@ -268,21 +285,10 @@ class DatabaseHelper {
             product_id INTEGER NOT NULL,
             file_path TEXT NOT NULL,
             thumbnail_path TEXT,
-            media_type TEXT NOT NULL DEFAULT 'image',
+            media_type TEXT NOT NULL DEFAULT 'image' CHECK (media_type IN ('image', 'video', 'document')),
             file_name TEXT,
             created_at TEXT,
-            FOREIGN KEY (product_id) REFERENCES $tableProducts (id)
-          )''');
-
-    // Create tags definition table (v11)
-    await db.execute('''
-          CREATE TABLE IF NOT EXISTS $tableTags (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            color TEXT NOT NULL DEFAULT '#1565C0',
-            description TEXT,
-            created_at TEXT,
-            updated_at TEXT
+            FOREIGN KEY (product_id) REFERENCES $tableProducts (id) ON DELETE CASCADE
           )''');
 
     // Create customer_photos table (v9)
@@ -294,7 +300,7 @@ class DatabaseHelper {
             thumbnail_path TEXT,
             description TEXT,
             created_at TEXT,
-            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id)
+            FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
           )''');
 
     // Create ai_configs table (v9)
@@ -306,8 +312,8 @@ class DatabaseHelper {
             api_key TEXT,
             base_url TEXT,
             model TEXT,
-            category TEXT NOT NULL DEFAULT 'chat',
-            enabled INTEGER NOT NULL DEFAULT 0,
+            category TEXT NOT NULL DEFAULT 'chat' CHECK (category IN ('chat', 'asr')),
+            enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
             created_at TEXT,
             updated_at TEXT
           )''');
@@ -319,10 +325,10 @@ class DatabaseHelper {
             username TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             display_name TEXT,
-            role TEXT NOT NULL DEFAULT 'user',
+            role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
             security_question TEXT,
             security_answer_hash TEXT,
-            is_active INTEGER NOT NULL DEFAULT 1,
+            is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
             created_at TEXT,
             last_login TEXT
           )''');
@@ -362,7 +368,7 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX IF NOT EXISTS idx_reminders_status ON $tableReminders(status)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_reminders_date ON $tableReminders(reminder_date)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_customer_tags_customer_id ON $tableCustomerTags(customer_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_customer_tags_tag ON $tableCustomerTags(tag)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_customer_tags_tag_id ON $tableCustomerTags(tag_id)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_customer_photos_customer_id ON customer_photos(customer_id)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_product_attachments_product_id ON product_attachments(product_id)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_customers_rating ON $tableCustomers(rating)');
@@ -377,7 +383,12 @@ class DatabaseHelper {
     final phones = await db.query('customer_phones');
     final addresses = await db.query('customer_addresses');
     final visits = await db.query(tableVisits, orderBy: 'date DESC');
-    final tags = await db.query(tableCustomerTags);
+    // Join customer_tags with tags to get tag names via tag_id FK
+    final tags = await db.rawQuery('''
+      SELECT ct.customer_id, t.name as tag
+      FROM $tableCustomerTags ct
+      JOIN $tableTags t ON t.id = ct.tag_id
+    ''');
     final photos = await db.query('customer_photos', orderBy: 'id ASC');
 
     // Customer products with product info
@@ -735,6 +746,332 @@ class DatabaseHelper {
       try { await db.execute('ALTER TABLE $tableTags ADD COLUMN description TEXT'); } catch (_) {}
       try { await db.execute('ALTER TABLE $tableTags ADD COLUMN updated_at TEXT'); } catch (_) {}
     }
+    if (oldVersion < 13) {
+      // v13: Major schema optimization
+      // Temporarily disable foreign keys for migration (required for table recreation)
+      await db.execute('PRAGMA foreign_keys = OFF');
+
+      // 1. Migrate customer_tags from text-based (tag TEXT) to ID-based (tag_id INTEGER FK)
+      //    Step 1: Ensure tags table exists
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $tableTags (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          color TEXT NOT NULL DEFAULT '#1565C0',
+          description TEXT,
+          created_at TEXT,
+          updated_at TEXT
+        )
+      ''');
+      //    Step 2: Migrate any distinct tags from customer_tags.tag into tags table
+      try {
+        await db.execute('''
+          INSERT OR IGNORE INTO $tableTags (name, created_at, updated_at)
+          SELECT DISTINCT tag, datetime('now'), datetime('now') FROM $tableCustomerTags
+        ''');
+      } catch (_) {}
+
+      //    Step 3: Create new customer_tags table with tag_id FK
+      await db.execute('ALTER TABLE $tableCustomerTags RENAME TO customer_tags_old');
+      await db.execute('''
+        CREATE TABLE $tableCustomerTags (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          tag_id INTEGER NOT NULL,
+          UNIQUE(customer_id, tag_id),
+          FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE,
+          FOREIGN KEY (tag_id) REFERENCES $tableTags (id) ON DELETE CASCADE
+        )
+      ''');
+      //    Step 4: Migrate data: look up tag_id from tags.name
+      await db.execute('''
+        INSERT INTO $tableCustomerTags (customer_id, tag_id)
+        SELECT DISTINCT old.customer_id, t.id
+        FROM customer_tags_old old
+        JOIN $tableTags t ON t.name = old.tag
+      ''');
+      //    Step 5: Drop old table
+      await db.execute('DROP TABLE customer_tags_old');
+
+      // 2. Add ON DELETE CASCADE to child tables by recreating them
+      // customer_phones
+      await db.execute('ALTER TABLE customer_phones RENAME TO customer_phones_old');
+      await db.execute('''
+        CREATE TABLE customer_phones (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          phone TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('INSERT INTO customer_phones SELECT * FROM customer_phones_old');
+      await db.execute('DROP TABLE customer_phones_old');
+
+      // customer_addresses
+      await db.execute('ALTER TABLE customer_addresses RENAME TO customer_addresses_old');
+      await db.execute('''
+        CREATE TABLE customer_addresses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          address TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('INSERT INTO customer_addresses SELECT * FROM customer_addresses_old');
+      await db.execute('DROP TABLE customer_addresses_old');
+
+      // visits
+      await db.execute('ALTER TABLE $tableVisits RENAME TO visits_old');
+      await db.execute('''
+        CREATE TABLE $tableVisits (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          date TEXT NOT NULL,
+          location TEXT,
+          accompanying_persons TEXT,
+          introduced_products TEXT,
+          interested_products TEXT,
+          competitors TEXT,
+          notes TEXT,
+          FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('INSERT INTO $tableVisits SELECT * FROM visits_old');
+      await db.execute('DROP TABLE visits_old');
+
+      // sales (with CHECK constraints)
+      await db.execute('ALTER TABLE $tableSales RENAME TO sales_old');
+      await db.execute('''
+        CREATE TABLE $tableSales (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          amount REAL CHECK (amount IS NULL OR amount >= 0),
+          notes TEXT,
+          sale_date TEXT NOT NULL,
+          colleague_id INTEGER,
+          commission_rate REAL CHECK (commission_rate IS NULL OR (commission_rate >= 0 AND commission_rate <= 100)),
+          policy_number TEXT,
+          policy_status TEXT DEFAULT '有效' CHECK (policy_status IS NULL OR policy_status IN ('有效', '待生效', '已失效', '已退保')),
+          payment_method TEXT,
+          payment_term INTEGER,
+          guarantee_period INTEGER,
+          renewal_date TEXT,
+          FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE,
+          FOREIGN KEY (product_id) REFERENCES $tableProducts (id) ON DELETE CASCADE,
+          FOREIGN KEY (colleague_id) REFERENCES $tableColleagues (id) ON DELETE SET NULL
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO $tableSales
+          (id, customer_id, product_id, amount, notes, sale_date, colleague_id,
+           commission_rate, policy_number, policy_status, payment_method,
+           payment_term, guarantee_period, renewal_date)
+        SELECT
+          id, customer_id, product_id,
+          CASE WHEN amount IS NULL OR amount >= 0 THEN amount ELSE 0 END,
+          notes, sale_date, colleague_id,
+          CASE WHEN commission_rate IS NULL OR (commission_rate >= 0 AND commission_rate <= 100) THEN commission_rate ELSE NULL END,
+          policy_number,
+          CASE WHEN policy_status IS NULL OR policy_status IN ('有效', '待生效', '已失效', '已退保') THEN policy_status ELSE '有效' END,
+          payment_method, payment_term, guarantee_period, renewal_date
+        FROM sales_old
+      ''');
+      await db.execute('DROP TABLE sales_old');
+
+      // customer_relations
+      await db.execute('ALTER TABLE $tableCustomerRelations RENAME TO customer_relations_old');
+      await db.execute('''
+        CREATE TABLE $tableCustomerRelations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          related_customer_id INTEGER NOT NULL,
+          relationship TEXT,
+          FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE,
+          FOREIGN KEY (related_customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('INSERT INTO $tableCustomerRelations SELECT * FROM customer_relations_old');
+      await db.execute('DROP TABLE customer_relations_old');
+
+      // customer_products
+      await db.execute('ALTER TABLE $tableCustomerProducts RENAME TO customer_products_old');
+      await db.execute('''
+        CREATE TABLE $tableCustomerProducts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          purchase_date TEXT,
+          FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE,
+          FOREIGN KEY (product_id) REFERENCES $tableProducts (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('INSERT INTO $tableCustomerProducts SELECT * FROM customer_products_old');
+      await db.execute('DROP TABLE customer_products_old');
+
+      // reminders (with CHECK constraints)
+      await db.execute('ALTER TABLE $tableReminders RENAME TO reminders_old');
+      await db.execute('''
+        CREATE TABLE $tableReminders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT,
+          reminder_date TEXT NOT NULL,
+          reminder_time TEXT,
+          type TEXT NOT NULL DEFAULT 'follow_up' CHECK (type IN ('follow_up', 'birthday', 'renewal', 'custom')),
+          status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
+          created_at TEXT,
+          FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO $tableReminders
+          (id, customer_id, title, description, reminder_date, reminder_time, type, status, created_at)
+        SELECT
+          id, customer_id, title, description, reminder_date, reminder_time,
+          CASE WHEN type IN ('follow_up', 'birthday', 'renewal', 'custom') THEN type ELSE 'custom' END,
+          CASE WHEN status IN ('pending', 'completed') THEN status ELSE 'pending' END,
+          created_at
+        FROM reminders_old
+      ''');
+      await db.execute('DROP TABLE reminders_old');
+
+      // product_attachments (with CHECK constraint)
+      await db.execute('ALTER TABLE product_attachments RENAME TO product_attachments_old');
+      await db.execute('''
+        CREATE TABLE product_attachments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          file_path TEXT NOT NULL,
+          thumbnail_path TEXT,
+          media_type TEXT NOT NULL DEFAULT 'image' CHECK (media_type IN ('image', 'video', 'document')),
+          file_name TEXT,
+          created_at TEXT,
+          FOREIGN KEY (product_id) REFERENCES $tableProducts (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO product_attachments
+          (id, product_id, file_path, thumbnail_path, media_type, file_name, created_at)
+        SELECT
+          id, product_id, file_path, thumbnail_path,
+          CASE WHEN media_type IN ('image', 'video', 'document') THEN media_type ELSE 'image' END,
+          file_name, created_at
+        FROM product_attachments_old
+      ''');
+      await db.execute('DROP TABLE product_attachments_old');
+
+      // customer_photos
+      await db.execute('ALTER TABLE customer_photos RENAME TO customer_photos_old');
+      await db.execute('''
+        CREATE TABLE customer_photos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          file_path TEXT NOT NULL,
+          thumbnail_path TEXT,
+          description TEXT,
+          created_at TEXT,
+          FOREIGN KEY (customer_id) REFERENCES $tableCustomers (id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute('INSERT INTO customer_photos SELECT * FROM customer_photos_old');
+      await db.execute('DROP TABLE customer_photos_old');
+
+      // customers (drop legacy tags/photos columns, add CHECK constraints)
+      await db.execute('ALTER TABLE $tableCustomers RENAME TO customers_old');
+      await db.execute('''
+        CREATE TABLE $tableCustomers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          alias TEXT,
+          age INTEGER,
+          gender TEXT CHECK (gender IS NULL OR gender IN ('男', '女', '其他')),
+          rating INTEGER CHECK (rating IS NULL OR (rating >= 0 AND rating <= 5)),
+          latitude REAL,
+          longitude REAL,
+          address TEXT,
+          birthday TEXT,
+          next_follow_up_date TEXT,
+          created_at TEXT,
+          wechat TEXT,
+          id_number TEXT,
+          occupation TEXT,
+          source TEXT,
+          remark TEXT,
+          purchase_intention INTEGER CHECK (purchase_intention IS NULL OR (purchase_intention >= 0 AND purchase_intention <= 5))
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO $tableCustomers (id, name, alias, age, gender, rating, latitude, longitude, address, birthday, next_follow_up_date, created_at, wechat, id_number, occupation, source, remark, purchase_intention)
+        SELECT
+          id, name, alias, age,
+          CASE WHEN gender IS NULL OR gender IN ('男', '女', '其他') THEN gender ELSE NULL END,
+          CASE WHEN rating IS NULL OR (rating >= 0 AND rating <= 5) THEN rating ELSE NULL END,
+          latitude, longitude, address, birthday, next_follow_up_date, created_at, wechat, id_number, occupation, source, remark,
+          CASE WHEN purchase_intention IS NULL OR (purchase_intention >= 0 AND purchase_intention <= 5) THEN purchase_intention ELSE NULL END
+        FROM customers_old
+      ''');
+      await db.execute('DROP TABLE customers_old');
+
+      // users (with CHECK constraints)
+      await db.execute('ALTER TABLE users RENAME TO users_old');
+      await db.execute('''
+        CREATE TABLE users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL UNIQUE,
+          password_hash TEXT NOT NULL,
+          display_name TEXT,
+          role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+          security_question TEXT,
+          security_answer_hash TEXT,
+          is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+          created_at TEXT,
+          last_login TEXT
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO users (id, username, password_hash, display_name, role, security_question, security_answer_hash, is_active, created_at, last_login)
+        SELECT
+          id, username, password_hash, display_name,
+          CASE WHEN role IN ('admin', 'user') THEN role ELSE 'user' END,
+          security_question, security_answer_hash,
+          CASE WHEN is_active IN (0, 1) THEN is_active ELSE 1 END,
+          created_at, last_login
+        FROM users_old
+      ''');
+      await db.execute('DROP TABLE users_old');
+
+      // ai_configs (with CHECK constraints)
+      await db.execute('ALTER TABLE ai_configs RENAME TO ai_configs_old');
+      await db.execute('''
+        CREATE TABLE ai_configs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          provider_key TEXT NOT NULL UNIQUE,
+          name TEXT NOT NULL,
+          api_key TEXT,
+          base_url TEXT,
+          model TEXT,
+          category TEXT NOT NULL DEFAULT 'chat' CHECK (category IN ('chat', 'asr')),
+          enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
+          created_at TEXT,
+          updated_at TEXT
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO ai_configs (id, provider_key, name, api_key, base_url, model, category, enabled, created_at, updated_at)
+        SELECT
+          id, provider_key, name, api_key, base_url, model,
+          CASE WHEN category IN ('chat', 'asr') THEN category ELSE 'chat' END,
+          CASE WHEN enabled IN (0, 1) THEN enabled ELSE 0 END,
+          created_at, updated_at
+        FROM ai_configs_old
+      ''');
+      await db.execute('DROP TABLE ai_configs_old');
+
+      // Re-enable foreign keys after migration
+      await db.execute('PRAGMA foreign_keys = ON');
+    }
 
     // Ensure admin password hash is always correct (fixes stale hashes from older versions)
     if (oldVersion < _databaseVersion) {
@@ -838,13 +1175,13 @@ class DatabaseHelper {
   }
 
   // Delete a customer and all related records
+  // ON DELETE CASCADE handles child records automatically; we only collect file paths for cleanup
   Future<int> deleteCustomer(int id) async {
     Database db = await instance.database;
     // Collect file paths to delete after transaction succeeds
     List<String> filesToDelete = [];
-    // Use transaction to ensure atomicity (query photos inside to prevent race)
     final result = await db.transaction((txn) async {
-      // Query photos inside transaction to avoid race condition
+      // Query photos inside transaction to collect file paths
       final photoResults = await txn.query('customer_photos', where: 'customer_id = ?', whereArgs: [id]);
       for (var r in photoResults) {
         final filePath = r['file_path'] as String?;
@@ -852,49 +1189,7 @@ class DatabaseHelper {
         if (filePath != null) filesToDelete.add(filePath);
         if (thumbPath != null) filesToDelete.add(thumbPath);
       }
-      // Delete child records first to maintain referential integrity
-      await txn.delete(
-        'customer_phones',
-        where: 'customer_id = ?',
-        whereArgs: [id],
-      );
-      await txn.delete(
-        'customer_addresses',
-        where: 'customer_id = ?',
-        whereArgs: [id],
-      );
-      await txn.delete(
-        'customer_photos',
-        where: 'customer_id = ?',
-        whereArgs: [id],
-      );
-      await txn.delete(tableVisits, where: 'customer_id = ?', whereArgs: [id]);
-      await txn.delete(tableSales, where: 'customer_id = ?', whereArgs: [id]);
-      await txn.delete(
-        tableCustomerProducts,
-        where: 'customer_id = ?',
-        whereArgs: [id],
-      );
-      await txn.delete(
-        tableCustomerRelations,
-        where: 'customer_id = ?',
-        whereArgs: [id],
-      );
-      await txn.delete(
-        tableCustomerRelations,
-        where: 'related_customer_id = ?',
-        whereArgs: [id],
-      );
-      await txn.delete(
-        tableCustomerTags,
-        where: 'customer_id = ?',
-        whereArgs: [id],
-      );
-      await txn.delete(
-        tableReminders,
-        where: 'customer_id = ?',
-        whereArgs: [id],
-      );
+      // ON DELETE CASCADE handles all child tables automatically
       return await txn.delete(tableCustomers, where: 'id = ?', whereArgs: [id]);
     });
     // Delete physical files after transaction succeeds
@@ -940,7 +1235,7 @@ class DatabaseHelper {
     );
   }
 
-  // Delete a product and all related records (attachments, customer associations)
+  // Delete a product and all related records (ON DELETE CASCADE handles child records)
   Future<int> deleteProduct(int id) async {
     Database db = await instance.database;
     // Collect file paths to delete after transaction succeeds
@@ -956,13 +1251,9 @@ class DatabaseHelper {
       if (filePath != null) filesToDelete.add(filePath);
       if (thumbnailPath != null) filesToDelete.add(thumbnailPath);
     }
-    final result = await db.transaction((txn) async {
-      await txn.delete('product_attachments', where: 'product_id = ?', whereArgs: [id]);
-      await txn.delete(tableCustomerProducts, where: 'product_id = ?', whereArgs: [id]);
-      await txn.delete(tableSales, where: 'product_id = ?', whereArgs: [id]);
-      return await txn.delete(tableProducts, where: 'id = ?', whereArgs: [id]);
-    });
-    // Delete physical files after transaction succeeds
+    // ON DELETE CASCADE handles product_attachments, customer_products, sales automatically
+    final result = await db.delete(tableProducts, where: 'id = ?', whereArgs: [id]);
+    // Delete physical files after DB deletion succeeds
     for (final path in filesToDelete) {
       try { await File(path).delete(); } catch (_) {}
     }
@@ -1011,19 +1302,10 @@ class DatabaseHelper {
     );
   }
 
-  // Delete a colleague and clear their references in sales
+  // Delete a colleague (ON DELETE SET NULL on sales.colleague_id handles cleanup)
   Future<int> deleteColleague(int id) async {
     Database db = await instance.database;
-    return await db.transaction((txn) async {
-      // Clear colleague_id references in sales records (set to NULL instead of deleting sales)
-      await txn.update(
-        tableSales,
-        {'colleague_id': null},
-        where: 'colleague_id = ?',
-        whereArgs: [id],
-      );
-      return await txn.delete(tableColleagues, where: 'id = ?', whereArgs: [id]);
-    });
+    return await db.delete(tableColleagues, where: 'id = ?', whereArgs: [id]);
   }
 
   // Insert customer-product relationship
@@ -1596,41 +1878,50 @@ class DatabaseHelper {
     await db.insert(tableTags, {
       'name': tag,
       'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    // Look up tag_id from tags table
+    final tagRows = await db.query(tableTags, where: 'name = ?', whereArgs: [tag], limit: 1);
+    if (tagRows.isEmpty) return 0;
+    final tagId = tagRows.first['id'] as int;
     return await db.insert(tableCustomerTags, {
       'customer_id': customerId,
-      'tag': tag,
+      'tag_id': tagId,
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   // Get tags for a customer
   Future<List<String>> getCustomerTags(int customerId) async {
     Database db = await instance.database;
-    final results = await db.query(
-      tableCustomerTags,
-      where: 'customer_id = ?',
-      whereArgs: [customerId],
-    );
-    return results.map((e) => e['tag'] as String? ?? '').where((t) => t.isNotEmpty).toList();
+    final results = await db.rawQuery('''
+      SELECT t.name FROM $tableCustomerTags ct
+      JOIN $tableTags t ON t.id = ct.tag_id
+      WHERE ct.customer_id = ?
+    ''', [customerId]);
+    return results.map((e) => e['name'] as String? ?? '').where((t) => t.isNotEmpty).toList();
   }
 
   // Delete a customer tag
   Future<int> deleteCustomerTag(int customerId, String tag) async {
     Database db = await instance.database;
+    // Look up tag_id
+    final tagRows = await db.query(tableTags, where: 'name = ?', whereArgs: [tag], limit: 1);
+    if (tagRows.isEmpty) return 0;
+    final tagId = tagRows.first['id'] as int;
     final result = await db.delete(
       tableCustomerTags,
-      where: 'customer_id = ? AND tag = ?',
-      whereArgs: [customerId, tag],
+      where: 'customer_id = ? AND tag_id = ?',
+      whereArgs: [customerId, tagId],
     );
     // Clean up tags definition table if no customer uses this tag anymore
     final remaining = await db.query(
       tableCustomerTags,
-      where: 'tag = ?',
-      whereArgs: [tag],
+      where: 'tag_id = ?',
+      whereArgs: [tagId],
       limit: 1,
     );
     if (remaining.isEmpty) {
-      await db.delete(tableTags, where: 'name = ?', whereArgs: [tag]);
+      await db.delete(tableTags, where: 'id = ?', whereArgs: [tagId]);
     }
     return result;
   }
@@ -1638,55 +1929,59 @@ class DatabaseHelper {
   // Delete a tag from all customers (by tag name)
   Future<int> deleteCustomerTagByName(String tag) async {
     Database db = await instance.database;
+    final tagRows = await db.query(tableTags, where: 'name = ?', whereArgs: [tag], limit: 1);
+    if (tagRows.isEmpty) return 0;
+    final tagId = tagRows.first['id'] as int;
     final result = await db.delete(
       tableCustomerTags,
-      where: 'tag = ?',
-      whereArgs: [tag],
+      where: 'tag_id = ?',
+      whereArgs: [tagId],
     );
     // Also remove from tags definition table
-    await db.delete(tableTags, where: 'name = ?', whereArgs: [tag]);
+    await db.delete(tableTags, where: 'id = ?', whereArgs: [tagId]);
     return result;
   }
 
   // Delete all tags for a customer
   Future<int> deleteAllCustomerTags(int customerId) async {
     Database db = await instance.database;
+    // Collect tag_ids that might become orphaned
+    final customerTagRows = await db.query(
+      tableCustomerTags,
+      columns: ['tag_id'],
+      where: 'customer_id = ?',
+      whereArgs: [customerId],
+    );
+    final tagIds = customerTagRows.map((r) => r['tag_id'] as int).toSet();
     final result = await db.delete(
       tableCustomerTags,
       where: 'customer_id = ?',
       whereArgs: [customerId],
     );
-
-    // Clean up orphaned tag definitions in a single query
-    await db.execute('''
-      DELETE FROM $tableTags WHERE name NOT IN (
-        SELECT DISTINCT tag FROM $tableCustomerTags
-      )
-    ''');
+    // Clean up orphaned tag definitions
+    for (final tagId in tagIds) {
+      final remaining = await db.query(
+        tableCustomerTags,
+        where: 'tag_id = ?',
+        whereArgs: [tagId],
+        limit: 1,
+      );
+      if (remaining.isEmpty) {
+        await db.delete(tableTags, where: 'id = ?', whereArgs: [tagId]);
+      }
+    }
     return result;
   }
 
-  // Get all unique tags (from tags definition table only - data consistency is maintained)
+  // Get all unique tags (from tags definition table)
   Future<List<String>> getAllUniqueTags() async {
     Database db = await instance.database;
-    try {
-      final results = await db.query(tableTags, columns: ['name'], orderBy: 'name');
-      return results
-          .map((e) => e['name'] as String?)
-          .whereType<String>()
-          .where((n) => n.isNotEmpty)
-          .toList();
-    } catch (_) {
-      // Fallback: query customer_tags if tags table doesn't exist yet (shouldn't happen)
-      final ctResults = await db.rawQuery(
-        'SELECT DISTINCT tag FROM $tableCustomerTags ORDER BY tag',
-      );
-      return ctResults
-          .map((e) => e['tag'] as String?)
-          .whereType<String>()
-          .where((t) => t.isNotEmpty)
-          .toList();
-    }
+    final results = await db.query(tableTags, columns: ['name'], orderBy: 'name');
+    return results
+        .map((e) => e['name'] as String?)
+        .whereType<String>()
+        .where((n) => n.isNotEmpty)
+        .toList();
   }
 
   // Insert a tag definition
@@ -1698,11 +1993,9 @@ class DatabaseHelper {
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
-  // Delete a tag definition
+  // Delete a tag definition (ON DELETE CASCADE on customer_tags.tag_id handles cleanup)
   Future<int> deleteTag(String name) async {
     Database db = await instance.database;
-    // Also remove from customer_tags to avoid orphaned associations
-    await db.delete(tableCustomerTags, where: 'tag = ?', whereArgs: [name]);
     return await db.delete(tableTags, where: 'name = ?', whereArgs: [name]);
   }
 
@@ -1713,7 +2006,8 @@ class DatabaseHelper {
       '''
       SELECT c.* FROM $tableCustomers c
       JOIN $tableCustomerTags ct ON c.id = ct.customer_id
-      WHERE ct.tag = ?
+      JOIN $tableTags t ON t.id = ct.tag_id
+      WHERE t.name = ?
       ORDER BY c.name
     ''',
       [tag],
@@ -1736,100 +2030,6 @@ class DatabaseHelper {
     } else {
       Directory documentsDirectory = await getApplicationDocumentsDirectory();
       return join(documentsDirectory.path, _databaseFileName);
-    }
-  }
-
-  // Export database
-  Future<File> exportDatabase() async {
-    if (kIsWeb) {
-      // For web platform, throw an exception
-      throw Exception('Export functionality not supported on web');
-    } else {
-      // Checkpoint WAL to ensure all data is in the main DB file
-      final db = await instance.database;
-      await db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
-
-      String dbPath = await getDatabasePath();
-      File dbFile = File(dbPath);
-
-      // Create export directory if it doesn't exist
-      Directory exportDir = Directory(
-        join(
-          await getApplicationDocumentsDirectory().then((dir) => dir.path),
-          'exports',
-        ),
-      );
-      if (!exportDir.existsSync()) {
-        exportDir.createSync(recursive: true);
-      }
-
-      // Create export file with timestamp
-      String timestamp = DateTime.now().toString().replaceAll(
-        RegExp(r'[\\/:*?"<>|]'),
-        '_',
-      );
-      String exportPath = join(exportDir.path, 'insurance_manager_$timestamp.db');
-      File exportFile = File(exportPath);
-
-      // Copy database file to export location
-      await dbFile.copy(exportPath);
-      return exportFile;
-    }
-  }
-
-  // Import database
-  Future<bool> importDatabase(File importFile) async {
-    if (kIsWeb) {
-      // For web platform, return false
-      return false;
-    } else {
-      try {
-        String dbPath = await getDatabasePath();
-
-        // Close database if it's open
-        if (_database != null && _database!.isOpen) {
-          await _database!.close();
-          _database = null;
-          _initCompleter = null;
-        }
-
-        // Backup original database before overwriting
-        final backupPath = '$dbPath.bak';
-        final originalDb = File(dbPath);
-        bool hadOriginal = originalDb.existsSync();
-        if (hadOriginal) {
-          await originalDb.copy(backupPath);
-        }
-
-        try {
-          // Copy import file to database location
-          await importFile.copy(dbPath);
-
-          // Reopen database to verify it's valid
-          await instance.database;
-          // Success — delete backup
-          if (hadOriginal) {
-            try { await File(backupPath).delete(); } catch (_) {}
-          }
-          return true;
-        } catch (e) {
-          // Restore backup on failure
-          if (hadOriginal) {
-            try {
-              await File(backupPath).rename(dbPath);
-            } catch (_) {
-              AppLogger.error('Failed to restore database backup after import failure');
-            }
-          } else {
-            // No original DB existed — delete the invalid file so app recreates empty DB
-            try { await File(dbPath).delete(); } catch (_) {}
-          }
-          rethrow;
-        }
-      } catch (e) {
-        AppLogger.error('importing database: $e');
-        return false;
-      }
     }
   }
 

@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:insurance_manager/providers/app_state.dart';
 import 'package:insurance_manager/pages/colleague_management_page.dart';
-import 'package:insurance_manager/database/database_helper.dart';
 import 'package:insurance_manager/pages/backup_restore_page.dart';
+import 'package:insurance_manager/services/backup_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
@@ -517,7 +517,7 @@ class _SettingsPageState extends State<SettingsPage> {
             title: '数据库管理',
             children: [
               Text(
-                '管理数据库文件，包括导出和导入数据',
+                '管理数据备份与恢复，包含数据库和附件的完整导出导入',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               ),
               SizedBox(height: 14),
@@ -525,39 +525,23 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: kIsWeb ? null : () async {
-                        try {
-                          final dbHelper = DatabaseHelper.instance;
-                          final exportFile = await dbHelper.exportDatabase();
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('数据库已导出到: ${exportFile.path}'),
-                            ),
-                          );
-                        } catch (e) {
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('导出数据库失败: $e')),
-                          );
-                        }
-                      },
+                      onPressed: kIsWeb ? null : () => _exportBackup(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFF1565C0),
                       ),
                       icon: Icon(Icons.download_rounded, size: 18),
-                      label: Text('导出DB'),
+                      label: Text('完整备份'),
                     ),
                   ),
                   SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: kIsWeb ? null : () => _importDatabase(context),
+                      onPressed: kIsWeb ? null : () => _importBackup(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFF00897B),
                       ),
                       icon: Icon(Icons.upload_rounded, size: 18),
-                      label: Text('导入'),
+                      label: Text('恢复备份'),
                     ),
                   ),
                 ],
@@ -1084,12 +1068,38 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Future<void> _importDatabase(BuildContext ctx) async {
+  Future<void> _exportBackup(BuildContext ctx) async {
+    try {
+      final backupService = BackupService.instance;
+      final backupPath = await backupService.createFullBackup(isAutoBackup: false);
+      if (!ctx.mounted) return;
+
+      // Offer to share the backup
+      try {
+        await Share.shareXFiles(
+          [XFile(backupPath)],
+          subject: '保险经纪人数据备份 ${DateTime.now().year}',
+        );
+      } catch (_) {
+        // Share not available or cancelled — just show path
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text('备份已创建：$backupPath')),
+        );
+      }
+    } catch (e) {
+      if (!ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text('创建备份失败：$e')),
+      );
+    }
+  }
+
+  Future<void> _importBackup(BuildContext ctx) async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['db'],
-        dialogTitle: '选择数据库文件',
+        allowedExtensions: ['zip'],
+        dialogTitle: '选择备份文件',
       );
 
       if (result == null || result.files.isEmpty) return;
@@ -1111,10 +1121,10 @@ class _SettingsPageState extends State<SettingsPage> {
         title: Row(children: [
           Icon(Icons.warning_amber, color: Colors.orange),
           SizedBox(width: 8),
-          Text('导入数据库'),
+          Text('恢复备份'),
         ]),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('即将从以下文件导入数据库：'),
+          Text('即将从以下备份恢复所有数据（含附件）：'),
           SizedBox(height: 4),
           Container(
             margin: EdgeInsets.all(8),
@@ -1129,7 +1139,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('注意：', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade800, fontSize: 13)),
               SizedBox(height: 4),
-              Text('当前所有数据将被覆盖替换！建议先导出当前数据库备份后再导入。', style: TextStyle(fontSize: 12, color: Colors.red.shade700)),
+              Text('当前所有数据将被覆盖替换！建议先创建当前数据的备份再进行恢复。', style: TextStyle(fontSize: 12, color: Colors.red.shade700)),
             ]),
           ),
         ]),
@@ -1138,7 +1148,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ElevatedButton(
             onPressed: () => Navigator.pop(dialogCtx, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('确认导入', style: TextStyle(color: Colors.white)),
+            child: Text('确认恢复', style: TextStyle(color: Colors.white)),
           ),
         ],
       ));
@@ -1153,37 +1163,35 @@ class _SettingsPageState extends State<SettingsPage> {
           CircularProgressIndicator(strokeWidth: 3),
           SizedBox(width: 16),
           Expanded(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('正在导入数据...', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text('正在恢复数据...', style: TextStyle(fontWeight: FontWeight.w600)),
             Text('请勿关闭应用', style: TextStyle(fontSize: 12, color: Colors.grey)),
           ])),
         ])),
       ));
 
-      final dbHelper = DatabaseHelper.instance;
-      final success = await dbHelper.importDatabase(importFile);
+      final backupService = BackupService.instance;
+      final (success, message) = await backupService.restoreFromBackup(importFile.path);
 
       if (!ctx.mounted) return;
+      // Close loading dialog
+      Navigator.pop(ctx);
+      if (!ctx.mounted) return;
+
       if (success) {
-        // Reload app state data while loading dialog is still showing
+        // Reload app state data
         final appState = Provider.of<AppState>(ctx, listen: false);
         await appState.initializeApp();
 
-        // Close loading after full initialization
-        if (ctx.mounted) Navigator.pop(ctx);
         if (!ctx.mounted) return;
-
         showDialog(context: ctx, builder: (successCtx) => AlertDialog(
           icon: Icon(Icons.check_circle, color: Colors.green, size: 48),
-          title: Text('导入成功！'),
-          content: Text('数据库已成功导入。建议重启应用以确保所有数据正确加载。'),
+          title: Text('恢复成功！'),
+          content: Text('$message\n\n建议重启应用以完整加载恢复的数据。'),
           actions: [TextButton(onPressed: () => Navigator.pop(successCtx), child: Text('好的'))],
         ));
       } else {
-        // Close loading dialog for failed import
-        if (ctx.mounted) Navigator.pop(ctx);
-        if (!ctx.mounted) return;
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('导入失败，请确认文件格式正确')),
+          SnackBar(content: Text(message), duration: Duration(seconds: 5)),
         );
       }
     } catch (e) {
@@ -1191,7 +1199,7 @@ class _SettingsPageState extends State<SettingsPage> {
       // Close loading dialog if still showing
       try { Navigator.pop(ctx); } catch (_) {}
       ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(content: Text('导入失败：$e')),
+        SnackBar(content: Text('恢复失败：$e')),
       );
     }
   }

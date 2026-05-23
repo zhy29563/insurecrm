@@ -1,4 +1,5 @@
 import 'package:insurance_manager/utils/app_logger.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:insurance_manager/services/backup_service.dart';
@@ -6,6 +7,8 @@ import 'package:insurance_manager/widgets/app_components.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:insurance_manager/providers/app_state.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as path;
 
 class BackupRestorePage extends StatefulWidget {
   const BackupRestorePage({super.key});
@@ -264,17 +267,23 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   }
 
   Widget _buildBackupTile(BackupInfo info, BuildContext context, bool isDark) {
+    final isCompatible = info.isCompatible;
     return Card(
       margin: EdgeInsets.only(bottom: 8),
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(
+        color: !isCompatible ? Colors.red.shade300 : Colors.grey.shade200,
+      )),
       child: Padding(
         padding: EdgeInsets.all(14),
         child: Row(children: [
           Container(
             width: 44, height: 44,
-            decoration: BoxDecoration(color: info.isAuto ? (isDark ? Color(0xFF1565C0).withValues(alpha: 0.2) : Color(0xFFE3F2FD)) : (isDark ? Color(0xFF7B1FA2).withValues(alpha: 0.2) : Color(0xFFF3E5F5)), borderRadius: BorderRadius.circular(10)),
-            child: Icon(info.isAuto ? Icons.auto_awesome : Icons.backup, color: info.isAuto ? Color(0xFF1565C0) : Color(0xFF7B1FA2)),
+            decoration: BoxDecoration(color: !isCompatible
+                ? Colors.red.shade50
+                : info.isAuto ? (isDark ? Color(0xFF1565C0).withValues(alpha: 0.2) : Color(0xFFE3F2FD)) : (isDark ? Color(0xFF7B1FA2).withValues(alpha: 0.2) : Color(0xFFF3E5F5)), borderRadius: BorderRadius.circular(10)),
+            child: Icon(!isCompatible ? Icons.warning_amber : info.isAuto ? Icons.auto_awesome : Icons.backup,
+                color: !isCompatible ? Colors.red : info.isAuto ? Color(0xFF1565C0) : Color(0xFF7B1FA2)),
           ),
           SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -283,6 +292,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               SizedBox(width: 6),
               if (info.isAuto) Container(padding: EdgeInsets.symmetric(horizontal:6,vertical:1), decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(4)),
                 child: Text('自动', style: TextStyle(fontSize: 10, color: Colors.blue.shade800))),
+              if (!isCompatible) Container(padding: EdgeInsets.symmetric(horizontal:6,vertical:1), decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
+                child: Text('不兼容', style: TextStyle(fontSize: 10, color: Colors.red.shade800))),
             ]),
             SizedBox(height: 4),
             Row(children: [
@@ -293,13 +304,17 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               Icon(Icons.sd_storage, size: 13, color: Colors.grey),
               SizedBox(width: 3),
               Text(info.sizeFormatted, style: TextStyle(fontSize: 12, color: Colors.grey)),
+              SizedBox(width: 12),
+              Icon(Icons.tag, size: 13, color: Colors.grey),
+              SizedBox(width: 3),
+              Text(info.versionText, style: TextStyle(fontSize: 12, color: Colors.grey)),
             ]),
           ])),
           PopupMenuButton<String>(
             onSelected: (v) => _handleBackupAction(v, info, context),
             itemBuilder: (c) => [
               PopupMenuItem(value: 'share', child: Row(children: [Icon(Icons.share, size:18), SizedBox(width:8), Text('分享/上传云端')])),
-              PopupMenuItem(value: 'restore', child: Row(children: [Icon(Icons.restore, size:18, color: Colors.teal), SizedBox(width:8), Text('从此备份恢复', style: TextStyle(color: Colors.teal))])),
+              PopupMenuItem(value: 'restore', enabled: isCompatible, child: Row(children: [Icon(Icons.restore, size:18, color: isCompatible ? Colors.teal : Colors.grey), SizedBox(width:8), Text('从此备份恢复', style: TextStyle(color: isCompatible ? Colors.teal : Colors.grey))])),
               PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size:18, color: Colors.red), SizedBox(width:8), Text('删除', style: TextStyle(color: Colors.red))])),
             ],
           ),
@@ -422,17 +437,38 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   void _showRestoreDialog(BuildContext ctx) {
     showDialog(context: ctx, builder: (dialogCtx) => SimpleDialog(title: Text('导入外部备份'), children: [
       Padding(padding: EdgeInsets.fromLTRB(20, 0, 20, 16), child: Column(children: [
-        Text('请将 .zip 备份文件放到以下目录中：', style: TextStyle(fontSize: 13)),
-        SizedBox(height: 8),
-        Container(padding: EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-          child: Text('文档目录 / backups /', style: TextStyle(fontSize: 11, fontFamily: 'monospace'))),
+        Text('从其他设备或云端获取的 .zip 备份文件可导入到当前设备：', style: TextStyle(fontSize: 13)),
         SizedBox(height: 12),
-        Text('或者点击下方按钮选择文件（需要系统文件选择器支持）', style: TextStyle(fontSize: 13, color: Colors.grey)),
       ])),
       Padding(padding: EdgeInsets.fromLTRB(20, 0, 20, 20), child: Column(children: [
-        SizedBox(width: double.infinity, child: OutlinedButton.icon(
-          onPressed: () { Navigator.pop(dialogCtx); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('请在设备上找到备份文件放入备份目录后刷新列表'))); },
-          icon: Icon(Icons.folder_open), label: Text('打开备份文件夹'))),
+        SizedBox(width: double.infinity, child: ElevatedButton.icon(
+          onPressed: () async {
+            Navigator.pop(dialogCtx);
+            try {
+              final result = await FilePicker.platform.pickFiles(
+                type: FileType.custom,
+                allowedExtensions: ['zip'],
+                dialogTitle: '选择备份文件',
+              );
+              if (result == null || result.files.isEmpty) return;
+              final platformFile = result.files.first;
+              if (platformFile.path == null) {
+                if (!ctx.mounted) return;
+                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('无法获取文件路径')));
+                return;
+              }
+              // Import the file to backup dir and then restore
+              final importFile = File(platformFile.path!);
+              final backupService = BackupService.instance;
+              final backupPath = await backupService.importBackupFromExternal(importFile);
+              if (!ctx.mounted) return;
+              _confirmRestore(ctx, backupPath, path.basename(backupPath));
+            } catch (e) {
+              if (!ctx.mounted) return;
+              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('导入失败：$e')));
+            }
+          },
+          icon: Icon(Icons.file_open), label: Text('选择备份文件(.zip)'))),
         SizedBox(height: 8),
         Text('提示：可通过「分享」功能将其他设备的备份传到此设备', style: TextStyle(fontSize: 12, color: Colors.grey.shade500), textAlign: TextAlign.center),
       ])),

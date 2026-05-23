@@ -1,4 +1,4 @@
-package com.example.insurance_manager
+package com.weapon.insurer
 
 import io.flutter.embedding.android.FlutterActivity
 

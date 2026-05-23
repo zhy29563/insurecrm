@@ -14,15 +14,6 @@ class Customer {
   List<Map<String, dynamic>> products;
   List<Map<String, dynamic>> relationships;
   String? birthday;
-
-  /// Legacy: comma-separated tags string, kept for backward compatibility;
-  /// prefer [persistentTagList] from the customer_tags join table.
-  String? tags;
-
-  /// Legacy: pipe-separated photo paths string, kept for backward compatibility;
-  /// prefer [persistentPhotoList] from the customer_photos table.
-  String? photos;
-
   String? nextFollowUpDate;
   String? createdAt;
 
@@ -40,9 +31,8 @@ class Customer {
   String? notes; // 客户备注
   int? purchaseIntentionLevel; // 购买意向等级 (1-5 scale)
 
-  // Cached computed lists to avoid repeated string splitting
+  // Cached computed tag list to avoid repeated lookups
   List<String>? _cachedTagList;
-  List<String>? _cachedPhotoList;
 
   Customer({
     this.id,
@@ -60,8 +50,6 @@ class Customer {
     List<Map<String, dynamic>>? products,
     List<Map<String, dynamic>>? relationships,
     this.birthday,
-    this.tags,
-    this.photos,
     this.nextFollowUpDate,
     this.createdAt,
     List<String>? persistentTagList,
@@ -80,33 +68,13 @@ class Customer {
         persistentTagList = persistentTagList ?? [],
         persistentPhotoList = persistentPhotoList ?? [];
 
-  /// Unified tag list: prefers persistentTagList (from separate table), falls back to tags string.
-  /// Results are cached to avoid repeated string splitting on every access.
+  /// Unified tag list from persistentTagList (cached).
   List<String> get tagList {
-    if (_cachedTagList != null) return _cachedTagList!;
-    if (persistentTagList.isNotEmpty) {
-      _cachedTagList = persistentTagList;
-    } else if (tags == null || tags!.isEmpty) {
-      _cachedTagList = const [];
-    } else {
-      _cachedTagList = tags!.split(',').where((t) => t.isNotEmpty).toList();
-    }
-    return _cachedTagList!;
+    return _cachedTagList ??= persistentTagList;
   }
 
-  /// Unified photo list: prefers persistentPhotoList, falls back to legacy photos string.
-  /// Results are cached to avoid repeated string splitting on every access.
-  List<String> get photoList {
-    if (_cachedPhotoList != null) return _cachedPhotoList!;
-    if (persistentPhotoList.isNotEmpty) {
-      _cachedPhotoList = persistentPhotoList;
-    } else if (photos == null || photos!.isEmpty) {
-      _cachedPhotoList = const [];
-    } else {
-      _cachedPhotoList = photos!.split('|').where((p) => p.isNotEmpty).toList();
-    }
-    return _cachedPhotoList!;
-  }
+  /// Unified photo list from persistentPhotoList.
+  List<String> get photoList => persistentPhotoList;
 
   Map<String, dynamic> toMap() {
     return {
@@ -128,8 +96,6 @@ class Customer {
       'source': source,
       'remark': notes,
       'purchase_intention': purchaseIntentionLevel,
-      'tags': tags,
-      'photos': photos,
     };
   }
 
@@ -158,8 +124,6 @@ class Customer {
       products: products,
       relationships: relationships,
       birthday: map['birthday'] as String?,
-      tags: map['tags'] as String?,
-      photos: map['photos'] as String?,
       nextFollowUpDate: map['next_follow_up_date'] as String?,
       createdAt: map['created_at'] as String?,
       persistentTagList: persistentTagList,

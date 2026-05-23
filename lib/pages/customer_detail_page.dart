@@ -293,7 +293,6 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         rating: _rating,
         phones: _phones,
         addresses: _addresses,
-        photos: _photos.isNotEmpty ? _photos.join('|') : null,
         persistentPhotoList: _photos,
         birthday: _birthdayController.text.isEmpty ? null : _birthdayController.text,
         createdAt:
@@ -304,7 +303,6 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         source: _source,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
         purchaseIntentionLevel: _rating,
-        tags: widget.customer?.tags,
         persistentTagList: widget.customer?.persistentTagList ?? [],
         visits: widget.customer?.visits ?? [],
         products: widget.customer?.products ?? [],
