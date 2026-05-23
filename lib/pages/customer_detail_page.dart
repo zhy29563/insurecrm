@@ -41,8 +41,8 @@ class RelationshipGraphPainter extends CustomPainter {
 
     final centerX = size.width / 2;
     final centerY = size.height / 2;
-    final centerRadius = 36.0;
-    final nodeRadius = 24.0;
+    const centerRadius = 36.0;
+    const nodeRadius = 24.0;
 
     // 绘制背景装饰 - 中心光晕
     final bgPaint = Paint()
@@ -408,13 +408,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               (Platform.isLinux || Platform.isWindows || Platform.isMacOS))) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('身份证扫描功能在当前平台暂不可用')));
+        ).showSnackBar(const SnackBar(content: Text('身份证扫描功能在当前平台暂不可用')));
         return;
       }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('身份证扫描功能在当前平台暂不可用')));
+      ).showSnackBar(const SnackBar(content: Text('身份证扫描功能在当前平台暂不可用')));
       return;
     }
 
@@ -422,16 +422,16 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       // 选择图片来源
       final source = await showModalBottomSheet<ImageSource>(
         context: context,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
         builder: (ctx) => SafeArea(
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Padding(
+                const Padding(
                   padding: EdgeInsets.only(bottom: 12),
                   child: Text(
                     '扫描身份证',
@@ -440,14 +440,17 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 ),
                 ListTile(
                   leading: Icon(Icons.camera_alt, color: primaryColor),
-                  title: Text('拍照识别'),
-                  subtitle: Text('使用相机拍摄身份证'),
+                  title: const Text('拍照识别'),
+                  subtitle: const Text('使用相机拍摄身份证'),
                   onTap: () => Navigator.pop(ctx, ImageSource.camera),
                 ),
                 ListTile(
-                  leading: Icon(Icons.photo_library, color: Color(0xFF43A047)),
-                  title: Text('从相册选择'),
-                  subtitle: Text('选择已有的身份证照片'),
+                  leading: const Icon(
+                    Icons.photo_library,
+                    color: Color(0xFF43A047),
+                  ),
+                  title: const Text('从相册选择'),
+                  subtitle: const Text('选择已有的身份证照片'),
                   onTap: () => Navigator.pop(ctx, ImageSource.gallery),
                 ),
               ],
@@ -474,7 +477,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       showDialog(
         barrierDismissible: false,
         context: context,
-        builder: (ctx) => PopScope(
+        builder: (ctx) => const PopScope(
           canPop: false,
           child: AlertDialog(
             content: Row(
@@ -520,7 +523,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('未识别到文字，请重新拍摄清晰的身份证照片')));
+        ).showSnackBar(const SnackBar(content: Text('未识别到文字，请重新拍摄清晰的身份证照片')));
         return;
       }
 
@@ -599,7 +602,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text('识别结果'),
+          title: const Text('识别结果'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,7 +613,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               if (address != null) _buildScanResultRow('地址', address),
               if (_birthdayController.text.isNotEmpty)
                 _buildScanResultRow('生日', _birthdayController.text),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
                 '确认将以上信息填入客户资料？',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
@@ -620,12 +623,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('取消'),
+              child: const Text('取消'),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-              child: Text('确认填入'),
+              child: const Text('确认填入'),
             ),
           ],
         ),
@@ -652,7 +655,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('身份证信息已填入')));
+        ).showSnackBar(const SnackBar(content: Text('身份证信息已填入')));
       }
     } catch (e) {
       AppLogger.error('scanning ID card: $e');
@@ -672,7 +675,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
   Widget _buildScanResultRow(String label, String value) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -686,7 +689,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -701,13 +704,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               (Platform.isLinux || Platform.isWindows || Platform.isMacOS))) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('照片选择功能在当前平台暂不可用')));
+        ).showSnackBar(const SnackBar(content: Text('照片选择功能在当前平台暂不可用')));
         return;
       }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('照片选择功能在当前平台暂不可用')));
+      ).showSnackBar(const SnackBar(content: Text('照片选择功能在当前平台暂不可用')));
       return;
     }
 
@@ -728,14 +731,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('照片添加成功')));
+        ).showSnackBar(const SnackBar(content: Text('照片添加成功')));
       }
     } catch (e) {
       AppLogger.error('picking image: $e');
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('照片添加失败，请重试')));
+      ).showSnackBar(const SnackBar(content: Text('照片添加失败，请重试')));
     }
   }
 
@@ -778,7 +781,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('无法拨打电话')));
+        ).showSnackBar(const SnackBar(content: Text('无法拨打电话')));
       }
     } catch (e) {
       if (!context.mounted) return;
@@ -798,7 +801,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('无法发送短信')));
+        ).showSnackBar(const SnackBar(content: Text('无法发送短信')));
       }
     } catch (e) {
       if (!context.mounted) return;
@@ -818,7 +821,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('未安装微信或无法打开')));
+        ).showSnackBar(const SnackBar(content: Text('未安装微信或无法打开')));
       }
     } catch (e) {
       if (!context.mounted) return;
@@ -843,14 +846,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('添加拜访记录'),
+        title: const Text('添加拜访记录'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: dateController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '日期',
                   prefixIcon: Icon(Icons.calendar_today, size: 20),
                 ),
@@ -870,42 +873,42 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               ),
               TextField(
                 controller: locationController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '地点',
                   prefixIcon: Icon(Icons.location_on, size: 20),
                 ),
               ),
               TextField(
                 controller: accompanyingPersonsController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '随行人员',
                   prefixIcon: Icon(Icons.people, size: 20),
                 ),
               ),
               TextField(
                 controller: introducedProductsController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '介绍的产品',
                   prefixIcon: Icon(Icons.inventory, size: 20),
                 ),
               ),
               TextField(
                 controller: interestedProductsController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '客户意向产品',
                   prefixIcon: Icon(Icons.favorite, size: 20),
                 ),
               ),
               TextField(
                 controller: competitorsController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '同行竞争产品',
                   prefixIcon: Icon(Icons.compare, size: 20),
                 ),
               ),
               TextField(
                 controller: notesController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '备注',
                   prefixIcon: Icon(Icons.note, size: 20),
                 ),
@@ -917,7 +920,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('取消'),
+            child: const Text('取消'),
           ),
           TextButton(
             onPressed: () async {
@@ -939,9 +942,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               // No setState needed - Provider will auto-rebuild when data changes
               ScaffoldMessenger.of(
                 this.context,
-              ).showSnackBar(SnackBar(content: Text('拜访记录已添加')));
+              ).showSnackBar(const SnackBar(content: Text('拜访记录已添加')));
             },
-            child: Text('添加'),
+            child: const Text('添加'),
           ),
         ],
       ),
@@ -972,14 +975,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text('添加销售记录'),
+          title: const Text('添加销售记录'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: dateController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: '日期',
                     prefixIcon: Icon(Icons.calendar_today, size: 20),
                   ),
@@ -997,11 +1000,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     }
                   },
                 ),
-                SizedBox(height: 10),
-                Text('选择产品:', style: TextStyle(fontSize: 14)),
-                SizedBox(height: 5),
+                const SizedBox(height: 10),
+                const Text('选择产品:', style: TextStyle(fontSize: 14)),
+                const SizedBox(height: 5),
                 DropdownButton<Product>(
-                  hint: Text('请选择产品'),
+                  hint: const Text('请选择产品'),
                   value: selectedProduct,
                   isExpanded: true,
                   onChanged: (Product? value) {
@@ -1018,21 +1021,23 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     );
                   }).toList(),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 TextField(
                   controller: amountController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: '金额',
                     hintText: '请输入销售金额',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.attach_money),
                   ),
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 TextField(
                   controller: notesController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: '备注',
                     hintText: '请输入备注信息（可多行）',
                     border: OutlineInputBorder(),
@@ -1040,11 +1045,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                   maxLines: 5,
                   minLines: 3,
                 ),
-                SizedBox(height: 10),
-                Text('选择合作同事:', style: TextStyle(fontSize: 14)),
-                SizedBox(height: 5),
+                const SizedBox(height: 10),
+                const Text('选择合作同事:', style: TextStyle(fontSize: 14)),
+                const SizedBox(height: 5),
                 DropdownButton<Colleague>(
-                  hint: Text('请选择同事（可选）'),
+                  hint: const Text('请选择同事（可选）'),
                   value: selectedColleague,
                   isExpanded: true,
                   onChanged: (Colleague? value) {
@@ -1064,7 +1069,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 if (selectedColleague != null)
                   TextField(
                     controller: commissionController,
-                    decoration: InputDecoration(labelText: '分成比例 (%)'),
+                    decoration: const InputDecoration(labelText: '分成比例 (%)'),
                     keyboardType: TextInputType.number,
                   ),
               ],
@@ -1075,14 +1080,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: Text('取消'),
+              child: const Text('取消'),
             ),
             TextButton(
               onPressed: () async {
                 if (selectedProduct == null) {
                   ScaffoldMessenger.of(
                     context,
-                  ).showSnackBar(SnackBar(content: Text('请选择产品')));
+                  ).showSnackBar(const SnackBar(content: Text('请选择产品')));
                   return;
                 }
 
@@ -1090,7 +1095,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 if (amount == null || amount <= 0) {
                   ScaffoldMessenger.of(
                     context,
-                  ).showSnackBar(SnackBar(content: Text('请输入有效的销售金额')));
+                  ).showSnackBar(const SnackBar(content: Text('请输入有效的销售金额')));
                   return;
                 }
                 if (selectedColleague != null) {
@@ -1101,14 +1106,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       commissionRate == null) {
                     ScaffoldMessenger.of(
                       context,
-                    ).showSnackBar(SnackBar(content: Text('请输入有效的分成比例')));
+                    ).showSnackBar(const SnackBar(content: Text('请输入有效的分成比例')));
                     return;
                   }
                   if (commissionRate != null &&
                       (commissionRate < 0 || commissionRate > 100)) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('分成比例应在0-100之间')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('分成比例应在0-100之间')),
+                    );
                     return;
                   }
                 }
@@ -1130,9 +1135,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 // No setState needed - Provider will auto-rebuild when data changes
                 ScaffoldMessenger.of(
                   this.context,
-                ).showSnackBar(SnackBar(content: Text('销售记录已添加')));
+                ).showSnackBar(const SnackBar(content: Text('销售记录已添加')));
               },
-              child: Text('添加'),
+              child: const Text('添加'),
             ),
           ],
         ),
@@ -1157,15 +1162,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text('添加客户关系'),
+          title: const Text('添加客户关系'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('选择客户:', style: TextStyle(fontSize: 14)),
-                SizedBox(height: 5),
+                const Text('选择客户:', style: TextStyle(fontSize: 14)),
+                const SizedBox(height: 5),
                 DropdownButton<Customer>(
-                  hint: Text('请选择客户'),
+                  hint: const Text('请选择客户'),
                   value: selectedCustomer,
                   isExpanded: true,
                   onChanged: (Customer? value) {
@@ -1183,17 +1188,19 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       })
                       .toList(),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Row(
                   children: [
-                    Text('关系类型:', style: TextStyle(fontSize: 14)),
-                    Spacer(),
+                    const Text('关系类型:', style: TextStyle(fontSize: 14)),
+                    const Spacer(),
                     InkWell(
                       onTap: () async {
                         Navigator.pop(context); // 先关闭当前对话框
                         await Navigator.push(
                           this.context,
-                          MaterialPageRoute(builder: (_) => SettingsPage()),
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsPage(),
+                          ),
                         );
                         // 返回后重新打开添加关系对话框（此时标签已更新）
                         if (mounted) {
@@ -1208,7 +1215,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                             size: 14,
                             color: primaryColor,
                           ),
-                          SizedBox(width: 2),
+                          const SizedBox(width: 2),
                           Text(
                             '管理标签',
                             style: TextStyle(
@@ -1222,12 +1229,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     ),
                   ],
                 ),
-                SizedBox(height: 5),
+                const SizedBox(height: 5),
                 DropdownButton<String>(
                   value: appState.relationshipLabels.contains(relationshipType)
                       ? relationshipType
                       : null,
-                  hint: Text('选择关系类型'),
+                  hint: const Text('选择关系类型'),
                   isExpanded: true,
                   onChanged: (String? value) {
                     setDialogState(() {
@@ -1249,14 +1256,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('取消'),
+              child: const Text('取消'),
             ),
             TextButton(
               onPressed: () async {
                 if (selectedCustomer == null) {
                   ScaffoldMessenger.of(
                     context,
-                  ).showSnackBar(SnackBar(content: Text('请选择客户')));
+                  ).showSnackBar(const SnackBar(content: Text('请选择客户')));
                   return;
                 }
 
@@ -1271,9 +1278,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 // No setState needed - Provider will auto-rebuild when data changes
                 ScaffoldMessenger.of(
                   this.context,
-                ).showSnackBar(SnackBar(content: Text('客户关系已添加')));
+                ).showSnackBar(const SnackBar(content: Text('客户关系已添加')));
               },
-              child: Text('添加'),
+              child: const Text('添加'),
             ),
           ],
         ),
@@ -1324,7 +1331,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.only(top: 24, bottom: 20),
+      padding: const EdgeInsets.only(top: 24, bottom: 20),
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
         children: [
@@ -1367,7 +1374,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.camera_alt,
                         size: 14,
                         color: Colors.white,
@@ -1377,11 +1384,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               ],
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           // 姓名
           _isEditing
               ? Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 60),
+                  padding: const EdgeInsets.symmetric(horizontal: 60),
                   child: TextFormField(
                     controller: _nameController,
                     textAlign: TextAlign.center,
@@ -1392,7 +1399,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     ),
                     decoration: InputDecoration(
                       isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
                       enabledBorder: UnderlineInputBorder(
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
@@ -1427,7 +1434,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           if (_aliasController.text.isNotEmpty || _isEditing)
             _isEditing
                 ? Padding(
-                    padding: EdgeInsets.only(left: 60, right: 60, top: 4),
+                    padding: const EdgeInsets.only(left: 60, right: 60, top: 4),
                     child: TextFormField(
                       controller: _aliasController,
                       textAlign: TextAlign.center,
@@ -1437,7 +1444,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       ),
                       decoration: InputDecoration(
                         isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 2),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 2),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey.shade200),
                         ),
@@ -1453,7 +1460,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     ),
                   )
                 : Padding(
-                    padding: EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       _aliasController.text,
                       style: TextStyle(
@@ -1465,7 +1472,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           // 评级
           if (!_isEditing && widget.customer != null)
             Padding(
-              padding: EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.only(top: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1513,7 +1520,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: 20, top: 24, bottom: 6),
+          padding: const EdgeInsets.only(left: 20, top: 24, bottom: 6),
           child: Row(
             children: [
               Text(
@@ -1525,13 +1532,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                   letterSpacing: 0.5,
                 ),
               ),
-              Spacer(),
-              if (trailing != null) ...[trailing, SizedBox(width: 16)],
+              const Spacer(),
+              if (trailing != null) ...[trailing, const SizedBox(width: 16)],
             ],
           ),
         ),
         Container(
-          margin: EdgeInsets.symmetric(horizontal: 16),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(10),
@@ -1552,13 +1559,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               if (icon != null)
                 Padding(
-                  padding: EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(right: 12),
                   child: Icon(icon, size: 20, color: Colors.grey.shade400),
                 ),
               SizedBox(
@@ -1657,7 +1664,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       showDivider: showDivider,
       child: DropdownButton<String>(
         value: options.contains(value) ? value : options.first,
-        underline: SizedBox(),
+        underline: const SizedBox(),
         isDense: true,
         isExpanded: true,
         icon: Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
@@ -1675,11 +1682,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
               Padding(
-                padding: EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.only(right: 12),
                 child: Icon(
                   Icons.phone_android,
                   size: 20,
@@ -1730,7 +1737,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           GestureDetector(
                             onTap: () => _makePhoneCall(phone),
                             child: Padding(
-                              padding: EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.only(left: 8),
                               child: Icon(
                                 Icons.phone,
                                 size: 18,
@@ -1741,7 +1748,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           GestureDetector(
                             onTap: () => _sendSms(phone),
                             child: Padding(
-                              padding: EdgeInsets.only(left: 12),
+                              padding: const EdgeInsets.only(left: 12),
                               child: Icon(
                                 Icons.message,
                                 size: 18,
@@ -1757,7 +1764,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         ),
         if (showDivider)
           Padding(
-            padding: EdgeInsets.only(left: 48),
+            padding: const EdgeInsets.only(left: 48),
             child: Divider(
               height: 1,
               color: Colors.grey.shade200,
@@ -1777,12 +1784,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: EdgeInsets.only(right: 12, top: 2),
+                padding: const EdgeInsets.only(right: 12, top: 2),
                 child: Icon(
                   Icons.location_on,
                   size: 20,
@@ -1830,7 +1837,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         ),
         if (showDivider)
           Padding(
-            padding: EdgeInsets.only(left: 48),
+            padding: const EdgeInsets.only(left: 48),
             child: Divider(
               height: 1,
               color: Colors.grey.shade200,
@@ -1844,12 +1851,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
   /// 添加新手机号行 - iOS Contacts 风格
   Widget _buildAddPhoneRow() {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
-            padding: EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: 12),
             child: Icon(
               Icons.add_circle_outline,
               size: 20,
@@ -1867,7 +1874,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             child: TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              style: TextStyle(fontSize: 15),
+              style: const TextStyle(fontSize: 15),
               decoration: InputDecoration(
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -1886,12 +1893,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               onTap: _addPhone,
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: primaryColor,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
+                child: const Text(
                   '添加',
                   style: TextStyle(
                     color: Colors.white,
@@ -1910,12 +1920,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
   /// 添加新地址行
   Widget _buildAddAddressRow() {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
-            padding: EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.only(right: 12),
             child: Icon(
               Icons.add_circle_outline,
               size: 20,
@@ -1932,7 +1942,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           Expanded(
             child: TextFormField(
               controller: _addressController,
-              style: TextStyle(fontSize: 15),
+              style: const TextStyle(fontSize: 15),
               decoration: InputDecoration(
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -1951,12 +1961,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               onTap: _addAddress,
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: primaryColor,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
+                child: const Text(
                   '添加',
                   style: TextStyle(
                     color: Colors.white,
@@ -1977,8 +1990,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     final primaryPhone = _phones.isNotEmpty ? _phones[0] : null;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: EdgeInsets.symmetric(vertical: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(10),
@@ -2005,7 +2018,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           _buildQuickActionButton(
             icon: Icons.chat,
             label: '微信',
-            color: Color(0xFF07C160),
+            color: const Color(0xFF07C160),
             onPressed: () => _openWechat(),
           ),
           _buildQuickActionButton(
@@ -2054,7 +2067,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               size: 22,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
@@ -2101,7 +2114,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       rows.add(_buildAddPhoneRow());
       rows.add(
         Padding(
-          padding: EdgeInsets.only(left: 48),
+          padding: const EdgeInsets.only(left: 48),
           child: Divider(
             height: 1,
             color: Colors.grey.shade200,
@@ -2114,7 +2127,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
     if (rows.isEmpty && !_isEditing) {
       rows.add(
-        Padding(
+        const Padding(
           padding: EdgeInsets.all(16),
           child: EmptyStatePlaceholder(
             icon: Icons.contact_phone_rounded,
@@ -2313,7 +2326,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     ['线上推广', '线下活动', '转介绍', '主动咨询', '其他'].contains(_source)
                 ? _source
                 : null,
-            underline: SizedBox(),
+            underline: const SizedBox(),
             isDense: true,
             isExpanded: true,
             icon: Icon(
@@ -2365,16 +2378,16 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
   /// 购买意向评级区块（编辑模式）
   Widget _buildRatingSection() {
-    if (!_isEditing && widget.customer == null) return SizedBox.shrink();
+    if (!_isEditing && widget.customer == null) return const SizedBox.shrink();
 
     return _buildGroupedSection(
       title: '购买意向',
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
-              Padding(
+              const Padding(
                 padding: EdgeInsets.only(right: 12),
                 child: Icon(Icons.star, size: 20, color: Colors.amber),
               ),
@@ -2394,7 +2407,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           return GestureDetector(
                             onTap: () => setState(() => _rating = ratingVal),
                             child: Padding(
-                              padding: EdgeInsets.only(right: 4),
+                              padding: const EdgeInsets.only(right: 4),
                               child: Icon(
                                 ratingVal <= _rating
                                     ? Icons.star
@@ -2419,7 +2432,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                               size: 20,
                             );
                           }),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
                             _rating >= 1 && _rating <= 5
                                 ? [
@@ -2470,7 +2483,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       children: [
         _photos.isEmpty
             ? Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: _isEditing
                     ? GestureDetector(
                         onTap: _pickImage,
@@ -2493,7 +2506,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                                 color: Colors.grey.shade400,
                                 size: 24,
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
                                 '添加',
                                 style: TextStyle(
@@ -2516,13 +2529,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       ),
               )
             : Padding(
-                padding: EdgeInsets.fromLTRB(12, 12, 12, 16),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
                 child: SizedBox(
                   height: 80,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: _photos.length + (_isEditing ? 1 : 0),
-                    separatorBuilder: (context, index) => SizedBox(width: 8),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(width: 8),
                     itemBuilder: (context, index) {
                       if (_isEditing && index == _photos.length) {
                         return GestureDetector(
@@ -2546,7 +2560,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                                   color: Colors.grey.shade400,
                                   size: 24,
                                 ),
-                                SizedBox(height: 2),
+                                const SizedBox(height: 2),
                                 Text(
                                   '添加',
                                   style: TextStyle(
@@ -2569,7 +2583,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                                     width: 80,
                                     height: 80,
                                     color: Colors.grey.shade200,
-                                    child: Icon(
+                                    child: const Icon(
                                       Icons.image_not_supported,
                                       color: Colors.grey,
                                     ),
@@ -2600,11 +2614,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                               child: GestureDetector(
                                 onTap: () => _removePhoto(index),
                                 child: Container(
-                                  decoration: BoxDecoration(
+                                  decoration: const BoxDecoration(
                                     color: Colors.red,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(
+                                  child: const Icon(
                                     Icons.close,
                                     color: Colors.white,
                                     size: 14,
@@ -2624,7 +2638,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
   /// 身份证扫描区块（编辑模式）
   Widget _buildScanSection() {
-    if (!_isEditing) return SizedBox.shrink();
+    if (!_isEditing) return const SizedBox.shrink();
 
     return _buildGroupedSection(
       title: '快捷操作',
@@ -2633,10 +2647,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           onTap: _scanIdCard,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Padding(
+                const Padding(
                   padding: EdgeInsets.only(right: 12),
                   child: Icon(
                     Icons.document_scanner,
@@ -2679,7 +2693,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           future: _customerProductsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return Padding(
+              return const Padding(
                 padding: EdgeInsets.all(16),
                 child: Center(
                   child: SizedBox(
@@ -2690,12 +2704,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 ),
               );
             } else if (snapshot.hasError) {
-              return Padding(
+              return const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text('获取产品信息失败', style: TextStyle(color: Colors.grey)),
               );
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Padding(
+              return const Padding(
                 padding: EdgeInsets.all(16),
                 child: EmptyStatePlaceholder(
                   icon: Icons.inventory_2_rounded,
@@ -2722,13 +2736,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     child: Column(
                       children: [
                         Padding(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 10,
                           ),
                           child: Row(
                             children: [
-                              Padding(
+                              const Padding(
                                 padding: EdgeInsets.only(right: 12),
                                 child: Icon(
                                   Icons.inventory_2,
@@ -2765,7 +2779,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                         ),
                         if (!isLast)
                           Padding(
-                            padding: EdgeInsets.only(left: 48),
+                            padding: const EdgeInsets.only(left: 48),
                             child: Divider(
                               height: 1,
                               color: Colors.grey.shade200,
@@ -2804,7 +2818,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               if (c.id != null) customerById[c.id!] = c;
             }
             if (relationships.isEmpty) {
-              return Padding(
+              return const Padding(
                 padding: EdgeInsets.all(16),
                 child: EmptyStatePlaceholder(
                   icon: Icons.diversity_3_rounded,
@@ -2817,7 +2831,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               children: [
                 // 关系思维导图
                 Padding(
-                  padding: EdgeInsets.fromLTRB(12, 12, 12, 8),
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                   child: SizedBox(
                     height: relationships.length <= 3 ? 180 : 240,
                     child: LayoutBuilder(
@@ -2828,7 +2842,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                             final pos = details.localPosition;
                             final centerX = constraints.maxWidth / 2;
                             final centerY = constraints.maxHeight / 2;
-                            final nodeRadius = 24.0;
+                            const nodeRadius = 24.0;
                             final r =
                                 math.min(centerX, centerY) - nodeRadius - 16;
                             for (int i = 0; i < relationships.length; i++) {
@@ -2860,7 +2874,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                                     );
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('该客户已被删除')),
+                                      const SnackBar(content: Text('该客户已被删除')),
                                     );
                                   }
                                 }
@@ -2896,28 +2910,31 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     direction: DismissDirection.endToStart,
                     background: Container(
                       alignment: Alignment.centerRight,
-                      padding: EdgeInsets.only(right: 20),
-                      margin: EdgeInsets.symmetric(vertical: 2),
+                      padding: const EdgeInsets.only(right: 20),
+                      margin: const EdgeInsets.symmetric(vertical: 2),
                       decoration: BoxDecoration(
-                        color: Color(0xFFE53935),
+                        color: const Color(0xFFE53935),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.delete_rounded, color: Colors.white),
+                      child: const Icon(
+                        Icons.delete_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                     confirmDismiss: (direction) async {
                       return await showDialog<bool>(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: Text('确认删除'),
-                          content: Text('确定要删除这条客户关系吗？'),
+                          title: const Text('确认删除'),
+                          content: const Text('确定要删除这条客户关系吗？'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, false),
-                              child: Text('取消'),
+                              child: const Text('取消'),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, true),
-                              child: Text(
+                              child: const Text(
                                 '删除',
                                 style: TextStyle(color: Colors.red),
                               ),
@@ -2936,9 +2953,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           (rel['id'] as num?)?.toInt() ?? -1,
                         );
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text('客户关系已删除')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('客户关系已删除')),
+                        );
                       }
                     },
                     child: InkWell(
@@ -2962,22 +2979,22 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                               ),
                             );
                           } else {
-                            ScaffoldMessenger.of(
-                              context,
-                            ).showSnackBar(SnackBar(content: Text('该客户已被删除')));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('该客户已被删除')),
+                            );
                           }
                         }
                       },
                       child: Column(
                         children: [
                           Padding(
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 10,
                             ),
                             child: Row(
                               children: [
-                                Padding(
+                                const Padding(
                                   padding: EdgeInsets.only(right: 12),
                                   child: Icon(
                                     Icons.person_outline,
@@ -3014,7 +3031,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           ),
                           if (!isLast)
                             Padding(
-                              padding: EdgeInsets.only(left: 48),
+                              padding: const EdgeInsets.only(left: 48),
                               child: Divider(
                                 height: 1,
                                 color: Colors.grey.shade200,
@@ -3047,7 +3064,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       trailing: AddSectionButton(onTap: _addVisit),
       children: [
         visits.isEmpty
-            ? Padding(
+            ? const Padding(
                 padding: EdgeInsets.all(16),
                 child: EmptyStatePlaceholder(
                   icon: Icons.directions_walk_rounded,
@@ -3064,28 +3081,31 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     direction: DismissDirection.endToStart,
                     background: Container(
                       alignment: Alignment.centerRight,
-                      padding: EdgeInsets.only(right: 20),
-                      margin: EdgeInsets.symmetric(vertical: 2),
+                      padding: const EdgeInsets.only(right: 20),
+                      margin: const EdgeInsets.symmetric(vertical: 2),
                       decoration: BoxDecoration(
-                        color: Color(0xFFE53935),
+                        color: const Color(0xFFE53935),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.delete_rounded, color: Colors.white),
+                      child: const Icon(
+                        Icons.delete_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                     confirmDismiss: (direction) async {
                       return await showDialog<bool>(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: Text('确认删除'),
-                          content: Text('确定要删除这条拜访记录吗？'),
+                          title: const Text('确认删除'),
+                          content: const Text('确定要删除这条拜访记录吗？'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, false),
-                              child: Text('取消'),
+                              child: const Text('取消'),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, true),
-                              child: Text(
+                              child: const Text(
                                 '删除',
                                 style: TextStyle(color: Colors.red),
                               ),
@@ -3104,9 +3124,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           (visit['id'] as num?)?.toInt() ?? -1,
                         );
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text('拜访记录已删除')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('拜访记录已删除')),
+                        );
                       }
                     },
                     child: _buildVisitItem(visit, index),
@@ -3119,14 +3139,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
   Widget _buildVisitItem(Map<String, dynamic> visit, int index) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Icon(Icons.event, size: 16, color: primaryColor),
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               Text(
                 visit['date'] ?? '',
                 style: TextStyle(
@@ -3137,9 +3157,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               ),
               if (visit['location'] != null &&
                   visit['location'].toString().isNotEmpty) ...[
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Icon(Icons.location_on, size: 14, color: Colors.grey.shade500),
-                SizedBox(width: 4),
+                const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     visit['location'],
@@ -3153,7 +3173,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           if (visit['introduced_products'] != null &&
               visit['introduced_products'].toString().isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 4, left: 22),
+              padding: const EdgeInsets.only(top: 4, left: 22),
               child: Text(
                 '介绍: ${visit['introduced_products']}',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
@@ -3162,7 +3182,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           if (visit['interested_products'] != null &&
               visit['interested_products'].toString().isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 2, left: 22),
+              padding: const EdgeInsets.only(top: 2, left: 22),
               child: Text(
                 '意向: ${visit['interested_products']}',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
@@ -3170,7 +3190,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             ),
           if (visit['notes'] != null && visit['notes'].toString().isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 2, left: 22),
+              padding: const EdgeInsets.only(top: 2, left: 22),
               child: Text(
                 '备注: ${visit['notes']}',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
@@ -3191,7 +3211,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           future: _customerSalesFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return Padding(
+              return const Padding(
                 padding: EdgeInsets.all(16),
                 child: Center(
                   child: SizedBox(
@@ -3202,12 +3222,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 ),
               );
             } else if (snapshot.hasError) {
-              return Padding(
+              return const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text('加载销售记录失败', style: TextStyle(color: Colors.grey)),
               );
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Padding(
+              return const Padding(
                 padding: EdgeInsets.all(16),
                 child: EmptyStatePlaceholder(
                   icon: Icons.receipt_long_rounded,
@@ -3225,28 +3245,31 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     direction: DismissDirection.endToStart,
                     background: Container(
                       alignment: Alignment.centerRight,
-                      padding: EdgeInsets.only(right: 20),
-                      margin: EdgeInsets.symmetric(vertical: 2),
+                      padding: const EdgeInsets.only(right: 20),
+                      margin: const EdgeInsets.symmetric(vertical: 2),
                       decoration: BoxDecoration(
-                        color: Color(0xFFE53935),
+                        color: const Color(0xFFE53935),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.delete_rounded, color: Colors.white),
+                      child: const Icon(
+                        Icons.delete_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                     confirmDismiss: (direction) async {
                       return await showDialog<bool>(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: Text('确认删除'),
-                          content: Text('确定要删除这条销售记录吗？'),
+                          title: const Text('确认删除'),
+                          content: const Text('确定要删除这条销售记录吗？'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, false),
-                              child: Text('取消'),
+                              child: const Text('取消'),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, true),
-                              child: Text(
+                              child: const Text(
                                 '删除',
                                 style: TextStyle(color: Colors.red),
                               ),
@@ -3265,9 +3288,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           (sale['id'] as num?)?.toInt() ?? -1,
                         );
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text('销售记录已删除')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('销售记录已删除')),
+                        );
                       }
                     },
                     child: _buildSaleItem(sale, index, snapshot.data!.length),
@@ -3283,14 +3306,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
   Widget _buildSaleItem(Map<String, dynamic> sale, int index, int total) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Icon(Icons.sell, size: 16, color: Colors.green.shade700),
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               Text(
                 sale['sale_date'] ?? '',
                 style: TextStyle(
@@ -3302,15 +3325,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             ],
           ),
           Padding(
-            padding: EdgeInsets.only(top: 4, left: 22),
+            padding: const EdgeInsets.only(top: 4, left: 22),
             child: Text(
               '产品: ${sale['product_name'] ?? ''}',
-              style: TextStyle(fontSize: 14, color: Colors.black87),
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
             ),
           ),
           if (sale['notes'] != null && sale['notes'].toString().isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 2, left: 22),
+              padding: const EdgeInsets.only(top: 2, left: 22),
               child: Text(
                 '备注: ${sale['notes']}',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
@@ -3318,7 +3341,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             ),
           if (sale['colleague_name'] != null)
             Padding(
-              padding: EdgeInsets.only(top: 2, left: 22),
+              padding: const EdgeInsets.only(top: 2, left: 22),
               child: Text(
                 '合作: ${sale['colleague_name']}${sale['commission_rate'] != null ? ' (${sale['commission_rate']}%)' : ''}',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
@@ -3354,7 +3377,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     final isEditMode = widget.customer != null;
 
     return Scaffold(
-      backgroundColor: Color(0xFFF2F2F7),
+      backgroundColor: const Color(0xFFF2F2F7),
       appBar: AppBar(
         title: Text(isEditMode ? (_isEditing ? '编辑客户' : '客户详情') : '添加客户'),
         backgroundColor: primaryColor,
@@ -3362,17 +3385,17 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         actions: [
           if (isEditMode && !_isEditing)
             IconButton(
-              icon: Icon(Icons.delete_outline),
+              icon: const Icon(Icons.delete_outline),
               onPressed: () {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: Text('确认删除'),
-                    content: Text('确定要删除这个客户吗？'),
+                    title: const Text('确认删除'),
+                    content: const Text('确定要删除这个客户吗？'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: Text('取消'),
+                        child: const Text('取消'),
                       ),
                       TextButton(
                         onPressed: () async {
@@ -3386,7 +3409,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           if (!mounted) return;
                           Navigator.of(this.context).pop(); // pop page
                         },
-                        child: Text('删除', style: TextStyle(color: Colors.red)),
+                        child: const Text(
+                          '删除',
+                          style: TextStyle(color: Colors.red),
+                        ),
                       ),
                     ],
                   ),
@@ -3396,7 +3422,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           if (!isEditMode && _isEditing)
             TextButton(
               onPressed: _saveCustomer,
-              child: Text(
+              child: const Text(
                 '保存',
                 style: TextStyle(
                   color: Colors.white,
@@ -3414,7 +3440,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             children: [
               // 顶部头像+姓名区域
               _buildHeader(),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               // 快速操作按钮
               _buildQuickActions(),
               // 联系信息
@@ -3445,7 +3471,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               // 底部保存按钮（编辑模式）
               if (_isEditing)
                 Padding(
-                  padding: EdgeInsets.fromLTRB(16, 24, 16, 40),
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
                   child: SizedBox(
                     width: double.infinity,
                     height: 48,
@@ -3469,7 +3495,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     ),
                   ),
                 ),
-              if (!_isEditing) SizedBox(height: 40),
+              if (!_isEditing) const SizedBox(height: 40),
             ],
           ),
         ),

@@ -40,7 +40,7 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
 
   Map<String, List<Customer>> _groupByAge(List<Customer> customers) {
     final groups = <String, List<Customer>>{};
-    for (var c in customers) {
+    for (final c in customers) {
       String key;
       if (c.age == null) {
         key = '未知年龄';
@@ -62,7 +62,7 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
 
   Map<String, List<Customer>> _groupByLocation(List<Customer> customers) {
     final groups = <String, List<Customer>>{};
-    for (var c in customers) {
+    for (final c in customers) {
       final addr =
           (c.addresses.isNotEmpty && c.addresses.first.trim().isNotEmpty)
           ? c.addresses.first.trim()
@@ -83,7 +83,7 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
 
   Map<String, List<Customer>> _groupByIndustry(List<Customer> customers) {
     final groups = <String, List<Customer>>{};
-    for (var c in customers) {
+    for (final c in customers) {
       final key = c.occupation?.trim().isNotEmpty == true
           ? c.occupation!.trim()
           : '未知行业';
@@ -154,7 +154,7 @@ class _CustomerGroupingPageState extends State<CustomerGroupingPage>
                             ),
                           ),
                           const SizedBox(width: 10),
-                          Text(
+                          const Text(
                             '分组方式',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,

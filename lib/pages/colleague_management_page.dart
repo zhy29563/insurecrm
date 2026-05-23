@@ -58,7 +58,9 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
             ),
             decoration: BoxDecoration(
               color: Theme.of(sheetCtx).scaffoldBackgroundColor,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -66,7 +68,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                 // Handle bar
                 Center(
                   child: Container(
-                    margin: EdgeInsets.only(top: 10, bottom: 6),
+                    margin: const EdgeInsets.only(top: 10, bottom: 6),
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
@@ -77,28 +79,31 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                 ),
                 // Header
                 Padding(
-                  padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                   child: Row(
                     children: [
                       Text(
                         isEdit ? '编辑同事' : '添加同事',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      Spacer(),
+                      const Spacer(),
                       TextButton(
                         onPressed: () => Navigator.pop(sheetCtx),
-                        child: Text('取消'),
+                        child: const Text('取消'),
                       ),
                     ],
                   ),
                 ),
-                Divider(height: 1),
+                const Divider(height: 1),
                 Flexible(
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                     child: Column(
                       children: [
                         // Avatar placeholder
@@ -107,7 +112,9 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                             width: 72,
                             height: 72,
                             decoration: BoxDecoration(
-                              color: Color(0xFF43A047).withValues(alpha: 0.12),
+                              color: const Color(
+                                0xFF43A047,
+                              ).withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                             ),
                             child: Center(
@@ -117,7 +124,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                                   nameController.text.isEmpty
                                       ? '?'
                                       : nameController.text[0].toUpperCase(),
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF43A047),
@@ -127,7 +134,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                             ),
                           ),
                         ),
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
                         // Form fields in grouped card style
                         _buildFieldGroup(
                           isDark:
@@ -161,7 +168,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 24),
+                        const SizedBox(height: 24),
                         // Save button
                         SizedBox(
                           width: double.infinity,
@@ -170,7 +177,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                             onPressed: () {
                               if (nameController.text.trim().isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('请输入同事姓名')),
+                                  const SnackBar(content: Text('请输入同事姓名')),
                                 );
                                 return;
                               }
@@ -219,14 +226,14 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                               );
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF43A047),
+                              backgroundColor: const Color(0xFF43A047),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                             child: Text(
                               isEdit ? '保存修改' : '添加同事',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -234,7 +241,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                           ),
                         ),
                         if (isEdit) ...[
-                          SizedBox(height: 12),
+                          const SizedBox(height: 12),
                           SizedBox(
                             width: double.infinity,
                             height: 48,
@@ -252,14 +259,14 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: Text(
+                              child: const Text(
                                 '删除此同事',
                                 style: TextStyle(fontWeight: FontWeight.w500),
                               ),
                             ),
                           ),
                         ],
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
@@ -293,7 +300,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
 
   Widget _fieldDivider() {
     return Padding(
-      padding: EdgeInsets.only(left: 56),
+      padding: const EdgeInsets.only(left: 56),
       child: Divider(height: 1, color: Colors.grey.shade200),
     );
   }
@@ -306,11 +313,11 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
     TextInputType? keyboard,
   }) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(
         children: [
           Icon(icon, size: 22, color: Colors.grey.shade500),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           SizedBox(
             width: 48,
             child: RichText(
@@ -319,7 +326,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                 style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
                 children: required
                     ? [
-                        TextSpan(
+                        const TextSpan(
                           text: ' *',
                           style: TextStyle(color: Colors.red),
                         ),
@@ -336,10 +343,10 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                 border: InputBorder.none,
                 hintText: '输入$label',
                 hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
-                contentPadding: EdgeInsets.symmetric(vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 isDense: true,
               ),
-              style: TextStyle(fontSize: 15),
+              style: const TextStyle(fontSize: 15),
             ),
           ),
         ],
@@ -351,12 +358,12 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: Text('确认删除'),
-        content: Text('确定要删除这个同事吗？此操作无法撤销。'),
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这个同事吗？此操作无法撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: Text('取消'),
+            child: const Text('取消'),
           ),
           TextButton(
             onPressed: () {
@@ -365,10 +372,10 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
               Navigator.pop(dialogCtx);
               ScaffoldMessenger.of(
                 context,
-              ).showSnackBar(SnackBar(content: Text('同事已删除')));
+              ).showSnackBar(const SnackBar(content: Text('同事已删除')));
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text('删除'),
+            child: const Text('删除'),
           ),
         ],
       ),
@@ -389,10 +396,10 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('同事管理'),
+        title: const Text('同事管理'),
         actions: [
           IconButton(
-            icon: Icon(Icons.person_add_rounded),
+            icon: const Icon(Icons.person_add_rounded),
             onPressed: _showAddSheet,
             tooltip: '添加同事',
           ),
@@ -402,13 +409,13 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
         children: [
           // Search bar
           Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: AppSearchBar(
               controller: _searchController,
               hintText: '搜索同事姓名、电话、邮箱...',
               onChanged: (v) {
                 _debounceTimer?.cancel();
-                _debounceTimer = Timer(Duration(milliseconds: 300), () {
+                _debounceTimer = Timer(const Duration(milliseconds: 300), () {
                   if (mounted) setState(() => _searchQuery = v);
                 });
               },
@@ -424,7 +431,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
             child: colleagues.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: colleagues.length,
                     itemBuilder: (context, index) {
                       final c = colleagues[index];
@@ -436,9 +443,9 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddSheet,
-        backgroundColor: Color(0xFF43A047),
-        icon: Icon(Icons.person_add_rounded, color: Colors.white),
-        label: Text(
+        backgroundColor: const Color(0xFF43A047),
+        icon: const Icon(Icons.person_add_rounded, color: Colors.white),
+        label: const Text(
           '添加同事',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
@@ -461,7 +468,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
         c.departmentAndRole != null && c.departmentAndRole!.isNotEmpty;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: AppDesign.cardBg(isDark),
         borderRadius: BorderRadius.circular(14),
@@ -475,7 +482,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
           borderRadius: BorderRadius.circular(14),
           onTap: () => _showEditorSheet(colleague: c),
           child: Padding(
-            padding: EdgeInsets.all(14),
+            padding: const EdgeInsets.all(14),
             child: Row(
               children: [
                 // Avatar
@@ -483,13 +490,13 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Color(0xFF43A047).withValues(alpha: 0.12),
+                    color: const Color(0xFF43A047).withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: Text(
                       c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF43A047),
@@ -497,7 +504,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                     ),
                   ),
                 ),
-                SizedBox(width: 14),
+                const SizedBox(width: 14),
                 // Info
                 Expanded(
                   child: Column(
@@ -508,7 +515,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                           Flexible(
                             child: Text(
                               c.name,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
                               ),
@@ -516,9 +523,9 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                             ),
                           ),
                           if (hasSpecialty) ...[
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Container(
-                              padding: EdgeInsets.symmetric(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
                                 vertical: 2,
                               ),
@@ -546,7 +553,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                         ],
                       ),
                       if (hasPhone || hasEmail) ...[
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Row(
                           children: [
                             if (hasPhone) ...[
@@ -555,7 +562,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                                 size: 13,
                                 color: Colors.grey.shade500,
                               ),
-                              SizedBox(width: 3),
+                              const SizedBox(width: 3),
                               Text(
                                 c.phone!,
                                 style: TextStyle(
@@ -564,14 +571,16 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                                 ),
                               ),
                             ],
-                            if (hasPhone && hasEmail) ...[SizedBox(width: 12)],
+                            if (hasPhone && hasEmail) ...[
+                              const SizedBox(width: 12),
+                            ],
                             if (hasEmail) ...[
                               Icon(
                                 Icons.email,
                                 size: 13,
                                 color: Colors.grey.shade500,
                               ),
-                              SizedBox(width: 3),
+                              const SizedBox(width: 3),
                               Flexible(
                                 child: Text(
                                   c.email!,

@@ -43,7 +43,7 @@ class _CustomerListPageState extends State<CustomerListPage>
     super.initState();
 
     _animationController = AnimationController(
-      duration: Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     );
     animation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -58,7 +58,10 @@ class _CustomerListPageState extends State<CustomerListPage>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('请选择要拜访的客户'), duration: Duration(seconds: 2)),
+          const SnackBar(
+            content: Text('请选择要拜访的客户'),
+            duration: Duration(seconds: 2),
+          ),
         );
       });
     }
@@ -121,46 +124,49 @@ class _CustomerListPageState extends State<CustomerListPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('客户管理'),
+        title: const Text('客户管理'),
         actions: [
           IconButton(
             icon: Container(
-              padding: EdgeInsets.all(6),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.person_add_rounded, size: 20),
+              child: const Icon(Icons.person_add_rounded, size: 20),
             ),
             onPressed: () => _navigateToCustomerDetail(),
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
         ],
       ),
       body: FadeTransition(
         opacity: animation,
         child: SlideTransition(
           position: Tween<Offset>(
-            begin: Offset(0, 0.05),
-            end: Offset(0, 0),
+            begin: const Offset(0, 0.05),
+            end: const Offset(0, 0),
           ).animate(animation),
           child: Column(
             children: [
               // 搜索框
               Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: AppSearchBar(
                   controller: _searchController,
                   hintText: '搜索客户（姓名、电话、地址）',
                   onChanged: (value) {
                     _debounceTimer?.cancel();
-                    _debounceTimer = Timer(Duration(milliseconds: 300), () {
-                      if (mounted) {
-                        setState(() {
-                          _searchQuery = value;
-                        });
-                      }
-                    });
+                    _debounceTimer = Timer(
+                      const Duration(milliseconds: 300),
+                      () {
+                        if (mounted) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                        }
+                      },
+                    );
                   },
                   onClear: () {
                     _searchController.clear();
@@ -175,20 +181,20 @@ class _CustomerListPageState extends State<CustomerListPage>
                   opacity: animation,
                   child: SlideTransition(
                     position: Tween<Offset>(
-                      begin: Offset(0, 0.05),
-                      end: Offset(0, 0),
+                      begin: const Offset(0, 0.05),
+                      end: const Offset(0, 0),
                     ).animate(animation),
                     child: Container(
                       height: 40,
-                      margin: EdgeInsets.only(bottom: 8),
+                      margin: const EdgeInsets.only(bottom: 8),
                       child: ListView(
                         scrollDirection: Axis.horizontal,
-                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         children: [
                           Padding(
-                            padding: EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.only(right: 8),
                             child: FilterChip(
-                              label: Text('全部'),
+                              label: const Text('全部'),
                               selected: _selectedTag == null,
                               onSelected: (_) {
                                 setState(() => _selectedTag = null);
@@ -201,7 +207,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                           ),
                           ...appState.allTags.map<Widget>(
                             (tag) => Padding(
-                              padding: EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.only(right: 8),
                               child: FilterChip(
                                 label: Text(tag),
                                 selected: _selectedTag == tag,
@@ -226,14 +232,14 @@ class _CustomerListPageState extends State<CustomerListPage>
                 ),
               Expanded(
                 child: appState.isDataLoading
-                    ? Center(child: CircularProgressIndicator())
+                    ? const Center(child: CircularProgressIndicator())
                     : _filteredCustomers.isEmpty
                     ? FadeTransition(
                         opacity: animation,
                         child: SlideTransition(
                           position: Tween<Offset>(
-                            begin: Offset(0, 0.05),
-                            end: Offset(0, 0),
+                            begin: const Offset(0, 0.05),
+                            end: const Offset(0, 0),
                           ).animate(animation),
                           child: const EmptyStatePlaceholder(
                             icon: Icons.people_outline_rounded,
@@ -246,14 +252,14 @@ class _CustomerListPageState extends State<CustomerListPage>
                         opacity: animation,
                         child: SlideTransition(
                           position: Tween<Offset>(
-                            begin: Offset(0, 0.05),
-                            end: Offset(0, 0),
+                            begin: const Offset(0, 0.05),
+                            end: const Offset(0, 0),
                           ).animate(animation),
                           child: Stack(
                             children: [
                               ListView.builder(
                                 controller: _scrollController,
-                                padding: EdgeInsets.only(bottom: 20),
+                                padding: const EdgeInsets.only(bottom: 20),
                                 itemCount: _alphabet.length,
                                 itemBuilder: (context, index) {
                                   final letter = _alphabet[index];
@@ -266,7 +272,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                                         CrossAxisAlignment.start,
                                     children: [
                                       Padding(
-                                        padding: EdgeInsets.fromLTRB(
+                                        padding: const EdgeInsets.fromLTRB(
                                           20,
                                           16,
                                           20,
@@ -276,8 +282,8 @@ class _CustomerListPageState extends State<CustomerListPage>
                                           opacity: animation,
                                           child: SlideTransition(
                                             position: Tween<Offset>(
-                                              begin: Offset(0, 0.05),
-                                              end: Offset(0, 0),
+                                              begin: const Offset(0, 0.05),
+                                              end: const Offset(0, 0),
                                             ).animate(animation),
                                             child: Text(
                                               letter,
@@ -295,14 +301,15 @@ class _CustomerListPageState extends State<CustomerListPage>
                                           opacity: animation,
                                           child: SlideTransition(
                                             position: Tween<Offset>(
-                                              begin: Offset(0, 0.05),
-                                              end: Offset(0, 0),
+                                              begin: const Offset(0, 0.05),
+                                              end: const Offset(0, 0),
                                             ).animate(animation),
                                             child: Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 16,
-                                                vertical: 4,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 4,
+                                                  ),
                                               child: _buildCustomerCard(
                                                 context,
                                                 customer,
@@ -323,7 +330,9 @@ class _CustomerListPageState extends State<CustomerListPage>
                                 bottom: 0,
                                 child: Center(
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: _alphabet.map<Widget>((letter) {
@@ -331,8 +340,8 @@ class _CustomerListPageState extends State<CustomerListPage>
                                           opacity: animation,
                                           child: SlideTransition(
                                             position: Tween<Offset>(
-                                              begin: Offset(0, 0.05),
-                                              end: Offset(0, 0),
+                                              begin: const Offset(0, 0.05),
+                                              end: const Offset(0, 0),
                                             ).animate(animation),
                                             child: InkWell(
                                               onTap: () =>
@@ -398,7 +407,7 @@ class _CustomerListPageState extends State<CustomerListPage>
                 const SizedBox(height: 3),
                 Text(
                   customer.phones.isNotEmpty ? customer.phones[0] : '暂无电话',
-                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
                 ),
                 if (customer.tagList.isNotEmpty) ...[
                   const SizedBox(height: 6),
@@ -426,8 +435,8 @@ class _CustomerListPageState extends State<CustomerListPage>
     final oldSectionKeys = Map<String, GlobalKey>.from(_sectionKeys);
     _sectionKeys.clear();
 
-    for (var customer in _filteredCustomers) {
-      String firstLetter = customer.name.isNotEmpty
+    for (final customer in _filteredCustomers) {
+      final String firstLetter = customer.name.isNotEmpty
           ? customer.name.substring(0, 1).toUpperCase()
           : '#';
 
@@ -463,7 +472,7 @@ class _CustomerListPageState extends State<CustomerListPage>
       if (context != null) {
         Scrollable.ensureVisible(
           context,
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
       }

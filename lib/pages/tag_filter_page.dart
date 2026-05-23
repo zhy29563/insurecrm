@@ -105,7 +105,7 @@ class _TagFilterPageState extends State<TagFilterPage>
                             ),
                           ),
                           const SizedBox(width: 10),
-                          Text(
+                          const Text(
                             '选择标签',
                             style: TextStyle(
                               fontSize: 16,

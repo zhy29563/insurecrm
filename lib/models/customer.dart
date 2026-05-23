@@ -115,7 +115,7 @@ class Customer {
       alias: map['alias'] as String?,
       age: (map['age'] as num?)?.toInt(),
       gender: map['gender'] as String?,
-      rating: ((map['rating'] as num?)?.toInt())?.clamp(0, 5),
+      rating: (map['rating'] as num?)?.toInt().clamp(0, 5),
       latitude: (map['latitude'] as num?)?.toDouble(),
       longitude: (map['longitude'] as num?)?.toDouble(),
       address: map['address'] as String?,
@@ -134,8 +134,9 @@ class Customer {
       occupation: map['occupation'] as String?,
       source: map['source'] as String?,
       notes: map['remark'] as String?,
-      purchaseIntentionLevel: ((map['purchase_intention'] as num?)?.toInt())
-          ?.clamp(0, 5),
+      purchaseIntentionLevel: (map['purchase_intention'] as num?)
+          ?.toInt()
+          .clamp(0, 5),
     );
   }
 }

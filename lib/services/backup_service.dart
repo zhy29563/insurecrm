@@ -303,7 +303,7 @@ class BackupService {
       final dbPath = await dbHelper.getDatabasePath();
       final originalDbFile = File(dbPath);
       String? safetyBackupPath;
-      bool hadOriginalDb = originalDbFile.existsSync();
+      final bool hadOriginalDb = originalDbFile.existsSync();
       if (hadOriginalDb) {
         safetyBackupPath = '$dbPath.pre_restore_safety';
         try {
@@ -549,7 +549,7 @@ class BackupService {
             (a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()),
           );
 
-    List<BackupInfo> result = [];
+    final List<BackupInfo> result = [];
     for (final file in files) {
       final size = file.lengthSync();
       // Try to read metadata from ZIP for extra info

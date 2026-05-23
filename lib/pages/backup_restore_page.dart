@@ -65,33 +65,36 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('数据备份与恢复'),
+        title: const Text('数据备份与恢复'),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh),
             onPressed: _refreshBackups,
             tooltip: '刷新列表',
           ),
         ],
       ),
       body: ListView(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         children: [
           // ===== Auto Backup Settings =====
           _buildCard(
             isDark: isDark,
             icon: Icons.schedule_rounded,
-            iconColor: Color(0xFF7B1FA2),
+            iconColor: const Color(0xFF7B1FA2),
             title: '自动备份设置',
             children: [
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(
+                title: const Text(
                   '启用自动备份',
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 subtitle: Text(_autoBackupEnabled ? '已开启' : '已关闭'),
-                secondary: Icon(Icons.timer_outlined, color: Color(0xFF7B1FA2)),
+                secondary: const Icon(
+                  Icons.timer_outlined,
+                  color: Color(0xFF7B1FA2),
+                ),
                 value: _autoBackupEnabled,
                 activeThumbColor: primaryColor,
                 onChanged: kIsWeb
@@ -102,17 +105,19 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         setState(() => _autoBackupEnabled = v);
                         if (v && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('自动备份已启用，将在应用启动时检查并执行')),
+                            const SnackBar(
+                              content: Text('自动备份已启用，将在应用启动时检查并执行'),
+                            ),
                           );
                         }
                       },
               ),
               if (_autoBackupEnabled) ...[
-                Divider(),
+                const Divider(),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.access_time, color: Colors.grey),
-                  title: Text('备份间隔（小时）'),
+                  leading: const Icon(Icons.access_time, color: Colors.grey),
+                  title: const Text('备份间隔（小时）'),
                   trailing: SizedBox(
                     width: 80,
                     child: DropdownButton<int>(
@@ -131,11 +136,14 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                     ),
                   ),
                 ),
-                Divider(),
+                const Divider(),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.archive_outlined, color: Colors.grey),
-                  title: Text('保留备份数量'),
+                  leading: const Icon(
+                    Icons.archive_outlined,
+                    color: Colors.grey,
+                  ),
+                  title: const Text('保留备份数量'),
                   trailing: SizedBox(
                     width: 60,
                     child: DropdownButton<int>(
@@ -157,20 +165,20 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               ],
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // ===== Manual Actions =====
           _buildCard(
             isDark: isDark,
             icon: Icons.backup_rounded,
-            iconColor: Color(0xFF1565C0),
+            iconColor: const Color(0xFF1565C0),
             title: '手动操作',
             children: [
               Text(
                 '创建完整备份或从已有备份恢复数据',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -179,10 +187,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                           ? null
                           : () => _createManualBackup(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF1565C0),
+                        backgroundColor: const Color(0xFF1565C0),
                       ),
                       icon: _isCreating
-                          ? SizedBox(
+                          ? const SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
@@ -190,20 +198,20 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                                 color: Colors.white,
                               ),
                             )
-                          : Icon(Icons.add_box_rounded, size: 18),
+                          : const Icon(Icons.add_box_rounded, size: 18),
                       label: Text(_isCreating ? '备份中...' : '立即备份'),
                     ),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: kIsWeb
                           ? null
                           : () => _showRestoreDialog(context),
-                      icon: Icon(Icons.restore_rounded, size: 18),
-                      label: Text('选择恢复'),
+                      icon: const Icon(Icons.restore_rounded, size: 18),
+                      label: const Text('选择恢复'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Color(0xFF00897B),
+                        foregroundColor: const Color(0xFF00897B),
                       ),
                     ),
                   ),
@@ -211,22 +219,22 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // ===== Cloud Sync Info =====
           _buildCard(
             isDark: isDark,
             icon: Icons.cloud_upload_rounded,
-            iconColor: Color(0xFF0288D1),
+            iconColor: const Color(0xFF0288D1),
             title: '云端同步（可选）',
             children: [
               Text(
                 '将备份文件上传至云端存储，支持跨设备同步',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Container(
-                padding: EdgeInsets.all(14),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: isDark
                       ? Colors.blue.shade900.withValues(alpha: 0.3)
@@ -248,7 +256,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                           size: 18,
                           color: Colors.blue.shade700,
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
                           '使用方式',
                           style: TextStyle(
@@ -259,7 +267,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       '• 点击备份文件右侧的「分享」按钮，可将备份上传到网盘、微信等云端位置\n'
                       '• 在新设备上下载后通过「导入备份」功能导入即可完成跨设备迁移\n'
@@ -274,20 +282,20 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               ),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           // ===== Backup List =====
           Row(
             children: [
               Icon(Icons.folder_zip_rounded, color: Colors.orange.shade700),
-              SizedBox(width: 8),
-              Text(
+              const SizedBox(width: 8),
+              const Text(
                 '本地备份记录',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.orange.shade100,
                   borderRadius: BorderRadius.circular(10),
@@ -303,16 +311,16 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               ),
             ],
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           if (_isLoading)
-            Center(
+            const Center(
               child: Padding(
                 padding: EdgeInsets.all(30),
                 child: CircularProgressIndicator(),
               ),
             )
           else if (_backups.isEmpty)
-            EmptyStatePlaceholder(
+            const EmptyStatePlaceholder(
               icon: Icons.cloud_off_rounded,
               message: '暂无备份',
               actionHint: '点击上方「立即备份」按钮创建第一个备份',
@@ -321,7 +329,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             ..._backups.map<Widget>(
               (b) => _buildBackupTile(b, context, isDark),
             ),
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
         ],
       ),
     );
@@ -335,7 +343,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     required List<Widget> children,
   }) {
     return Container(
-      padding: EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppDesign.cardBg(isDark),
         borderRadius: BorderRadius.circular(16),
@@ -343,7 +351,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -353,21 +361,24 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 20, color: iconColor),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 title,
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           ...children,
         ],
       ),
@@ -377,7 +388,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   Widget _buildBackupTile(BackupInfo info, BuildContext context, bool isDark) {
     final isCompatible = info.isCompatible;
     return Card(
-      margin: EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -386,7 +397,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         ),
       ),
       child: Padding(
-        padding: EdgeInsets.all(14),
+        padding: const EdgeInsets.all(14),
         child: Row(
           children: [
             Container(
@@ -397,11 +408,11 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                     ? Colors.red.shade50
                     : info.isAuto
                     ? (isDark
-                          ? Color(0xFF1565C0).withValues(alpha: 0.2)
-                          : Color(0xFFE3F2FD))
+                          ? const Color(0xFF1565C0).withValues(alpha: 0.2)
+                          : const Color(0xFFE3F2FD))
                     : (isDark
-                          ? Color(0xFF7B1FA2).withValues(alpha: 0.2)
-                          : Color(0xFFF3E5F5)),
+                          ? const Color(0xFF7B1FA2).withValues(alpha: 0.2)
+                          : const Color(0xFFF3E5F5)),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -413,11 +424,11 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 color: !isCompatible
                     ? Colors.red
                     : info.isAuto
-                    ? Color(0xFF1565C0)
-                    : Color(0xFF7B1FA2),
+                    ? const Color(0xFF1565C0)
+                    : const Color(0xFF7B1FA2),
               ),
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -427,17 +438,17 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                       Flexible(
                         child: Text(
                           info.fileName,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       if (info.isAuto)
                         Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 6,
                             vertical: 1,
                           ),
@@ -455,7 +466,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         ),
                       if (!isCompatible)
                         Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 6,
                             vertical: 1,
                           ),
@@ -473,32 +484,45 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         ),
                     ],
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.access_time_filled,
                         size: 13,
                         color: Colors.grey,
                       ),
-                      SizedBox(width: 3),
+                      const SizedBox(width: 3),
                       Text(
                         _formatDateTime(info.created),
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
-                      SizedBox(width: 12),
-                      Icon(Icons.sd_storage, size: 13, color: Colors.grey),
-                      SizedBox(width: 3),
+                      const SizedBox(width: 12),
+                      const Icon(
+                        Icons.sd_storage,
+                        size: 13,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 3),
                       Text(
                         info.sizeFormatted,
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
-                      SizedBox(width: 12),
-                      Icon(Icons.tag, size: 13, color: Colors.grey),
-                      SizedBox(width: 3),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.tag, size: 13, color: Colors.grey),
+                      const SizedBox(width: 3),
                       Text(
                         info.versionText,
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -508,7 +532,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             PopupMenuButton<String>(
               onSelected: (v) => _handleBackupAction(v, info, context),
               itemBuilder: (c) => [
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'share',
                   child: Row(
                     children: [
@@ -528,7 +552,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         size: 18,
                         color: isCompatible ? Colors.teal : Colors.grey,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
                         '从此备份恢复',
                         style: TextStyle(
@@ -538,7 +562,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                     ],
                   ),
                 ),
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
@@ -571,7 +595,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           if (!ctx.mounted) return;
           ScaffoldMessenger.of(
             ctx,
-          ).showSnackBar(SnackBar(content: Text('已准备分享')));
+          ).showSnackBar(const SnackBar(content: Text('已准备分享')));
         } catch (e) {
           if (!ctx.mounted) return;
           ScaffoldMessenger.of(
@@ -592,12 +616,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     showDialog(
       context: ctx,
       builder: (dialogCtx) => AlertDialog(
-        title: Text('确认删除'),
+        title: const Text('确认删除'),
         content: Text('确定要删除备份「${info.fileName}」吗？此操作无法撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: Text('取消'),
+            child: const Text('取消'),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -609,9 +633,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               if (!ctx.mounted) return;
               ScaffoldMessenger.of(
                 ctx,
-              ).showSnackBar(SnackBar(content: Text('已删除')));
+              ).showSnackBar(const SnackBar(content: Text('已删除')));
             },
-            child: Text('删除'),
+            child: const Text('删除'),
           ),
         ],
       ),
@@ -622,7 +646,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     showDialog(
       context: ctx,
       builder: (dialogCtx) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.warning_amber, color: Colors.orange),
             SizedBox(width: 8),
@@ -633,23 +657,26 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('即将从以下备份恢复所有数据：'),
-            SizedBox(height: 4),
+            const Text('即将从以下备份恢复所有数据：'),
+            const SizedBox(height: 4),
             Container(
-              margin: EdgeInsets.all(8),
-              padding: EdgeInsets.all(10),
+              margin: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.orange.shade50,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 fileName,
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Container(
-              padding: EdgeInsets.all(10),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(8),
@@ -669,7 +696,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     '当前所有数据将被覆盖替换！建议先创建一个当前数据的备份再进行恢复。',
                     style: TextStyle(fontSize: 12, color: Colors.red.shade700),
@@ -682,7 +709,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: Text('取消'),
+            child: const Text('取消'),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -691,7 +718,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               showDialog(
                 barrierDismissible: false,
                 context: ctx,
-                builder: (loadingCtx) => PopScope(
+                builder: (loadingCtx) => const PopScope(
                   canPop: false,
                   child: AlertDialog(
                     content: Row(
@@ -735,12 +762,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 showDialog(
                   context: ctx,
                   builder: (successCtx) => AlertDialog(
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.check_circle,
                       color: Colors.green,
                       size: 48,
                     ),
-                    title: Text('恢复成功！'),
+                    title: const Text('恢复成功！'),
                     content: Text('${result.$2}\n\n建议重启应用以完整加载恢复的数据。'),
                     actions: [
                       TextButton(
@@ -756,7 +783,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                           if (!mounted) return;
                           setState(() {});
                         },
-                        child: Text('好的'),
+                        child: const Text('好的'),
                       ),
                     ],
                   ),
@@ -769,7 +796,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('确认恢复', style: TextStyle(color: Colors.white)),
+            child: const Text('确认恢复', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -801,9 +828,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     showDialog(
       context: ctx,
       builder: (dialogCtx) => SimpleDialog(
-        title: Text('导入外部备份'),
+        title: const Text('导入外部备份'),
         children: [
-          Padding(
+          const Padding(
             padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
             child: Column(
               children: [
@@ -816,7 +843,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             child: Column(
               children: [
                 SizedBox(
@@ -834,9 +861,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         final platformFile = result.files.first;
                         if (platformFile.path == null) {
                           if (!ctx.mounted) return;
-                          ScaffoldMessenger.of(
-                            ctx,
-                          ).showSnackBar(SnackBar(content: Text('无法获取文件路径')));
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(content: Text('无法获取文件路径')),
+                          );
                           return;
                         }
                         // Import the file to backup dir and then restore
@@ -857,11 +884,11 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         ).showSnackBar(SnackBar(content: Text('导入失败：$e')));
                       }
                     },
-                    icon: Icon(Icons.file_open),
-                    label: Text('选择备份文件(.zip)'),
+                    icon: const Icon(Icons.file_open),
+                    label: const Text('选择备份文件(.zip)'),
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   '提示：可通过「分享」功能将其他设备的备份传到此设备',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade500),

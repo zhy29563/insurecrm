@@ -159,7 +159,7 @@ class ImageUtils {
   /// 删除物理文件
   static void deleteFiles(List<String> paths) {
     if (kIsWeb) return;
-    for (var filePath in paths) {
+    for (final filePath in paths) {
       try {
         File(filePath).deleteSync();
       } catch (_) {}

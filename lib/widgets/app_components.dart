@@ -29,7 +29,7 @@ class AppDesign {
   static BoxShadow cardShadow(BuildContext context) => BoxShadow(
     color: Colors.black.withValues(alpha: 0.04),
     blurRadius: 8,
-    offset: Offset(0, 2),
+    offset: const Offset(0, 2),
   );
 
   // ── Rating Colors & Labels ──
@@ -176,7 +176,7 @@ class AppCard extends StatelessWidget {
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.06 * elevation),
                   blurRadius: 8,
-                  offset: Offset(0, 2),
+                  offset: const Offset(0, 2),
                 ),
               ]
             : [AppDesign.cardShadow(context)],
@@ -232,7 +232,7 @@ class AppSearchBar extends StatelessWidget {
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -245,7 +245,7 @@ class AppSearchBar extends StatelessWidget {
           prefixIcon: Icon(prefixIcon, color: primaryColor, size: 22),
           suffixIcon: (searchQuery != null && searchQuery!.isNotEmpty)
               ? IconButton(
-                  icon: Icon(Icons.clear_rounded, size: 20),
+                  icon: const Icon(Icons.clear_rounded, size: 20),
                   onPressed: onClear,
                 )
               : null,
@@ -285,7 +285,7 @@ class EmptyStatePlaceholder extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.05)
@@ -452,7 +452,7 @@ class AddSectionButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
@@ -461,7 +461,7 @@ class AddSectionButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.add, size: 16, color: primaryColor),
-            SizedBox(width: 4),
+            const SizedBox(width: 4),
             Text('添加', style: TextStyle(color: primaryColor, fontSize: 13)),
           ],
         ),

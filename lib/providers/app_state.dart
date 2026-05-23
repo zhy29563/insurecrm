@@ -278,11 +278,11 @@ class AppState extends ChangeNotifier {
     try {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      final in30Days = today.add(Duration(days: 30));
+      final in30Days = today.add(const Duration(days: 30));
       final notifications = <Map<String, dynamic>>[];
 
       // 1. 跟进到期提醒 (nextFollowUpDate is due or past)
-      for (var c in customers) {
+      for (final c in customers) {
         if (c.nextFollowUpDate == null || c.nextFollowUpDate!.isEmpty) continue;
         final followUpDate = DateTime.tryParse(c.nextFollowUpDate!);
         if (followUpDate == null) continue;
@@ -290,7 +290,9 @@ class AppState extends ChangeNotifier {
           String statusLabel;
           if (followUpDate.isBefore(today)) {
             statusLabel = '已超期';
-          } else if (followUpDate.isBefore(today.add(Duration(days: 3)))) {
+          } else if (followUpDate.isBefore(
+            today.add(const Duration(days: 3)),
+          )) {
             statusLabel = '即将到期';
           } else {
             statusLabel = '近期到期';
@@ -302,15 +304,17 @@ class AppState extends ChangeNotifier {
             'subtitle':
                 '$statusLabel · 计划跟进日 ${c.nextFollowUpDate!.substring(5)}',
             'icon': Icons.phone_rounded,
-            'color': Color(0xFFE53935),
+            'color': const Color(0xFFE53935),
             'time': c.nextFollowUpDate,
-            'isUrgent': !followUpDate.isAfter(today.add(Duration(days: 7))),
+            'isUrgent': !followUpDate.isAfter(
+              today.add(const Duration(days: 7)),
+            ),
           });
         }
       }
 
       // 2. 保单/产品到期提醒 (product endDate)
-      for (var p in products) {
+      for (final p in products) {
         if (p.salesEndDate == null || p.salesEndDate!.isEmpty) continue;
         final endDate = DateTime.tryParse(p.salesEndDate!);
         if (endDate == null) continue;
@@ -318,7 +322,7 @@ class AppState extends ChangeNotifier {
           String statusLabel;
           if (endDate.isBefore(today)) {
             statusLabel = '已到期';
-          } else if (endDate.isBefore(today.add(Duration(days: 14)))) {
+          } else if (endDate.isBefore(today.add(const Duration(days: 14)))) {
             statusLabel = '即将到期';
           } else {
             statusLabel = '近期到期';
@@ -329,15 +333,15 @@ class AppState extends ChangeNotifier {
             'title': '${p.company} - ${p.name} 保单到期',
             'subtitle': '$statusLabel · 到期日 ${p.salesEndDate!.substring(5)}',
             'icon': Icons.autorenew_rounded,
-            'color': Color(0xFFFF9800),
+            'color': const Color(0xFFFF9800),
             'time': p.salesEndDate,
-            'isUrgent': !endDate.isAfter(today.add(Duration(days: 14))),
+            'isUrgent': !endDate.isAfter(today.add(const Duration(days: 14))),
           });
         }
       }
 
       // 3. 客户生日提醒
-      for (var c in customers) {
+      for (final c in customers) {
         if (c.birthday == null || c.birthday!.isEmpty) continue;
         final parts = c.birthday!.split('-');
         if (parts.length < 2) continue;
@@ -378,7 +382,7 @@ class AppState extends ChangeNotifier {
             'title': '${c.name} 的生日',
             'subtitle': '$label · ${c.birthday}',
             'icon': Icons.cake_rounded,
-            'color': Color(0xFFAB47BC),
+            'color': const Color(0xFFAB47BC),
             'time': birthdayCheck.toIso8601String().substring(0, 10),
             'isUrgent': daysUntilBirthday <= 3,
             'customerId': c.id,
@@ -493,7 +497,7 @@ class AppState extends ChangeNotifier {
   Future<String?> getSecurityQuestion(String username) async {
     if (kIsWeb) return null;
     final db = DatabaseHelper.instance;
-    Database database = await db.database;
+    final Database database = await db.database;
     final results = await database.query(
       'users',
       where: 'username = ? AND is_active = 1',
@@ -654,8 +658,8 @@ class AppState extends ChangeNotifier {
     final thisYear = now.year;
 
     // Rating distribution from customers
-    Map<int, int> ratingCounts = {};
-    for (var c in customers) {
+    final Map<int, int> ratingCounts = {};
+    for (final c in customers) {
       final r = c.rating ?? 0;
       ratingCounts[r] = (ratingCounts[r] ?? 0) + 1;
     }
@@ -675,8 +679,8 @@ class AppState extends ChangeNotifier {
     }).length;
 
     // Monthly new customers
-    Map<int, int> monthlyCounts = {};
-    for (var c in customers) {
+    final Map<int, int> monthlyCounts = {};
+    for (final c in customers) {
       if (c.createdAt == null) continue;
       final dt = DateTime.tryParse(c.createdAt!);
       if (dt != null && dt.year == thisYear) {
@@ -722,9 +726,9 @@ class AppState extends ChangeNotifier {
     });
 
     // Product ranking from sales
-    Map<int, int> productSaleCounts = {};
-    Map<int, double> productSaleAmounts = {};
-    for (var saleRecord in salesRecords) {
+    final Map<int, int> productSaleCounts = {};
+    final Map<int, double> productSaleAmounts = {};
+    for (final saleRecord in salesRecords) {
       final productId = (saleRecord['product_id'] as num?)?.toInt();
       if (productId == null) continue;
       productSaleCounts[productId] = (productSaleCounts[productId] ?? 0) + 1;
@@ -751,9 +755,9 @@ class AppState extends ChangeNotifier {
         );
 
     // Monthly sales
-    Map<int, double> monthlySalesMap = {};
-    Map<int, int> monthlySalesCountMap = {};
-    for (var saleRecord in salesRecords) {
+    final Map<int, double> monthlySalesMap = {};
+    final Map<int, int> monthlySalesCountMap = {};
+    for (final saleRecord in salesRecords) {
       final saleDateStr = saleRecord['sale_date'] as String?;
       if (saleDateStr == null) continue;
       final saleDate = DateTime.tryParse(saleDateStr);
@@ -778,9 +782,9 @@ class AppState extends ChangeNotifier {
           ..sort((a, b) => (a['month'] ?? 0).compareTo(b['month'] ?? 0));
 
     // Monthly visits
-    Map<int, int> monthlyVisitsMap = {};
-    for (var customer in customers) {
-      for (var visitRecord in customer.visits) {
+    final Map<int, int> monthlyVisitsMap = {};
+    for (final customer in customers) {
+      for (final visitRecord in customer.visits) {
         final visitDateStr = visitRecord['date'] as String?;
         if (visitDateStr == null) continue;
         final visitDate = DateTime.tryParse(visitDateStr);
@@ -797,9 +801,9 @@ class AppState extends ChangeNotifier {
           ..sort((a, b) => (a['month'] ?? 0).compareTo(b['month'] ?? 0));
 
     // Quarterly sales
-    Map<int, double> quarterlySalesMap = {};
-    Map<int, int> quarterlySalesCountMap = {};
-    for (var saleRecord in salesRecords) {
+    final Map<int, double> quarterlySalesMap = {};
+    final Map<int, int> quarterlySalesCountMap = {};
+    for (final saleRecord in salesRecords) {
       final saleDateStr = saleRecord['sale_date'] as String?;
       if (saleDateStr == null) continue;
       final saleDate = DateTime.tryParse(saleDateStr);
@@ -841,8 +845,8 @@ class AppState extends ChangeNotifier {
     ];
 
     // Monthly commissions
-    Map<int, double> monthlyCommMap = {};
-    for (var saleRecord in salesRecords) {
+    final Map<int, double> monthlyCommMap = {};
+    for (final saleRecord in salesRecords) {
       final saleDateStr = saleRecord['sale_date'] as String?;
       if (saleDateStr == null) continue;
       final saleDate = DateTime.tryParse(saleDateStr);
@@ -861,8 +865,8 @@ class AppState extends ChangeNotifier {
           ..sort((a, b) => (a['month'] ?? 0).compareTo(b['month'] ?? 0));
 
     // Quarterly commissions
-    Map<int, double> quarterlyCommMap = {};
-    for (var saleRecord in salesRecords) {
+    final Map<int, double> quarterlyCommMap = {};
+    for (final saleRecord in salesRecords) {
       final saleDateStr = saleRecord['sale_date'] as String?;
       if (saleDateStr == null) continue;
       final saleDate = DateTime.tryParse(saleDateStr);
@@ -958,7 +962,7 @@ class AppState extends ChangeNotifier {
         batchData['relations'] as Map<int, List<Map<String, dynamic>>>;
 
     final List<Customer> result = [];
-    for (var map in customerMaps) {
+    for (final map in customerMaps) {
       final customerId = map['id'] as int;
       final phones = (phonesByCustomer[customerId] ?? [])
           .map((e) => e['phone'] as String? ?? '')
@@ -1090,10 +1094,10 @@ class AppState extends ChangeNotifier {
             persistentTagList: ['高意向', '重点客户'],
             birthday: '1991-05-15',
             nextFollowUpDate: now
-                .add(Duration(days: 2))
+                .add(const Duration(days: 2))
                 .toIso8601String()
                 .substring(0, 10),
-            createdAt: now.subtract(Duration(days: 15)).toIso8601String(),
+            createdAt: now.subtract(const Duration(days: 15)).toIso8601String(),
           ),
           Customer(
             id: 2,
@@ -1109,10 +1113,10 @@ class AppState extends ChangeNotifier {
             persistentTagList: ['中等意向'],
             birthday: '1998-08-22',
             nextFollowUpDate: now
-                .add(Duration(days: 7))
+                .add(const Duration(days: 7))
                 .toIso8601String()
                 .substring(0, 10),
-            createdAt: now.subtract(Duration(days: 10)).toIso8601String(),
+            createdAt: now.subtract(const Duration(days: 10)).toIso8601String(),
           ),
           Customer(
             id: 3,
@@ -1128,10 +1132,10 @@ class AppState extends ChangeNotifier {
             persistentTagList: ['低意向'],
             birthday: '1984-03-10',
             nextFollowUpDate: now
-                .subtract(Duration(days: 3))
+                .subtract(const Duration(days: 3))
                 .toIso8601String()
                 .substring(0, 10),
-            createdAt: now.subtract(Duration(days: 30)).toIso8601String(),
+            createdAt: now.subtract(const Duration(days: 30)).toIso8601String(),
           ),
           Customer(
             id: 4,
@@ -1147,10 +1151,10 @@ class AppState extends ChangeNotifier {
             persistentTagList: ['高意向', 'VIP客户'],
             birthday: '1996-11-08',
             nextFollowUpDate: now
-                .add(Duration(days: 1))
+                .add(const Duration(days: 1))
                 .toIso8601String()
                 .substring(0, 10),
-            createdAt: now.subtract(Duration(days: 5)).toIso8601String(),
+            createdAt: now.subtract(const Duration(days: 5)).toIso8601String(),
           ),
           Customer(
             id: 5,
@@ -1166,7 +1170,7 @@ class AppState extends ChangeNotifier {
             persistentTagList: ['中等意向', '重点客户'],
             birthday: '1988-07-25',
             nextFollowUpDate: now
-                .add(Duration(days: 5))
+                .add(const Duration(days: 5))
                 .toIso8601String()
                 .substring(0, 10),
             createdAt: now.toIso8601String(),
@@ -1200,10 +1204,12 @@ class AppState extends ChangeNotifier {
               'tags': '高意向,重点客户',
               'birthday': '1991-05-15',
               'next_follow_up_date': now
-                  .add(Duration(days: 2))
+                  .add(const Duration(days: 2))
                   .toIso8601String()
                   .substring(0, 10),
-              'created_at': now.subtract(Duration(days: 15)).toIso8601String(),
+              'created_at': now
+                  .subtract(const Duration(days: 15))
+                  .toIso8601String(),
             },
             {
               'name': '刘小红',
@@ -1216,10 +1222,12 @@ class AppState extends ChangeNotifier {
               'tags': '中等意向',
               'birthday': '1998-08-22',
               'next_follow_up_date': now
-                  .add(Duration(days: 7))
+                  .add(const Duration(days: 7))
                   .toIso8601String()
                   .substring(0, 10),
-              'created_at': now.subtract(Duration(days: 10)).toIso8601String(),
+              'created_at': now
+                  .subtract(const Duration(days: 10))
+                  .toIso8601String(),
             },
             {
               'name': '王大力',
@@ -1232,10 +1240,12 @@ class AppState extends ChangeNotifier {
               'tags': '低意向',
               'birthday': '1984-03-10',
               'next_follow_up_date': now
-                  .subtract(Duration(days: 3))
+                  .subtract(const Duration(days: 3))
                   .toIso8601String()
                   .substring(0, 10),
-              'created_at': now.subtract(Duration(days: 30)).toIso8601String(),
+              'created_at': now
+                  .subtract(const Duration(days: 30))
+                  .toIso8601String(),
             },
             {
               'name': '张丽',
@@ -1248,10 +1258,12 @@ class AppState extends ChangeNotifier {
               'tags': '高意向,VIP客户',
               'birthday': '1996-11-08',
               'next_follow_up_date': now
-                  .add(Duration(days: 1))
+                  .add(const Duration(days: 1))
                   .toIso8601String()
                   .substring(0, 10),
-              'created_at': now.subtract(Duration(days: 5)).toIso8601String(),
+              'created_at': now
+                  .subtract(const Duration(days: 5))
+                  .toIso8601String(),
             },
             {
               'name': '李强',
@@ -1264,7 +1276,7 @@ class AppState extends ChangeNotifier {
               'tags': '中等意向,重点客户',
               'birthday': '1988-07-25',
               'next_follow_up_date': now
-                  .add(Duration(days: 5))
+                  .add(const Duration(days: 5))
                   .toIso8601String()
                   .substring(0, 10),
               'created_at': now.toIso8601String(),
@@ -1389,7 +1401,7 @@ class AppState extends ChangeNotifier {
             {
               'customer_id': customerIds[0],
               'date': now
-                  .subtract(Duration(days: 5))
+                  .subtract(const Duration(days: 5))
                   .toIso8601String()
                   .substring(0, 10),
               'location': '北京办公室',
@@ -1401,7 +1413,7 @@ class AppState extends ChangeNotifier {
             {
               'customer_id': customerIds[0],
               'date': now
-                  .subtract(Duration(days: 20))
+                  .subtract(const Duration(days: 20))
                   .toIso8601String()
                   .substring(0, 10),
               'location': '客户家中',
@@ -1410,7 +1422,7 @@ class AppState extends ChangeNotifier {
             {
               'customer_id': customerIds[1],
               'date': now
-                  .subtract(Duration(days: 3))
+                  .subtract(const Duration(days: 3))
                   .toIso8601String()
                   .substring(0, 10),
               'location': '上海办公室',
@@ -1420,7 +1432,7 @@ class AppState extends ChangeNotifier {
             {
               'customer_id': customerIds[3],
               'date': now
-                  .subtract(Duration(days: 1))
+                  .subtract(const Duration(days: 1))
                   .toIso8601String()
                   .substring(0, 10),
               'location': '深圳咖啡厅',
@@ -1432,7 +1444,7 @@ class AppState extends ChangeNotifier {
             {
               'customer_id': customerIds[4],
               'date': now
-                  .subtract(Duration(days: 8))
+                  .subtract(const Duration(days: 8))
                   .toIso8601String()
                   .substring(0, 10),
               'location': '杭州茶馆',
@@ -1452,7 +1464,7 @@ class AppState extends ChangeNotifier {
                 'amount': 50000.0,
                 'notes': '购买平安福重疾险，保额50万',
                 'sale_date': now
-                    .subtract(Duration(days: 3))
+                    .subtract(const Duration(days: 3))
                     .toIso8601String()
                     .substring(0, 10),
                 'colleague_id': colleagueMaps.isNotEmpty
@@ -1468,7 +1480,7 @@ class AppState extends ChangeNotifier {
                 'amount': 8000.0,
                 'notes': '购买太平洋健康险，年缴保费8000元',
                 'sale_date': now
-                    .subtract(Duration(days: 1))
+                    .subtract(const Duration(days: 1))
                     .toIso8601String()
                     .substring(0, 10),
                 'colleague_id': colleagueMaps.length > 1
@@ -1502,7 +1514,7 @@ class AppState extends ChangeNotifier {
               'title': '跟进陈小明 - 重疾险方案',
               'description': '发送详细的重疾险保障方案',
               'reminder_date': now
-                  .add(Duration(days: 2))
+                  .add(const Duration(days: 2))
                   .toIso8601String()
                   .substring(0, 10),
               'reminder_time': '10:00',
@@ -1525,7 +1537,7 @@ class AppState extends ChangeNotifier {
               'title': '跟进王大力 - 续保提醒',
               'description': '车险即将到期，提醒续保',
               'reminder_date': now
-                  .subtract(Duration(days: 3))
+                  .subtract(const Duration(days: 3))
                   .toIso8601String()
                   .substring(0, 10),
               'type': 'renewal',
@@ -1537,7 +1549,7 @@ class AppState extends ChangeNotifier {
               'title': '刘小红 - 健康险跟进',
               'description': '跟进健康险意向，发送产品资料',
               'reminder_date': now
-                  .add(Duration(days: 7))
+                  .add(const Duration(days: 7))
                   .toIso8601String()
                   .substring(0, 10),
               'reminder_time': '09:00',
@@ -1550,7 +1562,7 @@ class AppState extends ChangeNotifier {
               'title': '李强 - 养老规划回访',
               'description': '回访养老规划需求',
               'reminder_date': now
-                  .add(Duration(days: 5))
+                  .add(const Duration(days: 5))
                   .toIso8601String()
                   .substring(0, 10),
               'type': 'follow_up',
@@ -1569,7 +1581,7 @@ class AppState extends ChangeNotifier {
                 'customer_id': customerIds[0],
                 'product_id': productIds[0],
                 'purchase_date': now
-                    .subtract(Duration(days: 3))
+                    .subtract(const Duration(days: 3))
                     .toIso8601String()
                     .substring(0, 10),
               },
@@ -1579,7 +1591,7 @@ class AppState extends ChangeNotifier {
                     ? productIds[1]
                     : productIds[0],
                 'purchase_date': now
-                    .subtract(Duration(days: 1))
+                    .subtract(const Duration(days: 1))
                     .toIso8601String()
                     .substring(0, 10),
               },
@@ -1694,7 +1706,7 @@ class AppState extends ChangeNotifier {
         );
         customers.add(newCustomer);
         // Update allTags with any new tags from this customer
-        for (var tag in newCustomer.tagList) {
+        for (final tag in newCustomer.tagList) {
           if (!allTags.contains(tag)) {
             allTags.add(tag);
           }
@@ -1709,17 +1721,17 @@ class AppState extends ChangeNotifier {
         final id = await db.insertCustomer(map);
 
         // Insert phones
-        for (var phone in customer.phones) {
+        for (final phone in customer.phones) {
           await db.insertCustomerPhone(id, phone);
         }
 
         // Insert addresses
-        for (var address in customer.addresses) {
+        for (final address in customer.addresses) {
           await db.insertCustomerAddress(id, address);
         }
 
         // Insert photos
-        for (var photoPath in customer.persistentPhotoList) {
+        for (final photoPath in customer.persistentPhotoList) {
           await db.insertCustomerPhoto({
             'customer_id': id,
             'file_path': photoPath,
@@ -1728,7 +1740,7 @@ class AppState extends ChangeNotifier {
         }
 
         // Insert tags (use tagList which covers both persistentTagList and tags field)
-        for (var tag in customer.tagList) {
+        for (final tag in customer.tagList) {
           await db.insertCustomerTag(id, tag);
         }
 
@@ -1757,14 +1769,14 @@ class AppState extends ChangeNotifier {
         final dbInstance = await db.database;
 
         // Query old photos before transaction to clean up orphaned files later
-        List<String> oldPhotoPaths = [];
+        final List<String> oldPhotoPaths = [];
         try {
           final oldPhotos = await dbInstance.query(
             'customer_photos',
             where: 'customer_id = ?',
             whereArgs: [customer.id],
           );
-          for (var p in oldPhotos) {
+          for (final p in oldPhotos) {
             final fp = p['file_path'] as String?;
             if (fp != null) oldPhotoPaths.add(fp);
           }
@@ -1786,7 +1798,7 @@ class AppState extends ChangeNotifier {
             where: 'customer_id = ?',
             whereArgs: [customer.id],
           );
-          for (var phone in customer.phones) {
+          for (final phone in customer.phones) {
             await txn.insert('customer_phones', {
               'customer_id': customer.id,
               'phone': phone,
@@ -1799,7 +1811,7 @@ class AppState extends ChangeNotifier {
             where: 'customer_id = ?',
             whereArgs: [customer.id],
           );
-          for (var address in customer.addresses) {
+          for (final address in customer.addresses) {
             await txn.insert('customer_addresses', {
               'customer_id': customer.id,
               'address': address,
@@ -1812,7 +1824,7 @@ class AppState extends ChangeNotifier {
             where: 'customer_id = ?',
             whereArgs: [customer.id],
           );
-          for (var photoPath in customer.persistentPhotoList) {
+          for (final photoPath in customer.persistentPhotoList) {
             await txn.insert('customer_photos', {
               'customer_id': customer.id,
               'file_path': photoPath,
@@ -1826,7 +1838,7 @@ class AppState extends ChangeNotifier {
             where: 'customer_id = ?',
             whereArgs: [customer.id],
           );
-          for (var tag in customer.tagList) {
+          for (final tag in customer.tagList) {
             // Sync tags definition table
             await txn.insert('tags', {
               'name': tag,
@@ -1968,7 +1980,7 @@ class AppState extends ChangeNotifier {
       ),
     ];
 
-    for (var product in sampleProducts) {
+    for (final product in sampleProducts) {
       await addProduct(product);
     }
   }
@@ -2557,9 +2569,9 @@ class AppState extends ChangeNotifier {
   // Recommend products for customer
   List<Product> recommendProducts(Customer customer) {
     // Simple recommendation logic based on age and gender
-    List<Product> recommended = [];
+    final List<Product> recommended = [];
 
-    for (var product in products) {
+    for (final product in products) {
       if (customer.age != null) {
         if (customer.age! < 30 && product.category?.contains('健康') == true) {
           recommended.add(product);
@@ -3078,8 +3090,8 @@ class AppState extends ChangeNotifier {
       if (kIsWeb) {
         // Web: tags stored in customer objects
         final tagSet = <String>{};
-        for (var c in customers) {
-          for (var t in c.tagList) {
+        for (final c in customers) {
+          for (final t in c.tagList) {
             tagSet.add(t);
           }
         }

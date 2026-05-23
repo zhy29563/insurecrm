@@ -95,20 +95,20 @@ class _SettingsPageState extends State<SettingsPage> {
                       hintText: isASR
                           ? '例如: 豆包ASR、讯飞ASR'
                           : '例如: 豆包、千问、GPT、Claude',
-                      prefixIcon: Icon(Icons.label),
+                      prefixIcon: const Icon(Icons.label),
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: apiKeyController,
                     obscureText: true,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'API Key *',
                       hintText: '输入 API Key',
                       prefixIcon: Icon(Icons.key),
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: baseUrlController,
                     decoration: InputDecoration(
@@ -116,16 +116,16 @@ class _SettingsPageState extends State<SettingsPage> {
                       hintText: isASR
                           ? '例如: https://openspeech.bytedance.com/v1'
                           : '例如: https://api.openai.com/v1',
-                      prefixIcon: Icon(Icons.link),
+                      prefixIcon: const Icon(Icons.link),
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: modelController,
                     decoration: InputDecoration(
                       labelText: '模型名称（可选）',
                       hintText: isASR ? '例如: asr-pro' : '例如: gpt-4o, qwen-max',
-                      prefixIcon: Icon(Icons.psychology),
+                      prefixIcon: const Icon(Icons.psychology),
                     ),
                   ),
                 ],
@@ -135,15 +135,15 @@ class _SettingsPageState extends State<SettingsPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('取消'),
+              child: const Text('取消'),
             ),
             ElevatedButton(
               onPressed: () async {
                 if (nameController.text.trim().isEmpty ||
                     apiKeyController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(
-                    pageContext,
-                  ).showSnackBar(SnackBar(content: Text('请填写引擎名称和API Key')));
+                  ScaffoldMessenger.of(pageContext).showSnackBar(
+                    const SnackBar(content: Text('请填写引擎名称和API Key')),
+                  );
                   return;
                 }
                 // 生成唯一 key
@@ -202,12 +202,12 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('确认删除'),
+        title: const Text('确认删除'),
         content: Text('确定要删除AI引擎「$name」的配置吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('取消'),
+            child: const Text('取消'),
           ),
           TextButton(
             onPressed: () async {
@@ -224,7 +224,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ).showSnackBar(SnackBar(content: Text('已删除AI引擎「$name」')));
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text('删除'),
+            child: const Text('删除'),
           ),
         ],
       ),
@@ -238,28 +238,28 @@ class _SettingsPageState extends State<SettingsPage> {
     final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      appBar: AppBar(title: Text('设置')),
+      appBar: AppBar(title: const Text('设置')),
       body: ListView(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         children: [
           // 外观设置
           _buildSectionCard(
             isDark: isDark,
             icon: Icons.palette_rounded,
-            iconColor: Color(0xFFAB47BC),
+            iconColor: const Color(0xFFAB47BC),
             title: '外观设置',
             children: [
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('深色模式'),
-                subtitle: Text('减少夜间使用对眼睛的刺激'),
+                title: const Text('深色模式'),
+                subtitle: const Text('减少夜间使用对眼睛的刺激'),
                 secondary: Icon(
                   appState.darkMode
                       ? Icons.dark_mode_rounded
                       : Icons.light_mode_rounded,
                   color: appState.darkMode
-                      ? Color(0xFFFFB74D)
-                      : Color(0xFFFFA726),
+                      ? const Color(0xFFFFB74D)
+                      : const Color(0xFFFFA726),
                 ),
                 value: appState.darkMode,
                 activeThumbColor: primaryColor,
@@ -267,7 +267,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // AI语音ASR配置
           _buildAICategorySection(
@@ -275,7 +275,7 @@ class _SettingsPageState extends State<SettingsPage> {
             appState: appState,
             category: 'asr',
             icon: Icons.mic_rounded,
-            iconColor: Color(0xFFFF6D00),
+            iconColor: const Color(0xFFFF6D00),
             title: 'AI语音识别(ASR)配置',
             description:
                 '配置语音识别引擎，用于产品推荐中的语音输入识别。支持兼容 OpenAI Whisper API 格式的ASR服务。',
@@ -287,7 +287,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 '豆包ASR',
                 'doubao_asr',
                 Icons.local_fire_department,
-                Color(0xFFFF6D00),
+                const Color(0xFFFF6D00),
                 category: 'asr',
                 appState: appState,
                 isDark: isDark,
@@ -296,14 +296,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 '讯飞ASR',
                 'xfyun_asr',
                 Icons.record_voice_over,
-                Color(0xFF0066CC),
+                const Color(0xFF0066CC),
                 category: 'asr',
                 appState: appState,
                 isDark: isDark,
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // AI对话配置
           _buildAICategorySection(
@@ -311,7 +311,7 @@ class _SettingsPageState extends State<SettingsPage> {
             appState: appState,
             category: 'chat',
             icon: Icons.smart_toy_rounded,
-            iconColor: Color(0xFF1E88E5),
+            iconColor: const Color(0xFF1E88E5),
             title: 'AI对话分析配置',
             description:
                 '配置对话分析引擎，用于产品推荐中的智能分析和推荐。支持兼容 OpenAI Chat API 格式的AI服务。',
@@ -323,7 +323,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 '豆包',
                 'doubao',
                 Icons.local_fire_department,
-                Color(0xFFFF6D00),
+                const Color(0xFFFF6D00),
                 appState: appState,
                 isDark: isDark,
               ),
@@ -331,7 +331,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 '千问',
                 'qianwen',
                 Icons.auto_awesome,
-                Color(0xFF6A1B9A),
+                const Color(0xFF6A1B9A),
                 appState: appState,
                 isDark: isDark,
               ),
@@ -339,7 +339,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 'GPT',
                 'gpt',
                 Icons.psychology,
-                Color(0xFF10A37F),
+                const Color(0xFF10A37F),
                 appState: appState,
                 isDark: isDark,
               ),
@@ -347,7 +347,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 'Claude',
                 'claude',
                 Icons.smart_toy,
-                Color(0xFFD97757),
+                const Color(0xFFD97757),
                 appState: appState,
                 isDark: isDark,
               ),
@@ -355,33 +355,33 @@ class _SettingsPageState extends State<SettingsPage> {
                 'Gemini',
                 'gemini',
                 Icons.diamond,
-                Color(0xFF4285F4),
+                const Color(0xFF4285F4),
                 appState: appState,
                 isDark: isDark,
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // 关系标签管理
           _buildSectionCard(
             isDark: isDark,
             icon: Icons.label_important_rounded,
-            iconColor: Color(0xFFE53935),
+            iconColor: const Color(0xFFE53935),
             title: '关系标签管理',
             children: [
               Text(
                 '管理客户关系标签，添加关系时可从中选择。自定义标签会保存到本地。',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
               ),
-              SizedBox(height: 14),
+              const SizedBox(height: 14),
               // 当前标签列表
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: appState.relationshipLabels.map<Widget>((label) {
                   return Chip(
-                    label: Text(label, style: TextStyle(fontSize: 13)),
+                    label: Text(label, style: const TextStyle(fontSize: 13)),
                     backgroundColor: _relLabelColor(
                       label,
                     ).withValues(alpha: 0.1),
@@ -391,9 +391,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     deleteIconColor: Colors.grey.shade500,
                     onDeleted: () async {
                       if (appState.relationshipLabels.length <= 1) {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text('至少保留一个关系标签')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('至少保留一个关系标签')),
+                        );
                         return;
                       }
                       await appState.removeRelationshipLabel(label);
@@ -405,7 +405,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   );
                 }).toList(),
               ),
-              SizedBox(height: 14),
+              const SizedBox(height: 14),
               // 添加新标签
               Row(
                 children: [
@@ -416,7 +416,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         labelText: '新标签名称',
                         hintText: '输入关系标签',
                         isDense: true,
-                        contentPadding: EdgeInsets.symmetric(
+                        contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 10,
                         ),
@@ -433,7 +433,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       },
                     ),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   ElevatedButton.icon(
                     onPressed: () async {
                       final text = _newRelLabelController.text.trim();
@@ -445,11 +445,11 @@ class _SettingsPageState extends State<SettingsPage> {
                         if (success) _newRelLabelController.clear();
                       }
                     },
-                    icon: Icon(Icons.add_rounded, size: 18),
-                    label: Text('添加'),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('添加'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFE53935),
-                      padding: EdgeInsets.symmetric(
+                      backgroundColor: const Color(0xFFE53935),
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 14,
                         vertical: 10,
                       ),
@@ -460,7 +460,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ],
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               // 重置按钮
               Align(
                 alignment: Alignment.centerRight,
@@ -469,19 +469,19 @@ class _SettingsPageState extends State<SettingsPage> {
                     final confirmed = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: Text('重置关系标签'),
-                        content: Text('确定要恢复默认关系标签吗？自定义添加的标签将被移除。'),
+                        title: const Text('重置关系标签'),
+                        content: const Text('确定要恢复默认关系标签吗？自定义添加的标签将被移除。'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
-                            child: Text('取消'),
+                            child: const Text('取消'),
                           ),
                           ElevatedButton(
                             onPressed: () => Navigator.pop(ctx, true),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFE53935),
+                              backgroundColor: const Color(0xFFE53935),
                             ),
-                            child: Text('重置'),
+                            child: const Text('重置'),
                           ),
                         ],
                       ),
@@ -489,31 +489,31 @@ class _SettingsPageState extends State<SettingsPage> {
                     if (confirmed == true) {
                       await appState.resetRelationshipLabels();
                       if (!mounted) return;
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('关系标签已重置为默认')));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('关系标签已重置为默认')),
+                      );
                     }
                   },
-                  icon: Icon(Icons.restore_rounded, size: 16),
-                  label: Text('恢复默认标签', style: TextStyle(fontSize: 13)),
+                  icon: const Icon(Icons.restore_rounded, size: 16),
+                  label: const Text('恢复默认标签', style: TextStyle(fontSize: 13)),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // 同事管理
           _buildSectionCard(
             isDark: isDark,
             icon: Icons.group_rounded,
-            iconColor: Color(0xFF43A047),
+            iconColor: const Color(0xFF43A047),
             title: '同事管理',
             children: [
               Text(
                 '管理同事信息，包括添加、编辑和删除同事资料',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               ),
-              SizedBox(height: 14),
+              const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -521,30 +521,30 @@ class _SettingsPageState extends State<SettingsPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ColleagueManagementPage(),
+                        builder: (context) => const ColleagueManagementPage(),
                       ),
                     );
                   },
-                  icon: Icon(Icons.arrow_forward_rounded, size: 18),
-                  label: Text('进入同事管理页面'),
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                  label: const Text('进入同事管理页面'),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // 数据备份与同步
           _buildSectionCard(
             isDark: isDark,
             icon: Icons.cloud_sync_rounded,
-            iconColor: Color(0xFF0288D1),
+            iconColor: const Color(0xFF0288D1),
             title: '数据备份与同步',
             children: [
               Text(
                 '自动定时本地备份、数据恢复、云端备份分享',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               ),
-              SizedBox(height: 14),
+              const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -552,59 +552,59 @@ class _SettingsPageState extends State<SettingsPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => BackupRestorePage(),
+                        builder: (context) => const BackupRestorePage(),
                       ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF0288D1),
+                    backgroundColor: const Color(0xFF0288D1),
                   ),
-                  icon: Icon(Icons.backup_table_rounded, size: 18),
-                  label: Text('进入备份管理'),
+                  icon: const Icon(Icons.backup_table_rounded, size: 18),
+                  label: const Text('进入备份管理'),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // 数据库管理
           _buildSectionCard(
             isDark: isDark,
             icon: Icons.storage_rounded,
-            iconColor: Color(0xFFFF7043),
+            iconColor: const Color(0xFFFF7043),
             title: '数据库管理',
             children: [
               Text(
                 '管理数据备份与恢复，包含数据库和附件的完整导出导入',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               ),
-              SizedBox(height: 14),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: kIsWeb ? null : () => _exportBackup(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF1565C0),
+                        backgroundColor: const Color(0xFF1565C0),
                       ),
-                      icon: Icon(Icons.download_rounded, size: 18),
-                      label: Text('完整备份'),
+                      icon: const Icon(Icons.download_rounded, size: 18),
+                      label: const Text('完整备份'),
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: kIsWeb ? null : () => _importBackup(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF00897B),
+                        backgroundColor: const Color(0xFF00897B),
                       ),
-                      icon: Icon(Icons.upload_rounded, size: 18),
-                      label: Text('恢复备份'),
+                      icon: const Icon(Icons.upload_rounded, size: 18),
+                      label: const Text('恢复备份'),
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
@@ -612,42 +612,42 @@ class _SettingsPageState extends State<SettingsPage> {
                       onPressed: kIsWeb
                           ? null
                           : () => _exportCSV(context, appState, 'customers'),
-                      icon: Icon(Icons.table_chart_rounded, size: 18),
-                      label: Text('导出客户CSV'),
+                      icon: const Icon(Icons.table_chart_rounded, size: 18),
+                      label: const Text('导出客户CSV'),
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: kIsWeb
                           ? null
                           : () => _exportCSV(context, appState, 'products'),
-                      icon: Icon(Icons.table_chart_rounded, size: 18),
-                      label: Text('导出产品CSV'),
+                      icon: const Icon(Icons.table_chart_rounded, size: 18),
+                      label: const Text('导出产品CSV'),
                     ),
                   ),
                 ],
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // 关于
           _buildSectionCard(
             isDark: isDark,
             icon: Icons.info_rounded,
-            iconColor: Color(0xFF78909C),
+            iconColor: const Color(0xFF78909C),
             title: '关于',
             children: [
               _buildAboutRow('版本', '1.0.0'),
-              Divider(height: 20),
+              const Divider(height: 20),
               _buildAboutRow('应用', '保险经纪人 v1.0'),
-              Divider(height: 20),
+              const Divider(height: 20),
               _buildAboutRow('版权', '© 2026 保险经纪人'),
             ],
           ),
-          SizedBox(height: 24),
-          SizedBox(height: 40),
+          const SizedBox(height: 24),
+          const SizedBox(height: 40),
         ],
       ),
     );
@@ -672,7 +672,7 @@ class _SettingsPageState extends State<SettingsPage> {
             },
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: alreadyAdded
               ? (isDark
@@ -690,7 +690,7 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 16, color: alreadyAdded ? Colors.grey : color),
-            SizedBox(width: 6),
+            const SizedBox(width: 6),
             Text(
               alreadyAdded ? '$label (已添加)' : label,
               style: TextStyle(
@@ -744,8 +744,8 @@ class _SettingsPageState extends State<SettingsPage> {
         builder: (context, setDialogState) => AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.smart_toy_rounded, color: Color(0xFF1E88E5)),
-              SizedBox(width: 8),
+              const Icon(Icons.smart_toy_rounded, color: Color(0xFF1E88E5)),
+              const SizedBox(width: 8),
               Text('配置 $name'),
             ],
           ),
@@ -761,22 +761,22 @@ class _SettingsPageState extends State<SettingsPage> {
                     decoration: InputDecoration(
                       labelText: 'API Key *',
                       hintText: '输入 $name 的 API Key',
-                      prefixIcon: Icon(Icons.key),
+                      prefixIcon: const Icon(Icons.key),
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: baseUrlController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Base URL',
                       hintText: 'API 服务地址',
                       prefixIcon: Icon(Icons.link),
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: modelController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: '模型名称',
                       hintText: '使用的模型',
                       prefixIcon: Icon(Icons.psychology),
@@ -789,14 +789,14 @@ class _SettingsPageState extends State<SettingsPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('取消'),
+              child: const Text('取消'),
             ),
             ElevatedButton(
               onPressed: () async {
                 if (apiKeyController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(
                     pageContext,
-                  ).showSnackBar(SnackBar(content: Text('请填写API Key')));
+                  ).showSnackBar(const SnackBar(content: Text('请填写API Key')));
                   return;
                 }
                 final appState = Provider.of<AppState>(context, listen: false);
@@ -822,7 +822,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   pageContext,
                 ).showSnackBar(SnackBar(content: Text('$name 引擎已配置')));
               },
-              child: Text('保存'),
+              child: const Text('保存'),
             ),
           ],
         ),
@@ -842,7 +842,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required List<Widget> children,
   }) {
     return Container(
-      padding: EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppDesign.cardBg(isDark),
         borderRadius: BorderRadius.circular(16),
@@ -850,7 +850,7 @@ class _SettingsPageState extends State<SettingsPage> {
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -860,21 +860,24 @@ class _SettingsPageState extends State<SettingsPage> {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 20, color: iconColor),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 title,
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           ...children,
         ],
       ),
@@ -911,7 +914,7 @@ class _SettingsPageState extends State<SettingsPage> {
           description,
           style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
         ),
-        SizedBox(height: 14),
+        const SizedBox(height: 14),
         // 已配置的引擎列表
         if (categoryConfigs.isNotEmpty) ...[
           ...categoryConfigs.map<Widget>((entry) {
@@ -924,8 +927,8 @@ class _SettingsPageState extends State<SettingsPage> {
             final model = config['model']?.toString() ?? '';
 
             return Container(
-              margin: EdgeInsets.only(bottom: 8),
-              padding: EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: (enabled ? iconColor : Colors.grey).withValues(
                   alpha: 0.06,
@@ -956,7 +959,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           color: enabled ? iconColor : Colors.grey.shade500,
                         ),
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -965,20 +968,20 @@ class _SettingsPageState extends State<SettingsPage> {
                               children: [
                                 Text(
                                   name,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 15,
                                   ),
                                 ),
-                                SizedBox(width: 8),
+                                const SizedBox(width: 8),
                                 Container(
-                                  padding: EdgeInsets.symmetric(
+                                  padding: const EdgeInsets.symmetric(
                                     horizontal: 6,
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
                                     color: enabled
-                                        ? Color(
+                                        ? const Color(
                                             0xFF43A047,
                                           ).withValues(alpha: 0.12)
                                         : Colors.grey.withValues(alpha: 0.1),
@@ -989,7 +992,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: enabled
-                                          ? Color(0xFF43A047)
+                                          ? const Color(0xFF43A047)
                                           : Colors.grey,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -997,7 +1000,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             Text(
                               hasApiKey ? 'API Key: ****' : '未配置 API Key',
                               style: TextStyle(
@@ -1039,18 +1042,18 @@ class _SettingsPageState extends State<SettingsPage> {
                               await appState.updateAIConfig(key, updatedConfig);
                               // No setState needed - Provider will auto-rebuild
                             },
-                            activeThumbColor: Color(0xFF43A047),
+                            activeThumbColor: const Color(0xFF43A047),
                             materialTapTargetSize:
                                 MaterialTapTargetSize.shrinkWrap,
                           ),
                           IconButton(
-                            icon: Icon(Icons.edit_outlined, size: 18),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
                             onPressed: () => _showAddAIDialog(
                               editKey: key,
                               category: category,
                             ),
                             padding: EdgeInsets.zero,
-                            constraints: BoxConstraints(
+                            constraints: const BoxConstraints(
                               minWidth: 32,
                               minHeight: 32,
                             ),
@@ -1064,7 +1067,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                             onPressed: () => _confirmDeleteAI(key, name),
                             padding: EdgeInsets.zero,
-                            constraints: BoxConstraints(
+                            constraints: const BoxConstraints(
                               minWidth: 32,
                               minHeight: 32,
                             ),
@@ -1078,14 +1081,14 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             );
           }),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Divider(height: 1, color: Colors.grey.shade200),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
         ],
         // 无配置提示
         if (categoryConfigs.isEmpty)
           Container(
-            padding: EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               borderRadius: BorderRadius.circular(10),
@@ -1101,12 +1104,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   size: 40,
                   color: Colors.grey.shade300,
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text(
                   emptyHint,
                   style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   emptySubHint,
                   style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
@@ -1119,12 +1122,12 @@ class _SettingsPageState extends State<SettingsPage> {
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () => _showAddAIDialog(category: category),
-            icon: Icon(Icons.add_rounded, size: 20),
+            icon: const Icon(Icons.add_rounded, size: 20),
             label: Text(addLabel),
             style: OutlinedButton.styleFrom(
               foregroundColor: iconColor,
               side: BorderSide(color: iconColor.withValues(alpha: 0.5)),
-              padding: EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -1132,12 +1135,12 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         if (presetChips.isNotEmpty) ...[
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             '快捷添加：',
             style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Wrap(spacing: 8, runSpacing: 8, children: presetChips),
         ],
       ],
@@ -1154,7 +1157,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         Text(
           value,
-          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
         ),
       ],
     );
@@ -1202,7 +1205,7 @@ class _SettingsPageState extends State<SettingsPage> {
         if (!ctx.mounted) return;
         ScaffoldMessenger.of(
           ctx,
-        ).showSnackBar(SnackBar(content: Text('无法获取文件路径')));
+        ).showSnackBar(const SnackBar(content: Text('无法获取文件路径')));
         return;
       }
 
@@ -1213,7 +1216,7 @@ class _SettingsPageState extends State<SettingsPage> {
       final confirmed = await showDialog<bool>(
         context: ctx,
         builder: (dialogCtx) => AlertDialog(
-          title: Row(
+          title: const Row(
             children: [
               Icon(Icons.warning_amber, color: Colors.orange),
               SizedBox(width: 8),
@@ -1224,23 +1227,26 @@ class _SettingsPageState extends State<SettingsPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('即将从以下备份恢复所有数据（含附件）：'),
-              SizedBox(height: 4),
+              const Text('即将从以下备份恢复所有数据（含附件）：'),
+              const SizedBox(height: 4),
               Container(
-                margin: EdgeInsets.all(8),
-                padding: EdgeInsets.all(10),
+                margin: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.orange.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   platformFile.name,
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Container(
-                padding: EdgeInsets.all(10),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.red.shade50,
                   borderRadius: BorderRadius.circular(8),
@@ -1256,7 +1262,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         fontSize: 13,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       '当前所有数据将被覆盖替换！建议先创建当前数据的备份再进行恢复。',
                       style: TextStyle(
@@ -1272,12 +1278,12 @@ class _SettingsPageState extends State<SettingsPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogCtx, false),
-              child: Text('取消'),
+              child: const Text('取消'),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(dialogCtx, true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: Text('确认恢复', style: TextStyle(color: Colors.white)),
+              child: const Text('确认恢复', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -1290,7 +1296,7 @@ class _SettingsPageState extends State<SettingsPage> {
       showDialog(
         barrierDismissible: false,
         context: ctx,
-        builder: (loadingCtx) => PopScope(
+        builder: (loadingCtx) => const PopScope(
           canPop: false,
           child: AlertDialog(
             content: Row(
@@ -1338,20 +1344,23 @@ class _SettingsPageState extends State<SettingsPage> {
         showDialog(
           context: ctx,
           builder: (successCtx) => AlertDialog(
-            icon: Icon(Icons.check_circle, color: Colors.green, size: 48),
-            title: Text('恢复成功！'),
+            icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
+            title: const Text('恢复成功！'),
             content: Text('$message\n\n建议重启应用以完整加载恢复的数据。'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(successCtx),
-                child: Text('好的'),
+                child: const Text('好的'),
               ),
             ],
           ),
         );
       } else {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text(message), duration: Duration(seconds: 5)),
+          SnackBar(
+            content: Text(message),
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } catch (e) {
@@ -1379,7 +1388,7 @@ class _SettingsPageState extends State<SettingsPage> {
       String csvContent;
 
       if (type == 'customers') {
-        final header = '姓名,别名,年龄,性别,评级,电话,地址,标签,创建时间';
+        const header = '姓名,别名,年龄,性别,评级,电话,地址,标签,创建时间';
         final rows = appState.customers
             .map((c) {
               final phones = esc(c.phones.join('; '));
@@ -1390,7 +1399,7 @@ class _SettingsPageState extends State<SettingsPage> {
             .join('\n');
         csvContent = '$header\n$rows';
       } else {
-        final header = '公司,名称,描述,优势,分类,开始日期,结束日期,创建时间';
+        const header = '公司,名称,描述,优势,分类,开始日期,结束日期,创建时间';
         final rows = appState.products
             .map((p) {
               return '"${esc(p.company)}","${esc(p.name)}","${esc(p.description)}","${esc(p.sellingPoints)}","${esc(p.category)}","${esc(p.salesStartDate)}","${esc(p.salesEndDate)}","${esc(p.createdAt)}"';

@@ -9,22 +9,22 @@ import 'package:crypto/crypto.dart';
 import 'dart:convert';
 
 class DatabaseHelper {
-  static final _databaseFileName = "insurance_manager.db"; // 数据库文件名
-  static final _legacyDatabaseFileName = "insurance_app.db"; // 旧版数据库文件名（用于迁移）
-  static final _databaseVersion = 13;
+  static const _databaseFileName = 'insurance_manager.db'; // 数据库文件名
+  static const _legacyDatabaseFileName = 'insurance_app.db'; // 旧版数据库文件名（用于迁移）
+  static const _databaseVersion = 13;
   static int get databaseVersion => _databaseVersion;
 
   // Database table names
-  static final tableCustomers = 'customers'; // 客户表
-  static final tableProducts = 'products'; // 产品表
-  static final tableVisits = 'visits'; // 拜访记录表
-  static final tableColleagues = 'colleagues'; // 同事表
-  static final tableCustomerProducts = 'customer_products'; // 客户-产品关联表
-  static final tableCustomerRelations = 'customer_relations'; // 客户关系表
-  static final tableSales = 'sales'; // 销售记录表
-  static final tableReminders = 'reminders'; // 提醒表
-  static final tableCustomerTags = 'customer_tags'; // 客户标签表
-  static final tableTags = 'tags'; // 标签定义表
+  static const tableCustomers = 'customers'; // 客户表
+  static const tableProducts = 'products'; // 产品表
+  static const tableVisits = 'visits'; // 拜访记录表
+  static const tableColleagues = 'colleagues'; // 同事表
+  static const tableCustomerProducts = 'customer_products'; // 客户-产品关联表
+  static const tableCustomerRelations = 'customer_relations'; // 客户关系表
+  static const tableSales = 'sales'; // 销售记录表
+  static const tableReminders = 'reminders'; // 提醒表
+  static const tableCustomerTags = 'customer_tags'; // 客户标签表
+  static const tableTags = 'tags'; // 标签定义表
 
   // make this a singleton class
   DatabaseHelper._internal();
@@ -77,9 +77,13 @@ class DatabaseHelper {
       );
     } else {
       // For mobile platforms
-      Directory documentsDirectory = await getApplicationDocumentsDirectory();
-      String newPath = join(documentsDirectory.path, _databaseFileName);
-      String oldPath = join(documentsDirectory.path, _legacyDatabaseFileName);
+      final Directory documentsDirectory =
+          await getApplicationDocumentsDirectory();
+      final String newPath = join(documentsDirectory.path, _databaseFileName);
+      final String oldPath = join(
+        documentsDirectory.path,
+        _legacyDatabaseFileName,
+      );
 
       // Migrate old database file if it exists and new one doesn't
       final oldFile = File(oldPath);
@@ -426,7 +430,7 @@ class DatabaseHelper {
 
   // Batch load all customer-related data (eliminates N+1 query problem)
   Future<Map<String, dynamic>> batchLoadCustomerData() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
 
     final phones = await db.query('customer_phones');
     final addresses = await db.query('customer_addresses');
@@ -1265,13 +1269,13 @@ class DatabaseHelper {
 
   // Insert a customer into the database
   Future<int> insertCustomer(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert(tableCustomers, row);
   }
 
   // Insert a phone for a customer
   Future<int> insertCustomerPhone(int customerId, String phone) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert('customer_phones', {
       'customer_id': customerId,
       'phone': phone,
@@ -1280,7 +1284,7 @@ class DatabaseHelper {
 
   // Insert an address for a customer
   Future<int> insertCustomerAddress(int customerId, String address) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert('customer_addresses', {
       'customer_id': customerId,
       'address': address,
@@ -1289,14 +1293,14 @@ class DatabaseHelper {
 
   // Get all customers
   Future<List<Map<String, dynamic>>> getAllCustomers() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.query(tableCustomers);
   }
 
   // Get customer by id
   Future<Map<String, dynamic>?> getCustomerById(int id) async {
-    Database db = await instance.database;
-    List<Map<String, dynamic>> results = await db.query(
+    final Database db = await instance.database;
+    final List<Map<String, dynamic>> results = await db.query(
       tableCustomers,
       where: 'id = ?',
       whereArgs: [id],
@@ -1306,8 +1310,8 @@ class DatabaseHelper {
 
   // Get customer phones
   Future<List<String>> getCustomerPhones(int customerId) async {
-    Database db = await instance.database;
-    List<Map<String, dynamic>> results = await db.query(
+    final Database db = await instance.database;
+    final List<Map<String, dynamic>> results = await db.query(
       'customer_phones',
       where: 'customer_id = ?',
       whereArgs: [customerId],
@@ -1320,8 +1324,8 @@ class DatabaseHelper {
 
   // Get customer addresses
   Future<List<String>> getCustomerAddresses(int customerId) async {
-    Database db = await instance.database;
-    List<Map<String, dynamic>> results = await db.query(
+    final Database db = await instance.database;
+    final List<Map<String, dynamic>> results = await db.query(
       'customer_addresses',
       where: 'customer_id = ?',
       whereArgs: [customerId],
@@ -1334,8 +1338,8 @@ class DatabaseHelper {
 
   // Update a customer
   Future<int> updateCustomer(Map<String, dynamic> row) async {
-    Database db = await instance.database;
-    int id = (row['id'] as num).toInt();
+    final Database db = await instance.database;
+    final int id = (row['id'] as num).toInt();
     final updateData = Map<String, dynamic>.from(row)..remove('id');
     return await db.update(
       tableCustomers,
@@ -1348,9 +1352,9 @@ class DatabaseHelper {
   // Delete a customer and all related records
   // ON DELETE CASCADE handles child records automatically; we only collect file paths for cleanup
   Future<int> deleteCustomer(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     // Collect file paths to delete after transaction succeeds
-    List<String> filesToDelete = [];
+    final List<String> filesToDelete = [];
     final result = await db.transaction((txn) async {
       // Query photos inside transaction to collect file paths
       final photoResults = await txn.query(
@@ -1358,7 +1362,7 @@ class DatabaseHelper {
         where: 'customer_id = ?',
         whereArgs: [id],
       );
-      for (var r in photoResults) {
+      for (final r in photoResults) {
         final filePath = r['file_path'] as String?;
         final thumbPath = r['thumbnail_path'] as String?;
         if (filePath != null) filesToDelete.add(filePath);
@@ -1378,20 +1382,20 @@ class DatabaseHelper {
 
   // Insert a product
   Future<int> insertProduct(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert(tableProducts, row);
   }
 
   // Get all products
   Future<List<Map<String, dynamic>>> getAllProducts() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.query(tableProducts);
   }
 
   // Get product by id
   Future<Map<String, dynamic>?> getProductById(int id) async {
-    Database db = await instance.database;
-    List<Map<String, dynamic>> results = await db.query(
+    final Database db = await instance.database;
+    final List<Map<String, dynamic>> results = await db.query(
       tableProducts,
       where: 'id = ?',
       whereArgs: [id],
@@ -1401,8 +1405,8 @@ class DatabaseHelper {
 
   // Update a product
   Future<int> updateProduct(Map<String, dynamic> row) async {
-    Database db = await instance.database;
-    int id = (row['id'] as num).toInt();
+    final Database db = await instance.database;
+    final int id = (row['id'] as num).toInt();
     final updateData = Map<String, dynamic>.from(row)..remove('id');
     return await db.update(
       tableProducts,
@@ -1414,9 +1418,9 @@ class DatabaseHelper {
 
   // Delete a product and all related records (ON DELETE CASCADE handles child records)
   Future<int> deleteProduct(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     // Collect file paths to delete after transaction succeeds
-    List<String> filesToDelete = [];
+    final List<String> filesToDelete = [];
     final attachments = await db.query(
       'product_attachments',
       where: 'product_id = ?',
@@ -1445,13 +1449,13 @@ class DatabaseHelper {
 
   // Insert a visit
   Future<int> insertVisit(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert(tableVisits, row);
   }
 
   // Get visits for a customer
   Future<List<Map<String, dynamic>>> getCustomerVisits(int customerId) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.query(
       tableVisits,
       where: 'customer_id = ?',
@@ -1462,20 +1466,20 @@ class DatabaseHelper {
 
   // Insert a colleague
   Future<int> insertColleague(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert(tableColleagues, row);
   }
 
   // Get all colleagues
   Future<List<Map<String, dynamic>>> getAllColleagues() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.query(tableColleagues);
   }
 
   // Update a colleague
   Future<int> updateColleague(Map<String, dynamic> row) async {
-    Database db = await instance.database;
-    int id = (row['id'] as num).toInt();
+    final Database db = await instance.database;
+    final int id = (row['id'] as num).toInt();
     final updateData = Map<String, dynamic>.from(row)..remove('id');
     return await db.update(
       tableColleagues,
@@ -1487,19 +1491,19 @@ class DatabaseHelper {
 
   // Delete a colleague (ON DELETE SET NULL on sales.colleague_id handles cleanup)
   Future<int> deleteColleague(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.delete(tableColleagues, where: 'id = ?', whereArgs: [id]);
   }
 
   // Insert customer-product relationship
   Future<int> insertCustomerProduct(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert(tableCustomerProducts, row);
   }
 
   // Get customer products
   Future<List<Map<String, dynamic>>> getCustomerProducts(int customerId) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT p.*, cp.purchase_date
@@ -1513,7 +1517,7 @@ class DatabaseHelper {
 
   // Insert customer relationship
   Future<int> insertCustomerRelationship(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert(tableCustomerRelations, row);
   }
 
@@ -1521,7 +1525,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getCustomerRelationships(
     int customerId,
   ) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT c.*, cr.relationship
@@ -1535,13 +1539,13 @@ class DatabaseHelper {
 
   // Insert a sale
   Future<int> insertSale(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert(tableSales, row);
   }
 
   // Get sales for a customer
   Future<List<Map<String, dynamic>>> getCustomerSales(int customerId) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT s.*, p.name as product_name, c.name as colleague_name
@@ -1557,7 +1561,7 @@ class DatabaseHelper {
 
   // Get visit efficiency analysis (optimized with JOIN instead of correlated subqueries)
   Future<List<Map<String, dynamic>>> getVisitEfficiencyAnalysis() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery('''
       SELECT
         c.id as customer_id,
@@ -1578,7 +1582,7 @@ class DatabaseHelper {
 
   // Get all sales
   Future<List<Map<String, dynamic>>> getAllSales() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery('''
       SELECT s.*, c.name as customer_name, p.name as product_name, col.name as colleague_name
       FROM $tableSales s
@@ -1591,19 +1595,19 @@ class DatabaseHelper {
 
   // Get all visits
   Future<List<Map<String, dynamic>>> getAllVisits() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.query(tableVisits, orderBy: 'date DESC');
   }
 
   // Insert a reminder
   Future<int> insertReminder(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert(tableReminders, row);
   }
 
   // Get all reminders
   Future<List<Map<String, dynamic>>> getAllReminders() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery('''
       SELECT r.*, c.name as customer_name
       FROM $tableReminders r
@@ -1614,7 +1618,7 @@ class DatabaseHelper {
 
   // Get reminders by date
   Future<List<Map<String, dynamic>>> getRemindersByDate(String date) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT r.*, c.name as customer_name
@@ -1629,7 +1633,7 @@ class DatabaseHelper {
 
   // Get pending reminders (not completed)
   Future<List<Map<String, dynamic>>> getPendingReminders() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery('''
       SELECT r.*, c.name as customer_name
       FROM $tableReminders r
@@ -1641,7 +1645,7 @@ class DatabaseHelper {
 
   // Get overdue reminders
   Future<List<Map<String, dynamic>>> getOverdueReminders() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final today = DateTime.now().toIso8601String().substring(0, 10);
     return await db.rawQuery(
       '''
@@ -1657,8 +1661,8 @@ class DatabaseHelper {
 
   // Update a reminder
   Future<int> updateReminder(Map<String, dynamic> row) async {
-    Database db = await instance.database;
-    int id = (row['id'] as num).toInt();
+    final Database db = await instance.database;
+    final int id = (row['id'] as num).toInt();
     final updateData = Map<String, dynamic>.from(row)..remove('id');
     return await db.update(
       tableReminders,
@@ -1670,13 +1674,13 @@ class DatabaseHelper {
 
   // Delete a reminder
   Future<int> deleteReminder(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.delete(tableReminders, where: 'id = ?', whereArgs: [id]);
   }
 
   // Get monthly sales summary
   Future<List<Map<String, dynamic>>> getMonthlySalesSummary(int year) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT
@@ -1694,7 +1698,7 @@ class DatabaseHelper {
 
   // Get quarterly sales summary
   Future<List<Map<String, dynamic>>> getQuarterlySalesSummary(int year) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT
@@ -1717,7 +1721,7 @@ class DatabaseHelper {
 
   // Get annual sales summary
   Future<List<Map<String, dynamic>>> getAnnualSalesSummary(int year) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT
@@ -1734,7 +1738,7 @@ class DatabaseHelper {
 
   // Get monthly visit summary
   Future<List<Map<String, dynamic>>> getMonthlyVisitSummary(int year) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT
@@ -1751,7 +1755,7 @@ class DatabaseHelper {
 
   // Get all-time total sales amount
   Future<double> getAllTimeTotalSalesAmount() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final result = await db.rawQuery(
       'SELECT COALESCE(SUM(amount), 0) as total FROM $tableSales',
     );
@@ -1760,7 +1764,7 @@ class DatabaseHelper {
 
   // Get all-time total visits count
   Future<int> getAllTimeTotalVisitsCount() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final result = await db.rawQuery(
       'SELECT COUNT(*) as total FROM $tableVisits',
     );
@@ -1771,7 +1775,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getMonthlyCommissionSummary(
     int year,
   ) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT
@@ -1790,7 +1794,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getQuarterlyCommissionSummary(
     int year,
   ) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT
@@ -1814,7 +1818,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getAnnualCommissionSummary(
     int year,
   ) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT
@@ -1832,7 +1836,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getMonthlyNewCustomerSummary(
     int year,
   ) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT
@@ -1849,7 +1853,7 @@ class DatabaseHelper {
 
   // Get product sales ranking
   Future<List<Map<String, dynamic>>> getProductSalesRanking() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery('''
       SELECT
         p.name as product_name,
@@ -1865,7 +1869,7 @@ class DatabaseHelper {
 
   // Get conversion funnel analysis (optimized with LEFT JOIN instead of EXISTS subqueries)
   Future<List<Map<String, dynamic>>> getConversionFunnelAnalysis() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery('''
       SELECT
         COALESCE(c.rating, 0) as rating,
@@ -1884,7 +1888,7 @@ class DatabaseHelper {
 
   // Get customer rating distribution
   Future<List<Map<String, dynamic>>> getCustomerRatingDistribution() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery('''
       SELECT
         COALESCE(rating, 0) as rating,
@@ -1899,8 +1903,8 @@ class DatabaseHelper {
 
   // Update a visit
   Future<int> updateVisit(Map<String, dynamic> row) async {
-    Database db = await instance.database;
-    int id = (row['id'] as num).toInt();
+    final Database db = await instance.database;
+    final int id = (row['id'] as num).toInt();
     final updateData = Map<String, dynamic>.from(row)..remove('id');
     return await db.update(
       tableVisits,
@@ -1912,7 +1916,7 @@ class DatabaseHelper {
 
   // Delete a visit
   Future<int> deleteVisit(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.delete(tableVisits, where: 'id = ?', whereArgs: [id]);
   }
 
@@ -1920,8 +1924,8 @@ class DatabaseHelper {
 
   // Update a sale
   Future<int> updateSale(Map<String, dynamic> row) async {
-    Database db = await instance.database;
-    int id = (row['id'] as num).toInt();
+    final Database db = await instance.database;
+    final int id = (row['id'] as num).toInt();
     final updateData = Map<String, dynamic>.from(row)..remove('id');
     return await db.update(
       tableSales,
@@ -1933,7 +1937,7 @@ class DatabaseHelper {
 
   // Delete a sale
   Future<int> deleteSale(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.delete(tableSales, where: 'id = ?', whereArgs: [id]);
   }
 
@@ -1941,7 +1945,7 @@ class DatabaseHelper {
 
   // Delete a customer relationship
   Future<int> deleteCustomerRelationship(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.delete(
       tableCustomerRelations,
       where: 'id = ?',
@@ -1951,7 +1955,7 @@ class DatabaseHelper {
 
   // Delete customer product association
   Future<int> deleteCustomerProduct(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.delete(
       tableCustomerProducts,
       where: 'id = ?',
@@ -1962,12 +1966,12 @@ class DatabaseHelper {
   // ===== Customer Photos =====
 
   Future<int> insertCustomerPhoto(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert('customer_photos', row);
   }
 
   Future<List<Map<String, dynamic>>> getCustomerPhotos(int customerId) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.query(
       'customer_photos',
       where: 'customer_id = ?',
@@ -1977,7 +1981,7 @@ class DatabaseHelper {
   }
 
   Future<int> deleteCustomerPhoto(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final results = await db.query(
       'customer_photos',
       where: 'id = ?',
@@ -1997,13 +2001,13 @@ class DatabaseHelper {
   }
 
   Future<int> deleteCustomerPhotosByCustomerId(int customerId) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final results = await db.query(
       'customer_photos',
       where: 'customer_id = ?',
       whereArgs: [customerId],
     );
-    for (var r in results) {
+    for (final r in results) {
       final path = r['file_path'] as String?;
       final thumbPath = r['thumbnail_path'] as String?;
       try {
@@ -2023,17 +2027,17 @@ class DatabaseHelper {
   // ===== AI Configs =====
 
   Future<int> insertAIConfig(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert('ai_configs', row);
   }
 
   Future<List<Map<String, dynamic>>> getAllAIConfigs() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.query('ai_configs', orderBy: 'id ASC');
   }
 
   Future<Map<String, dynamic>?> getAIConfigByKey(String providerKey) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final results = await db.query(
       'ai_configs',
       where: 'provider_key = ?',
@@ -2046,7 +2050,7 @@ class DatabaseHelper {
     String providerKey,
     Map<String, dynamic> row,
   ) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.update(
       'ai_configs',
       row,
@@ -2056,7 +2060,7 @@ class DatabaseHelper {
   }
 
   Future<int> deleteAIConfigByKey(String providerKey) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.delete(
       'ai_configs',
       where: 'provider_key = ?',
@@ -2065,7 +2069,7 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getEnabledAIConfigs() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.query(
       'ai_configs',
       where: 'enabled = 1',
@@ -2077,7 +2081,7 @@ class DatabaseHelper {
 
   // Insert a tag for a customer
   Future<int> insertCustomerTag(int customerId, String tag) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     // Sync tag definition table
     await db.insert(tableTags, {
       'name': tag,
@@ -2101,7 +2105,7 @@ class DatabaseHelper {
 
   // Get tags for a customer
   Future<List<String>> getCustomerTags(int customerId) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final results = await db.rawQuery(
       '''
       SELECT t.name FROM $tableCustomerTags ct
@@ -2118,7 +2122,7 @@ class DatabaseHelper {
 
   // Delete a customer tag
   Future<int> deleteCustomerTag(int customerId, String tag) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     // Look up tag_id
     final tagRows = await db.query(
       tableTags,
@@ -2148,7 +2152,7 @@ class DatabaseHelper {
 
   // Delete a tag from all customers (by tag name)
   Future<int> deleteCustomerTagByName(String tag) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final tagRows = await db.query(
       tableTags,
       where: 'name = ?',
@@ -2169,7 +2173,7 @@ class DatabaseHelper {
 
   // Delete all tags for a customer
   Future<int> deleteAllCustomerTags(int customerId) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     // Collect tag_ids that might become orphaned
     final customerTagRows = await db.query(
       tableCustomerTags,
@@ -2200,7 +2204,7 @@ class DatabaseHelper {
 
   // Get all unique tags (from tags definition table)
   Future<List<String>> getAllUniqueTags() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final results = await db.query(
       tableTags,
       columns: ['name'],
@@ -2215,7 +2219,7 @@ class DatabaseHelper {
 
   // Insert a tag definition
   Future<int> insertTag(String name) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert(tableTags, {
       'name': name,
       'created_at': DateTime.now().toIso8601String(),
@@ -2224,13 +2228,13 @@ class DatabaseHelper {
 
   // Delete a tag definition (ON DELETE CASCADE on customer_tags.tag_id handles cleanup)
   Future<int> deleteTag(String name) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.delete(tableTags, where: 'name = ?', whereArgs: [name]);
   }
 
   // Get customers by tag
   Future<List<Map<String, dynamic>>> getCustomersByTag(String tag) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.rawQuery(
       '''
       SELECT c.* FROM $tableCustomers c
@@ -2257,7 +2261,8 @@ class DatabaseHelper {
     if (kIsWeb) {
       return ':memory:';
     } else {
-      Directory documentsDirectory = await getApplicationDocumentsDirectory();
+      final Directory documentsDirectory =
+          await getApplicationDocumentsDirectory();
       return join(documentsDirectory.path, _databaseFileName);
     }
   }
@@ -2265,14 +2270,14 @@ class DatabaseHelper {
   // ===== Product Attachments =====
 
   Future<int> insertProductAttachment(Map<String, dynamic> row) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.insert('product_attachments', row);
   }
 
   Future<List<Map<String, dynamic>>> getProductAttachments(
     int productId,
   ) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.query(
       'product_attachments',
       where: 'product_id = ?',
@@ -2282,7 +2287,7 @@ class DatabaseHelper {
   }
 
   Future<void> deleteProductAttachment(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     // Get file paths to delete physical files
     final results = await db.query(
       'product_attachments',
@@ -2303,13 +2308,13 @@ class DatabaseHelper {
   }
 
   Future<void> deleteProductAttachmentsByProductId(int productId) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final results = await db.query(
       'product_attachments',
       where: 'product_id = ?',
       whereArgs: [productId],
     );
-    for (var r in results) {
+    for (final r in results) {
       final path = r['file_path'] as String?;
       final thumbPath = r['thumbnail_path'] as String?;
       try {
@@ -2330,7 +2335,7 @@ class DatabaseHelper {
 
   /// Public method for password hashing using SHA-256 with salt
   static String hashPassword(String password) {
-    final salt = 'InsuranceManager_salt_v3';
+    const salt = 'InsuranceManager_salt_v3';
     final bytes = utf8.encode('$password$salt');
     final digest = sha256.convert(bytes);
     // Run 1000 rounds for key stretching
@@ -2352,7 +2357,7 @@ class DatabaseHelper {
     required String securityAnswer,
     String role = 'user',
   }) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
 
     // Check if username already exists
     final existing = await db.query(
@@ -2382,7 +2387,7 @@ class DatabaseHelper {
     String username,
     String password,
   ) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
 
     final results = await db.query(
       'users',
@@ -2448,7 +2453,7 @@ class DatabaseHelper {
 
   /// Get user by ID
   Future<Map<String, dynamic>?> getUserById(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     final results = await db.query('users', where: 'id = ?', whereArgs: [id]);
     if (results.isNotEmpty) return results.first;
     return null;
@@ -2456,7 +2461,7 @@ class DatabaseHelper {
 
   /// Get all users (for admin management)
   Future<List<Map<String, dynamic>>> getAllUsers() async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     return await db.query(
       'users',
       orderBy: 'id ASC',
@@ -2474,7 +2479,7 @@ class DatabaseHelper {
 
   /// Update user role
   Future<void> updateUserRole(int userId, String newRole) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     await db.update(
       'users',
       {'role': newRole},
@@ -2489,7 +2494,7 @@ class DatabaseHelper {
     required String securityAnswer,
     required String newPassword,
   }) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
 
     final results = await db.query(
       'users',
@@ -2527,7 +2532,7 @@ class DatabaseHelper {
     required String oldPassword,
     required String newPassword,
   }) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
 
     final results = await db.query(
       'users',
@@ -2555,7 +2560,7 @@ class DatabaseHelper {
 
   /// Delete a user
   Future<void> deleteUser(int id) async {
-    Database db = await instance.database;
+    final Database db = await instance.database;
     await db.delete('users', where: 'id = ?', whereArgs: [id]);
   }
 }

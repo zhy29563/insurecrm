@@ -60,33 +60,33 @@ class _ProductListPageState extends State<ProductListPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('产品管理'),
+        title: const Text('产品管理'),
         actions: [
           IconButton(
             icon: Container(
-              padding: EdgeInsets.all(6),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.add_rounded, size: 20),
+              child: const Icon(Icons.add_rounded, size: 20),
             ),
             onPressed: () => _navigateToProductDetail(),
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
           // 搜索框
           Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: AppSearchBar(
               controller: _searchController,
               hintText: '搜索产品（名称、公司、分类）',
               onChanged: (value) {
                 _debounceTimer?.cancel();
-                _debounceTimer = Timer(Duration(milliseconds: 300), () {
+                _debounceTimer = Timer(const Duration(milliseconds: 300), () {
                   if (mounted) {
                     setState(() {
                       _searchQuery = value;
@@ -103,7 +103,7 @@ class _ProductListPageState extends State<ProductListPage> {
           ),
           Expanded(
             child: appState.isDataLoading
-                ? Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator())
                 : _filteredProducts.isEmpty
                 ? const EmptyStatePlaceholder(
                     icon: Icons.auto_stories_outlined,
@@ -111,12 +111,12 @@ class _ProductListPageState extends State<ProductListPage> {
                     actionHint: '点击右上角添加产品',
                   )
                 : ListView.builder(
-                    padding: EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.only(bottom: 20),
                     itemCount: _filteredProducts.length,
                     itemBuilder: (context, index) {
                       final product = _filteredProducts[index];
                       return Padding(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 5,
                         ),

@@ -17,14 +17,14 @@ void main() async {
   // Only set system UI overlay style on non-web platforms
   if (!kIsWeb) {
     SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+      const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
     );
   }
 
   runApp(
     ChangeNotifierProvider(
       create: (context) => AppState()..initializeApp(),
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
@@ -55,7 +55,7 @@ class MyApp extends StatelessWidget {
     primarySwatch: _primarySwatch,
     scaffoldBackgroundColor: surfaceColor,
     fontFamily: 'Roboto',
-    appBarTheme: AppBarTheme(
+    appBarTheme: const AppBarTheme(
       elevation: 0,
       centerTitle: true,
       backgroundColor: primaryColor,
@@ -70,20 +70,20 @@ class MyApp extends StatelessWidget {
       elevation: 2,
       shadowColor: Colors.black.withValues(alpha: 0.08),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         elevation: 0,
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.grey.shade300),
@@ -94,7 +94,7 @@ class MyApp extends StatelessWidget {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: primaryColor, width: 1.5),
+        borderSide: const BorderSide(color: primaryColor, width: 1.5),
       ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -103,7 +103,7 @@ class MyApp extends StatelessWidget {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       selectedItemColor: primaryColor,
       unselectedItemColor: Colors.grey,
       type: BottomNavigationBarType.fixed,
@@ -124,10 +124,10 @@ class MyApp extends StatelessWidget {
   static final ThemeData _darkTheme = ThemeData(
     brightness: Brightness.dark,
     primarySwatch: _primarySwatch,
-    scaffoldBackgroundColor: Color(0xFF121212),
-    cardColor: Color(0xFF1E1E1E),
+    scaffoldBackgroundColor: const Color(0xFF121212),
+    cardColor: const Color(0xFF1E1E1E),
     fontFamily: 'Roboto',
-    appBarTheme: AppBarTheme(
+    appBarTheme: const AppBarTheme(
       elevation: 0,
       centerTitle: true,
       backgroundColor: Color(0xFF1E1E1E),
@@ -140,12 +140,12 @@ class MyApp extends StatelessWidget {
     cardTheme: CardThemeData(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Color(0xFF2C2C2C),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      fillColor: const Color(0xFF2C2C2C),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.grey.shade700),
@@ -156,14 +156,14 @@ class MyApp extends StatelessWidget {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Color(0xFF42A5F5), width: 1.5),
+        borderSide: const BorderSide(color: Color(0xFF42A5F5), width: 1.5),
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      selectedItemColor: Color(0xFF42A5F5),
+      selectedItemColor: const Color(0xFF42A5F5),
       unselectedItemColor: Colors.grey.shade600,
       type: BottomNavigationBarType.fixed,
-      backgroundColor: Color(0xFF1E1E1E),
+      backgroundColor: const Color(0xFF1E1E1E),
       elevation: 8,
     ),
     snackBarTheme: SnackBarThemeData(
@@ -188,7 +188,7 @@ class MyApp extends StatelessWidget {
           theme: _lightTheme,
           darkTheme: _darkTheme,
           themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
-          home: HomePage(),
+          home: const HomePage(),
           debugShowCheckedModeBanner: false,
         );
       },

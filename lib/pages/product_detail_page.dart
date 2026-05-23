@@ -128,7 +128,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     if (kIsWeb) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('当前平台暂不支持添加图片')));
+      ).showSnackBar(const SnackBar(content: Text('当前平台暂不支持添加图片')));
       return;
     }
     final picker = ImagePicker();
@@ -160,7 +160,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     if (kIsWeb) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('当前平台暂不支持添加视频')));
+      ).showSnackBar(const SnackBar(content: Text('当前平台暂不支持添加视频')));
       return;
     }
     final picker = ImagePicker();
@@ -200,7 +200,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('选择公司'),
+        title: const Text('选择公司'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -213,15 +213,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 },
               ),
             ),
-            if (_companyList.isNotEmpty) Divider(),
+            if (_companyList.isNotEmpty) const Divider(),
             TextField(
               controller: _newCompanyController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: '新公司名称',
                 prefixIcon: Icon(Icons.business),
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () {
                 if (_newCompanyController.text.isNotEmpty) {
@@ -231,7 +231,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   Navigator.pop(context);
                 }
               },
-              child: Text('添加新公司'),
+              child: const Text('添加新公司'),
             ),
           ],
         ),
@@ -244,7 +244,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('选择分类'),
+        title: const Text('选择分类'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -257,15 +257,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 },
               ),
             ),
-            if (_categoryList.isNotEmpty) Divider(),
+            if (_categoryList.isNotEmpty) const Divider(),
             TextField(
               controller: _newCategoryController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: '新分类名称',
                 prefixIcon: Icon(Icons.category),
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () {
                 if (_newCategoryController.text.isNotEmpty) {
@@ -276,7 +276,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   Navigator.pop(context);
                 }
               },
-              child: Text('添加新分类'),
+              child: const Text('添加新分类'),
             ),
           ],
         ),
@@ -335,7 +335,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('保存产品失败，请重试')));
+        ).showSnackBar(const SnackBar(content: Text('保存产品失败，请重试')));
         return;
       }
 
@@ -414,7 +414,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('删除附件失败')));
+        ).showSnackBar(const SnackBar(content: Text('删除附件失败')));
       }
     }
   }
@@ -468,7 +468,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       color: AppDesign.cardBg(isDark),
       child: Column(
         children: [
@@ -481,7 +481,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: Color(0xFF00897B).withValues(alpha: 0.1),
+                    color: const Color(0xFF00897B).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: coverPath != null
@@ -508,11 +508,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       width: 26,
                       height: 26,
                       decoration: BoxDecoration(
-                        color: Color(0xFF00897B),
+                        color: const Color(0xFF00897B),
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.camera_alt,
                         size: 12,
                         color: Colors.white,
@@ -522,11 +522,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ],
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           // 产品名称
           _isEditing
               ? Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: TextFormField(
                     controller: _nameController,
                     textAlign: TextAlign.center,
@@ -537,11 +537,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                     decoration: InputDecoration(
                       isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
                       enabledBorder: UnderlineInputBorder(
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
-                      focusedBorder: UnderlineInputBorder(
+                      focusedBorder: const UnderlineInputBorder(
                         borderSide: BorderSide(color: Color(0xFF00897B)),
                       ),
                       hintText: '产品名称',
@@ -565,7 +565,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           if (_companyController.text.isNotEmpty || _isEditing)
             _isEditing
                 ? Padding(
-                    padding: EdgeInsets.only(left: 40, right: 40, top: 4),
+                    padding: const EdgeInsets.only(left: 40, right: 40, top: 4),
                     child: TextFormField(
                       controller: _companyController,
                       textAlign: TextAlign.center,
@@ -575,11 +575,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                       decoration: InputDecoration(
                         isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 2),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 2),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey.shade200),
                         ),
-                        focusedBorder: UnderlineInputBorder(
+                        focusedBorder: const UnderlineInputBorder(
                           borderSide: BorderSide(color: Color(0xFF00897B)),
                         ),
                         hintText: '所属公司',
@@ -592,7 +592,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                   )
                 : Padding(
-                    padding: EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       _companyController.text,
                       style: TextStyle(
@@ -604,16 +604,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           // 分类标签
           if (_categoryController.text.isNotEmpty && !_isEditing)
             Padding(
-              padding: EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.only(top: 6),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: Color(0xFF00897B).withValues(alpha: 0.1),
+                  color: const Color(0xFF00897B).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   _categoryController.text,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Color(0xFF00897B),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -627,7 +630,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   }
 
   Widget _buildProductIcon() {
-    return Center(
+    return const Center(
       child: Icon(
         Icons.inventory_2_rounded,
         size: 36,
@@ -645,7 +648,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: 20, top: 24, bottom: 6),
+          padding: const EdgeInsets.only(left: 20, top: 24, bottom: 6),
           child: Text(
             title.toUpperCase(),
             style: TextStyle(
@@ -657,7 +660,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ),
         ),
         Container(
-          margin: EdgeInsets.symmetric(horizontal: 16),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(10),
@@ -678,13 +681,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               if (icon != null)
                 Padding(
-                  padding: EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(right: 12),
                   child: Icon(icon, size: 20, color: Colors.grey.shade400),
                 ),
               SizedBox(
@@ -701,7 +704,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         if (showDivider)
           Padding(
             padding: EdgeInsets.only(left: icon != null ? 48 : 84),
-            child: Divider(height: 1, thickness: 0.5),
+            child: const Divider(height: 1, thickness: 0.5),
           ),
       ],
     );
@@ -777,12 +780,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               onTap: onSelect,
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
-                  color: Color(0xFF00897B).withValues(alpha: 0.1),
+                  color: const Color(0xFF00897B).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
+                child: const Text(
                   '选择',
                   style: TextStyle(
                     color: Color(0xFF00897B),
@@ -929,18 +935,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         // 添加按钮
         if (canEdit)
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
                 Padding(
-                  padding: EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(right: 12),
                   child: Icon(
                     Icons.attach_file,
                     size: 20,
                     color: Colors.grey.shade400,
                   ),
                 ),
-                SizedBox(width: 56),
+                const SizedBox(width: 56),
                 Expanded(
                   child: Row(
                     children: [
@@ -948,7 +954,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         onTap: !kIsWeb ? _pickImage : null,
                         borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 6,
                           ),
@@ -967,7 +973,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                 size: 16,
                                 color: Colors.green.shade600,
                               ),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
                                 '图片',
                                 style: TextStyle(
@@ -980,12 +986,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           ),
                         ),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       InkWell(
                         onTap: !kIsWeb ? _pickVideo : null,
                         borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 6,
                           ),
@@ -1008,7 +1014,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                 size: 16,
                                 color: Colors.purple.shade600,
                               ),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
                                 '视频',
                                 style: TextStyle(
@@ -1030,17 +1036,17 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         // 已保存的附件（从DB加载）
         if (_savedAttachments.isNotEmpty)
           Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               children: _savedAttachments.asMap().entries.map<Widget>((entry) {
-                int index = entry.key;
-                var att = entry.value;
-                String type = att['media_type'] as String? ?? 'image';
-                String filePath = att['file_path'] as String? ?? '';
-                String thumbPath = att['thumbnail_path'] as String? ?? '';
-                String fileName = att['file_name'] as String? ?? '文件';
+                final int index = entry.key;
+                final att = entry.value;
+                final String type = att['media_type'] as String? ?? 'image';
+                final String filePath = att['file_path'] as String? ?? '';
+                final String thumbPath = att['thumbnail_path'] as String? ?? '';
+                final String fileName = att['file_name'] as String? ?? '文件';
 
                 return Stack(
                   children: [
@@ -1072,7 +1078,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                 color: Colors.grey.shade800,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Center(
+                              child: const Center(
                                 child: Icon(
                                   Icons.play_circle,
                                   color: Colors.white,
@@ -1088,11 +1094,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         child: GestureDetector(
                           onTap: () => _removeSavedAttachment(index),
                           child: Container(
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: Colors.red,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.close,
                               color: Colors.white,
                               size: 14,
@@ -1105,11 +1111,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       left: 0,
                       right: 0,
                       child: Container(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 4,
                           vertical: 2,
                         ),
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.black54,
                           borderRadius: BorderRadius.only(
                             bottomLeft: Radius.circular(8),
@@ -1120,7 +1126,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           fileName.length > 10
                               ? '${fileName.substring(0, 7)}...'
                               : fileName,
-                          style: TextStyle(fontSize: 9, color: Colors.white),
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: Colors.white,
+                          ),
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1135,12 +1144,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         // 新增的附件（未保存到DB）
         if (_mediaFiles.isNotEmpty)
           Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (_savedAttachments.isNotEmpty)
-                  Padding(
+                  const Padding(
                     padding: EdgeInsets.only(bottom: 6),
                     child: Text(
                       '待保存',
@@ -1155,10 +1164,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   spacing: 8,
                   runSpacing: 8,
                   children: _mediaFiles.asMap().entries.map<Widget>((entry) {
-                    int index = entry.key;
-                    File file = entry.value;
-                    String type = _mediaTypes[index];
-                    String fileSize = ImageUtils.formatFileSize(
+                    final int index = entry.key;
+                    final File file = entry.value;
+                    final String type = _mediaTypes[index];
+                    final String fileSize = ImageUtils.formatFileSize(
                       file.lengthSync(),
                     );
 
@@ -1180,7 +1189,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                   child: kIsWeb
                                       ? Container(
                                           color: Colors.grey.shade200,
-                                          child: Icon(
+                                          child: const Icon(
                                             Icons.image,
                                             color: Colors.grey,
                                             size: 24,
@@ -1198,7 +1207,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                     color: Colors.grey.shade800,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: Center(
+                                  child: const Center(
                                     child: Icon(
                                       Icons.play_circle,
                                       color: Colors.white,
@@ -1213,11 +1222,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           child: GestureDetector(
                             onTap: () => _removeNewAttachment(index),
                             child: Container(
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 color: Colors.red,
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
+                              child: const Icon(
                                 Icons.close,
                                 color: Colors.white,
                                 size: 14,
@@ -1229,20 +1238,20 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           bottom: 0,
                           left: 0,
                           child: Container(
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                               horizontal: 4,
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
                               color: Colors.orange.withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.only(
+                              borderRadius: const BorderRadius.only(
                                 bottomLeft: Radius.circular(8),
                                 bottomRight: Radius.circular(8),
                               ),
                             ),
                             child: Text(
                               fileSize,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 9,
                                 color: Colors.white,
                               ),
@@ -1257,7 +1266,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             ),
           ),
         if (_savedAttachments.isEmpty && _mediaFiles.isEmpty && !canEdit)
-          Padding(
+          const Padding(
             padding: EdgeInsets.all(16),
             child: EmptyStatePlaceholder(
               icon: Icons.attach_file_rounded,
@@ -1280,7 +1289,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           future: _productCustomersFuture,
           builder: (ctx, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return Padding(
+              return const Padding(
                 padding: EdgeInsets.all(16),
                 child: Center(
                   child: SizedBox(
@@ -1292,13 +1301,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               );
             }
             if (snapshot.hasError) {
-              return Padding(
+              return const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text('获取客户信息失败', style: TextStyle(color: Colors.grey)),
               );
             }
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Padding(
+              return const Padding(
                 padding: EdgeInsets.all(16),
                 child: EmptyStatePlaceholder(
                   icon: Icons.people_outline_rounded,
@@ -1322,24 +1331,24 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   child: Column(
                     children: [
                       Padding(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 10,
                         ),
                         child: Row(
                           children: [
                             Padding(
-                              padding: EdgeInsets.only(right: 12),
+                              padding: const EdgeInsets.only(right: 12),
                               child: CircleAvatar(
                                 radius: 16,
-                                backgroundColor: Color(
+                                backgroundColor: const Color(
                                   0xFF1565C0,
                                 ).withValues(alpha: 0.1),
                                 child: Text(
                                   customer.name.isNotEmpty
                                       ? customer.name.substring(0, 1)
                                       : '?',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Color(0xFF1565C0),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -1353,7 +1362,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                 children: [
                                   Text(
                                     customer.name,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -1379,7 +1388,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ),
                       if (!isLast)
-                        Padding(
+                        const Padding(
                           padding: EdgeInsets.only(left: 44),
                           child: Divider(height: 1, thickness: 0.5),
                         ),
@@ -1398,7 +1407,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     if (kIsWeb) {
       return Container(
         color: Colors.grey.shade200,
-        child: Icon(Icons.broken_image, color: Colors.grey, size: 24),
+        child: const Icon(Icons.broken_image, color: Colors.grey, size: 24),
       );
     }
     final file = File(filePath);
@@ -1407,7 +1416,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
     return Container(
       color: Colors.grey.shade200,
-      child: Icon(Icons.broken_image, color: Colors.grey, size: 24),
+      child: const Icon(Icons.broken_image, color: Colors.grey, size: 24),
     );
   }
 
@@ -1416,31 +1425,31 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     final appState = Provider.of<AppState>(context);
 
     return Scaffold(
-      backgroundColor: Color(0xFFF2F2F7),
+      backgroundColor: const Color(0xFFF2F2F7),
       appBar: AppBar(
         title: Text(isEditMode ? (_isEditing ? '编辑产品' : '产品详情') : '添加产品'),
-        backgroundColor: Color(0xFF00897B),
+        backgroundColor: const Color(0xFF00897B),
         elevation: 0,
         actions: [
           if (isEditMode && !_isEditing)
             Row(
               children: [
                 IconButton(
-                  icon: Icon(Icons.edit),
+                  icon: const Icon(Icons.edit),
                   onPressed: () => setState(() => _isEditing = true),
                 ),
                 IconButton(
-                  icon: Icon(Icons.delete_outline),
+                  icon: const Icon(Icons.delete_outline),
                   onPressed: () {
                     showDialog(
                       context: context,
                       builder: (dialogCtx) => AlertDialog(
-                        title: Text('确认删除'),
-                        content: Text('确定要删除这个产品吗？所有附件也将被删除。'),
+                        title: const Text('确认删除'),
+                        content: const Text('确定要删除这个产品吗？所有附件也将被删除。'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(dialogCtx),
-                            child: Text('取消'),
+                            child: const Text('取消'),
                           ),
                           TextButton(
                             onPressed: () async {
@@ -1453,7 +1462,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                 navigator.pop();
                               }
                             },
-                            child: Text(
+                            child: const Text(
                               '删除',
                               style: TextStyle(color: Colors.red),
                             ),
@@ -1468,7 +1477,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           if (!isEditMode && _isEditing)
             TextButton(
               onPressed: _saveProduct,
-              child: Text(
+              child: const Text(
                 '保存',
                 style: TextStyle(
                   color: Colors.white,
@@ -1480,7 +1489,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           if (isEditMode && _isEditing)
             TextButton(
               onPressed: _saveProduct,
-              child: Text(
+              child: const Text(
                 '保存',
                 style: TextStyle(
                   color: Colors.white,
@@ -1497,7 +1506,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           child: Column(
             children: [
               _buildProductHeader(),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               _buildBasicInfoSection(),
               _buildDetailsSection(),
               _buildDateSection(),
@@ -1506,14 +1515,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               // 底部保存按钮
               if (_isEditing)
                 Padding(
-                  padding: EdgeInsets.fromLTRB(16, 24, 16, 40),
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
                   child: SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
                       onPressed: _saveProduct,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF00897B),
+                        backgroundColor: const Color(0xFF00897B),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -1521,7 +1530,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                       child: Text(
                         isEditMode ? '保存修改' : '添加产品',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -1530,7 +1539,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ),
                   ),
                 ),
-              if (!_isEditing) SizedBox(height: 40),
+              if (!_isEditing) const SizedBox(height: 40),
             ],
           ),
         ),

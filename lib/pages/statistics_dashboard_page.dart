@@ -21,8 +21,8 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
 
   // Static Tween to avoid recreating on every build call
   static final _slideUpTween = Tween<Offset>(
-    begin: Offset(0, 0.1),
-    end: Offset(0, 0),
+    begin: const Offset(0, 0.1),
+    end: const Offset(0, 0),
   );
 
   @override
@@ -31,7 +31,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
 
     // KPI卡片动画
     _kpiAnimationController = AnimationController(
-      duration: Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     _kpiCardAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -40,13 +40,13 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
 
     // 图表动画
     _chartController = AnimationController(
-      duration: Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
     _chartAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _chartController,
-        curve: Interval(0.3, 1.0, curve: Curves.easeOut),
+        curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
       ),
     );
 
@@ -72,12 +72,12 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: Text('数据看板')),
+      appBar: AppBar(title: const Text('数据看板')),
       body: RefreshIndicator(
         onRefresh: () => appState.loadStatistics(),
         child: SingleChildScrollView(
-          physics: AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -89,7 +89,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   child: _buildKPIRow(appState),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // 月度保费趋势
               FadeTransition(
@@ -99,7 +99,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.show_chart_rounded,
-                    iconColor: Color(0xFF1E88E5),
+                    iconColor: const Color(0xFF1E88E5),
                     title: '月度保费趋势',
                     child: SizedBox(
                       height: 220,
@@ -108,7 +108,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // 月度拜访统计
               FadeTransition(
@@ -118,7 +118,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.event_note_rounded,
-                    iconColor: Color(0xFF43A047),
+                    iconColor: const Color(0xFF43A047),
                     title: '月度拜访统计',
                     child: SizedBox(
                       height: 220,
@@ -127,7 +127,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // 客户意向分布
               FadeTransition(
@@ -137,7 +137,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.pie_chart_rounded,
-                    iconColor: Color(0xFFAB47BC),
+                    iconColor: const Color(0xFFAB47BC),
                     title: '客户意向分布',
                     child: SizedBox(
                       height: 220,
@@ -146,7 +146,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // 产品销量排行
               FadeTransition(
@@ -156,13 +156,13 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.emoji_events_rounded,
-                    iconColor: Color(0xFFFF9800),
+                    iconColor: const Color(0xFFFF9800),
                     title: '产品销量排行',
                     child: _buildProductRankingList(appState, isDark),
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // 季度保费统计
               FadeTransition(
@@ -172,13 +172,13 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.calendar_view_month_rounded,
-                    iconColor: Color(0xFF5C6BC0),
+                    iconColor: const Color(0xFF5C6BC0),
                     title: '季度保费统计',
                     child: _buildQuarterlySalesChart(appState, isDark),
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // 佣金统计
               FadeTransition(
@@ -188,13 +188,13 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.account_balance_wallet_rounded,
-                    iconColor: Color(0xFF66BB6A),
+                    iconColor: const Color(0xFF66BB6A),
                     title: '佣金统计',
                     child: _buildCommissionChart(appState, isDark),
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // 客户转化漏斗
               FadeTransition(
@@ -204,13 +204,13 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.linear_scale_rounded,
-                    iconColor: Color(0xFFFFA726),
+                    iconColor: const Color(0xFFFFA726),
                     title: '客户转化漏斗',
                     child: _buildConversionFunnelChart(appState, isDark),
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // 拜访效率分析
               FadeTransition(
@@ -220,13 +220,13 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   child: _buildSectionCard(
                     isDark: isDark,
                     icon: Icons.analytics_rounded,
-                    iconColor: Color(0xFF26A69A),
+                    iconColor: const Color(0xFF26A69A),
                     title: '拜访效率分析',
                     child: _buildVisitEfficiencyList(appState, isDark),
                   ),
                 ),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -243,17 +243,17 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
             value: _formatAmount(appState.currentMonthSalesAmount),
             unit: '元',
             icon: Icons.payments_rounded,
-            color: Color(0xFF1E88E5),
+            color: const Color(0xFF1E88E5),
           ),
         ),
-        SizedBox(width: 10),
+        const SizedBox(width: 10),
         Expanded(
           child: _buildKPICard(
             title: '本月拜访',
             value: '${appState.currentMonthVisitsCount}',
             unit: '次',
             icon: Icons.directions_walk_rounded,
-            color: Color(0xFF43A047),
+            color: const Color(0xFF43A047),
           ),
         ),
       ],
@@ -270,7 +270,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppDesign.cardBg(isDark),
         borderRadius: BorderRadius.circular(14),
@@ -278,7 +278,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -288,21 +288,21 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(6),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, size: 16, color: color),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 title,
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
               ),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -314,9 +314,9 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   color: color,
                 ),
               ),
-              SizedBox(width: 4),
+              const SizedBox(width: 4),
               Padding(
-                padding: EdgeInsets.only(bottom: 3),
+                padding: const EdgeInsets.only(bottom: 3),
                 child: Text(
                   unit,
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
@@ -337,7 +337,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     required Widget child,
   }) {
     return Container(
-      padding: EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppDesign.cardBg(isDark),
         borderRadius: BorderRadius.circular(16),
@@ -345,7 +345,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -355,21 +355,24 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 18, color: iconColor),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text(
                 title,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           child,
         ],
       ),
@@ -379,7 +382,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
   Widget _buildSalesChart(AppState appState, bool isDark) {
     final months = List.generate(12, (i) => i + 1);
     final dataMap = <int, double>{};
-    for (var item in appState.monthlySales) {
+    for (final item in appState.monthlySales) {
       final month = (item['month'] as num?)?.toInt();
       if (month != null) {
         dataMap[month] = (item['total_amount'] as num?)?.toDouble() ?? 0;
@@ -400,7 +403,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
 
     return LineChart(
       LineChartData(
-        gridData: FlGridData(show: true, drawVerticalLine: false),
+        gridData: const FlGridData(show: true, drawVerticalLine: false),
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
@@ -425,20 +428,24 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               },
             ),
           ),
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
         borderData: FlBorderData(show: false),
         lineBarsData: [
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: Color(0xFF1E88E5),
+            color: const Color(0xFF1E88E5),
             barWidth: 2.5,
-            dotData: FlDotData(show: true),
+            dotData: const FlDotData(show: true),
             belowBarData: BarAreaData(
               show: true,
-              color: Color(0xFF1E88E5).withValues(alpha: 0.1),
+              color: const Color(0xFF1E88E5).withValues(alpha: 0.1),
             ),
           ),
         ],
@@ -464,7 +471,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
   Widget _buildVisitChart(AppState appState, bool isDark) {
     final months = List.generate(12, (i) => i + 1);
     final dataMap = <int, double>{};
-    for (var item in appState.monthlyVisits) {
+    for (final item in appState.monthlyVisits) {
       final month = (item['month'] as num?)?.toInt();
       if (month != null) {
         dataMap[month] = (item['count'] as num?)?.toDouble() ?? 0;
@@ -478,7 +485,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
         barRods: [
           BarChartRodData(
             toY: value,
-            color: value > 0 ? Color(0xFF43A047) : Colors.grey.shade200,
+            color: value > 0 ? const Color(0xFF43A047) : Colors.grey.shade200,
             width: 16,
             borderRadius: BorderRadius.circular(4),
           ),
@@ -497,7 +504,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
 
     return BarChart(
       BarChartData(
-        gridData: FlGridData(show: true, drawVerticalLine: false),
+        gridData: const FlGridData(show: true, drawVerticalLine: false),
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
@@ -522,8 +529,12 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               },
             ),
           ),
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
         borderData: FlBorderData(show: false),
         barGroups: barGroups,
@@ -554,12 +565,12 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
     }
 
     final ratingColors = {
-      5: Color(0xFFE53935),
-      4: Color(0xFFFF9800),
-      3: Color(0xFFFDD835),
-      2: Color(0xFF43A047),
-      1: Color(0xFF42A5F5),
-      0: Color(0xFF9E9E9E),
+      5: const Color(0xFFE53935),
+      4: const Color(0xFFFF9800),
+      3: const Color(0xFFFDD835),
+      2: const Color(0xFF43A047),
+      1: const Color(0xFF42A5F5),
+      0: const Color(0xFF9E9E9E),
     };
 
     final total = ratingData.fold(
@@ -583,7 +594,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                   title: percentage >= 5
                       ? '${percentage.toStringAsFixed(0)}%'
                       : '',
-                  titleStyle: TextStyle(
+                  titleStyle: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -596,7 +607,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
             ),
           ),
         ),
-        SizedBox(width: 16),
+        const SizedBox(width: 16),
         Expanded(
           flex: 2,
           child: Column(
@@ -606,7 +617,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
               final rating = (item['rating'] as num?)?.toInt() ?? -1;
               final count = (item['count'] as num?)?.toInt() ?? 0;
               return Padding(
-                padding: EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
                   children: [
                     Container(
@@ -617,7 +628,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                         shape: BoxShape.circle,
                       ),
                     ),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         AppDesign.ratingLabel(rating),
@@ -630,7 +641,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                     ),
                     Text(
                       '$count',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -670,13 +681,13 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
         final progress = saleCount / maxCount;
 
         final medalColors = [
-          Color(0xFFFFD700), // Gold
-          Color(0xFFC0C0C0), // Silver
-          Color(0xFFCD7F32), // Bronze
+          const Color(0xFFFFD700), // Gold
+          const Color(0xFFC0C0C0), // Silver
+          const Color(0xFFCD7F32), // Bronze
         ];
 
         return Padding(
-          padding: EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
               // 排名
@@ -700,7 +711,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                         )
                       : Text(
                           '${index + 1}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: Colors.grey,
@@ -708,7 +719,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                         ),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               // 产品信息和进度条
               Expanded(
                 child: Column(
@@ -719,7 +730,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                         Expanded(
                           child: Text(
                             productName,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
@@ -729,7 +740,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                         ),
                         Text(
                           '$saleCount笔',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFFFF9800),
                             fontWeight: FontWeight.w600,
@@ -737,7 +748,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                         ),
                       ],
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Stack(
                       children: [
                         Container(
@@ -754,7 +765,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                           child: Container(
                             height: 6,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
+                              gradient: const LinearGradient(
                                 colors: [Color(0xFFFF9800), Color(0xFFFF5722)],
                               ),
                               borderRadius: BorderRadius.circular(3),
@@ -765,7 +776,7 @@ class _StatisticsDashboardPageState extends State<StatisticsDashboardPage>
                     ),
                     if (totalAmount > 0)
                       Padding(
-                        padding: EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: 4),
                         child: Text(
                           '保费: ${_formatAmount(totalAmount.toInt())}元',
                           style: TextStyle(
