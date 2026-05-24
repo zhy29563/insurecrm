@@ -9,6 +9,7 @@ import 'package:insurance_manager/models/colleague.dart';
 import 'package:insurance_manager/models/sale.dart';
 import 'package:insurance_manager/models/user.dart';
 import 'package:flutter/foundation.dart';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:insurance_manager/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -137,7 +138,9 @@ class AppState extends ChangeNotifier {
       final sw1 = Stopwatch()..start();
       await Future.wait([_loadRelationshipLabels()]);
       if (sw1.elapsedMilliseconds < 400) {
-        await Future.delayed(Duration(milliseconds: 400 - sw1.elapsedMilliseconds));
+        await Future.delayed(
+          Duration(milliseconds: 400 - sw1.elapsedMilliseconds),
+        );
       }
 
       // 阶段2: 加载客户数据 (最少停留 600ms)
@@ -145,7 +148,9 @@ class AppState extends ChangeNotifier {
       final sw2 = Stopwatch()..start();
       await loadCustomers();
       if (sw2.elapsedMilliseconds < 600) {
-        await Future.delayed(Duration(milliseconds: 600 - sw2.elapsedMilliseconds));
+        await Future.delayed(
+          Duration(milliseconds: 600 - sw2.elapsedMilliseconds),
+        );
       }
 
       // 阶段3: 加载产品、同事、销售 (最少停留 600ms)
@@ -153,7 +158,9 @@ class AppState extends ChangeNotifier {
       final sw3 = Stopwatch()..start();
       await Future.wait([loadProducts(), loadColleagues(), loadSales()]);
       if (sw3.elapsedMilliseconds < 600) {
-        await Future.delayed(Duration(milliseconds: 600 - sw3.elapsedMilliseconds));
+        await Future.delayed(
+          Duration(milliseconds: 600 - sw3.elapsedMilliseconds),
+        );
       }
 
       // 阶段4: 加载提醒、统计、通知 (最少停留 700ms)
@@ -165,14 +172,13 @@ class AppState extends ChangeNotifier {
         loadSystemNotifications(),
       ]);
       if (sw4.elapsedMilliseconds < 700) {
-        await Future.delayed(Duration(milliseconds: 700 - sw4.elapsedMilliseconds));
+        await Future.delayed(
+          Duration(milliseconds: 700 - sw4.elapsedMilliseconds),
+        );
       }
 
-      // 阶段5: 准备就绪 (最少停留 500ms，让用户看到"加载完成")
-      _setLoadingStage('加载完成', 1.0);
-      await Future.delayed(const Duration(milliseconds: 500));
-
       // 完成
+      _loadingProgress = 1.0;
       _isInitialized = true;
       notifyListeners();
     } catch (e) {

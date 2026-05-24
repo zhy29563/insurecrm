@@ -185,80 +185,16 @@ class _HomeContentState extends State<_HomeContent> {
   Widget _buildContent(BuildContext context, _HomeData data, bool isDark) {
     return CustomScrollView(
       slivers: [
+        // ── 渐变 AppBar ──
         SliverAppBar(
-          expandedHeight: 56,
+          expandedHeight: 74,
           floating: false,
           pinned: true,
           elevation: 0,
-          backgroundColor: isDark
-              ? const Color(0xFF1E1E1E)
-              : const Color(0xFF0D47A1),
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '保险经纪人',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const NotificationCenterPage(),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Stack(
-                    children: [
-                      const Icon(
-                        Icons.notifications_none_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                      if (data.overdueReminders.isNotEmpty ||
-                          data.systemNotifications.isNotEmpty)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFE53935),
-                              shape: BoxShape.circle,
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 8,
-                              minHeight: 8,
-                            ),
-                            child: Text(
-                              '${(data.overdueReminders.length + data.systemNotifications.length).clamp(1, 99)}',
-                              style: const TextStyle(
-                                fontSize: 8,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+          titleTextStyle:
+              const TextStyle(color: Colors.white, fontSize: 17),
+          iconTheme:
+              const IconThemeData(color: Colors.white, size: 24),
           flexibleSpace: FlexibleSpaceBar(
             background: Container(
               decoration: BoxDecoration(
@@ -276,6 +212,95 @@ class _HomeContentState extends State<_HomeContent> {
                           const Color(0xFF1565C0),
                           const Color(0xFF1E88E5),
                         ],
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '保险经纪人',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '欢迎使用保险管理系统',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const NotificationCenterPage(),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(14),
+                          child: Stack(
+                            children: [
+                              const Icon(
+                                Icons.notifications_none_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                              if (data.overdueReminders.isNotEmpty ||
+                                  data.systemNotifications.isNotEmpty)
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFE53935),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 8,
+                                      minHeight: 8,
+                                    ),
+                                    child: Text(
+                                      '${(data.overdueReminders.length + data.systemNotifications.length).clamp(1, 99)}',
+                                      style: const TextStyle(
+                                        fontSize: 8,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

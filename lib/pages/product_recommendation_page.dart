@@ -46,6 +46,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
   bool _isAnalyzing = false;
   bool _hasAnalyzed = false;
   String? _analysisMode;
+  double _semanticThreshold = 0.58;
 
   late AnimationController _pulseController;
   late AnimationController _fadeController;
@@ -667,7 +668,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
         if (productText.isEmpty) continue;
 
         final similarity = semantic.computeSimilarity(requirement, productText);
-        if (similarity > 0.58) {
+        if (similarity > _semanticThreshold) {
           scored[product] = similarity;
         }
       }
@@ -783,6 +784,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
 
   @override
   void dispose() {
+    _reanalysisTimer?.cancel();
     _pulseController.dispose();
     _fadeController.dispose();
     _speech.cancel();
@@ -802,84 +804,30 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
     final hasAnyInput = _segments.isNotEmpty || _manualText.isNotEmpty;
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // ── 渐变 AppBar ────────────────────────────
-          SliverAppBar(
-            expandedHeight: 180,
-            pinned: true,
-            stretch: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isDark
-                        ? [const Color(0xFF1565C0), const Color(0xFF0D47A1)]
-                        : [const Color(0xFF1976D2), const Color(0xFF42A5F5)],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 60, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '智能产品推荐',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '描述客户需求，AI 匹配最合适的产品',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+      appBar: AppBar(
+        title: const Text('智能产品推荐'),
+        toolbarHeight: 56,
+        actions: [
+          if (hasAnyInput)
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: '清空重填',
+              onPressed: _clearAllInputs,
             ),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            actions: [
-              if (hasAnyInput)
-                IconButton(
-                  icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                  tooltip: '清空重填',
-                  onPressed: _clearAllInputs,
-                ),
-            ],
-          ),
-
-          // ── 内容区 ─────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-              child: Column(
-                children: [
-                  // 输入卡片
-                  _buildInputCard(isDark, primaryColor),
-                  const SizedBox(height: 24),
-
-                  // 结果区
-                  _buildResultsSection(isDark, primaryColor),
-                ],
-              ),
-            ),
-          ),
         ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        child: Column(
+          children: [
+            // 输入卡片
+            _buildInputCard(isDark, primaryColor),
+            const SizedBox(height: 24),
+
+            // 结果区
+            _buildResultsSection(isDark, primaryColor),
+          ],
+        ),
       ),
     );
   }
@@ -1133,6 +1081,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildThresholdSlider(isDark, primaryColor),
+          const SizedBox(height: 14),
           _buildResultsHeader(primaryColor),
           const SizedBox(height: 14),
           FadeTransition(
@@ -1169,6 +1119,104 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
 
     return _buildEmptyState(isDark);
   }
+
+  Widget _buildThresholdSlider(bool isDark, Color primaryColor) {
+    if (_analysisMode != 'semantic') return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppDesign.cardBg(isDark),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.tune_rounded, size: 18, color: primaryColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '匹配灵敏度',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _textPrimary(context),
+                      ),
+                    ),
+                    Text(
+                      '${(_semanticThreshold * 100).round()}%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: primaryColor,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                SliderTheme(
+                  data: SliderThemeData(
+                    activeTrackColor: primaryColor,
+                    inactiveTrackColor: primaryColor.withValues(alpha: 0.15),
+                    thumbColor: primaryColor,
+                    overlayColor: primaryColor.withValues(alpha: 0.1),
+                    trackHeight: 3,
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 7,
+                    ),
+                  ),
+                  child: Slider(
+                    value: _semanticThreshold,
+                    min: 0.30,
+                    max: 0.85,
+                    divisions: 55,
+                    onChanged: (val) async {
+                      setState(() => _semanticThreshold = val);
+                      // 滑动后自动重新分析（防抖）
+                      _reanalyzeDebounced();
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    _semanticThreshold < 0.45
+                        ? '宽松 — 更多候选，可能包含低相关结果'
+                        : _semanticThreshold > 0.70
+                        ? '严格 — 仅高匹配度结果'
+                        : '适中 — 推荐平衡精度与召回率',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Timer? _reanalysisTimer;
+  void _reanalyzeDebounced() {
+    _reanalysisTimer?.cancel();
+    _reanalysisTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted && _fullRequirement.isNotEmpty && _hasAnalyzed) {
+        _analyzeProducts();
+      }
+    });
+  }
+
+  Color _textPrimary(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+      ? Colors.white
+      : const Color(0xFF1A1A2E);
 
   Widget _buildResultsHeader(Color primaryColor) {
     return Row(

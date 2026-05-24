@@ -398,6 +398,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('同事管理'),
+        toolbarHeight: 56,
         actions: [
           IconButton(
             icon: const Icon(Icons.person_add_rounded),

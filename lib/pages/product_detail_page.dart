@@ -1396,6 +1396,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         title: Text(isEditMode ? (_isEditing ? '编辑产品' : '产品详情') : '添加产品'),
         backgroundColor: const Color(0xFF00897B),
         elevation: 0,
+        toolbarHeight: 56,
         actions: [
           if (isEditMode && !_isEditing)
             Row(

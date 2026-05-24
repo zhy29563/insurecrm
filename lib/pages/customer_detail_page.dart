@@ -3617,6 +3617,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         title: Text(isEditMode ? (_isEditing ? '编辑客户' : '客户详情') : '添加客户'),
         backgroundColor: primaryColor,
         elevation: 0,
+        toolbarHeight: 56,
         actions: [
           if (isEditMode && !_isEditing)
             IconButton(

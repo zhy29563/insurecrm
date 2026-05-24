@@ -256,251 +256,99 @@ class _NearbyCustomersPageState extends State<NearbyCustomersPage>
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // ── 渐变头部 ──
-          SliverAppBar(
-            expandedHeight: 180,
-            pinned: true,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isDark
-                        ? [const Color(0xFF1565C0), const Color(0xFF0D47A1)]
-                        : [const Color(0xFF42A5F5), primaryColor],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 56, 20, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            AnimatedBuilder(
-                              animation: _pulseAnimation,
-                              builder: (context, child) => Transform.scale(
-                                scale: _isLocating ? _pulseAnimation.value : 1.0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(
-                                        alpha: _currentPosition != null
-                                            ? 0.25
-                                            : 0.15),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    _currentPosition != null
-                                        ? Icons.my_location_rounded
-                                        : Icons.location_searching_rounded,
-                                    size: 24,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    '附近客户',
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  FadeTransition(
-                                    opacity: _fadeAnimation,
-                                    child: Text(
-                                      _currentPosition != null
-                                          ? (_address.length > 30
-                                              ? '${_address.substring(0, 28)}...'
-                                              : _address)
-                                          : '点击定位查找附近客户',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.white.withValues(alpha: 0.85),
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (_currentPosition != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.people_outline_rounded,
-                                        size: 14, color: Colors.white70),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${_nearbyCustomers.length} 位',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (_currentPosition != null &&
-                            _nearbyCustomers.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '搜索范围: ${_formatRadiusLabel(_radius)}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+      appBar: AppBar(
+        title: const Text('附近客户'),
+        toolbarHeight: 56,
+        actions: [
+          if (_currentPosition != null)
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: '刷新位置',
+              onPressed: () => _getCurrentLocation(),
             ),
-            actions: [
-              if (_currentPosition != null)
-                IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.refresh_rounded,
-                        size: 18, color: Colors.white),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // 定位操作按钮区
+            _buildLocationCard(isDark, primaryColor),
+
+            // 错误提示
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: _buildErrorCard(),
+              ),
+
+            // 半径调节器（定位后显示）
+            if (_currentPosition != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: _buildRadiusSlider(isDark, primaryColor),
+              ),
+
+            // 未定位空状态
+            if (_currentPosition == null &&
+                _errorMessage == null &&
+                !_isLocating)
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.40,
+                child: Center(child: _buildEmptyLocateUI(primaryColor)),
+              )
+
+            // 加载中
+            else if (_isLoading)
+              SizedBox(
+                height: 200,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        '正在搜索附近客户...',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
                   ),
-                  tooltip: '刷新位置',
-                  onPressed: () => _getCurrentLocation(),
+                ),
+              )
+
+            // 结果列表
+            else if (_currentPosition != null && !_isLoading) ...[
+              if (_nearbyCustomers.isEmpty)
+                _buildNoResultsUI(primaryColor)
+              else
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  child: Column(
+                    children: List.generate(_nearbyCustomers.length, (index) {
+                      final item = _nearbyCustomers[index];
+                      final customer = item['customer'] as Customer;
+                      final distance = item['distance'] as double? ?? 0;
+                      return _AnimatedCustomerCard(
+                        index: index,
+                        child: _buildCustomerCard(customer, distance,
+                            isDark, primaryColor, colorScheme),
+                      );
+                    }),
+                  ),
                 ),
             ],
-            titleTextStyle: const TextStyle(color: Colors.white),
-            iconTheme: const IconThemeData(color: Colors.white),
-          ),
-
-          // ── 主体内容 ──
-          SliverToBoxAdapter(
-            child: Column(
-              children: [
-                // 定位操作卡片
-                _buildLocationCard(isDark, primaryColor),
-
-                // 错误提示
-                if (_errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                    child: _buildErrorCard(),
-                  ),
-
-                // 半径调节器（定位后显示）
-                if (_currentPosition != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: _buildRadiusSlider(isDark, primaryColor),
-                  ),
-
-                // 未定位空状态
-                if (_currentPosition == null &&
-                    _errorMessage == null &&
-                    !_isLocating)
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.45,
-                    child: Center(child: _buildEmptyLocateUI(primaryColor)),
-                  )
-
-                // 加载中
-                else if (_isLoading)
-                  SizedBox(
-                    height: 200,
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 3,
-                              color: primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            '正在搜索附近客户...',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-
-                // 结果列表
-                else if (_currentPosition != null && !_isLoading) ...[
-                  if (_nearbyCustomers.isEmpty)
-                    _buildNoResultsUI(primaryColor)
-                  else
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      child: Column(
-                        children: List.generate(_nearbyCustomers.length, (index) {
-                          final item = _nearbyCustomers[index];
-                          final customer = item['customer'] as Customer;
-                          final distance = item['distance'] as double? ?? 0;
-                          return _AnimatedCustomerCard(
-                            index: index,
-                            child: _buildCustomerCard(customer, distance,
-                                isDark, primaryColor, colorScheme),
-                          );
-                        }),
-                      ),
-                    ),
-                ],
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -509,7 +357,7 @@ class _NearbyCustomersPageState extends State<NearbyCustomersPage>
   //  UI 组件
   // ════════════════════════════════
 
-  /// 定位状态卡片
+  /// 定位操作按钮卡片
   Widget _buildLocationCard(bool isDark, Color primaryColor) {
     return Container(
       margin: const EdgeInsets.all(16),

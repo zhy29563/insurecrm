@@ -48,334 +48,400 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // 外观设置
-          _buildSectionCard(
-            isDark: isDark,
-            icon: Icons.palette_rounded,
-            iconColor: const Color(0xFFAB47BC),
-            title: '外观设置',
-            children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('深色模式'),
-                subtitle: const Text('减少夜间使用对眼睛的刺激'),
-                secondary: Icon(
-                  appState.darkMode
-                      ? Icons.dark_mode_rounded
-                      : Icons.light_mode_rounded,
-                  color: appState.darkMode
-                      ? const Color(0xFFFFB74D)
-                      : const Color(0xFFFFA726),
+      body: CustomScrollView(
+        slivers: [
+          // ── 渐变 AppBar ──
+          SliverAppBar(
+            expandedHeight: 72,
+            pinned: true,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDark
+                        ? [const Color(0xFF424242), const Color(0xFF212121)]
+                        : [const Color(0xFF616161), const Color(0xFF757575)],
+                  ),
                 ),
-                value: appState.darkMode,
-                activeThumbColor: primaryColor,
-                onChanged: (value) => appState.toggleDarkMode(value),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // 语音识别模型
-          _buildModelSection(
-            isDark: isDark,
-            icon: Icons.mic_rounded,
-            iconColor: const Color(0xFF00897B),
-            title: '语音识别模型',
-            description: 'Sherpa-ONNX Paraformer 中文语音识别，无需网络，数据不离开设备。',
-            modelName: 'Paraformer 中文离线',
-            modelSize: '~120 MB',
-            isActive: SherpaASRService.instance.isInitialized,
-            activeColor: const Color(0xFF00897B),
-            onToggle: (enable) async {
-              if (enable) {
-                return await SherpaASRService.instance.initialize();
-              } else {
-                SherpaASRService.instance.deactivate();
-                return true;
-              }
-            },
-            successMsg: '已启用语音识别模型',
-            failMsg: '启用语音识别模型失败',
-          ),
-          const SizedBox(height: 16),
-
-          // 文字识别模型
-          _buildModelSection(
-            isDark: isDark,
-            icon: Icons.document_scanner_rounded,
-            iconColor: const Color(0xFF43A047),
-            title: '文字识别模型',
-            description: 'PaddleOCR PP-OCRv5 文字识别，无需网络，数据不离开设备。支持中英文。',
-            modelName: 'PP-OCRv5 中英离线',
-            modelSize: '~21 MB',
-            isActive: OcrService.instance.isInitialized,
-            activeColor: const Color(0xFF43A047),
-            onToggle: (enable) async {
-              if (enable) {
-                return await OcrService.instance.initialize();
-              } else {
-                await OcrService.instance.deactivate();
-                return true;
-              }
-            },
-            successMsg: '已启用文字识别模型',
-            failMsg: '启用文字识别模型失败',
-          ),
-          const SizedBox(height: 16),
-
-          // 语义分析模型
-          _buildModelSection(
-            isDark: isDark,
-            icon: Icons.psychology_rounded,
-            iconColor: const Color(0xFF5C6BC0),
-            title: '语义分析模型',
-            description: 'BGE-small-zh 语义嵌入模型，无需网络，数据不离开设备。用于产品推荐智能匹配。',
-            modelName: 'BGE-small-zh 语义嵌入',
-            modelSize: '~91 MB',
-            isActive: SemanticService.instance.isInitialized,
-            activeColor: const Color(0xFF5C6BC0),
-            onToggle: (enable) async {
-              if (enable) {
-                return await SemanticService.instance.initialize();
-              } else {
-                SemanticService.instance.deactivate();
-                return true;
-              }
-            },
-            successMsg: '已启用语义分析模型',
-            failMsg: '启用语义分析模型失败',
-          ),
-          const SizedBox(height: 16),
-
-          // 关系标签管理
-          _buildSectionCard(
-            isDark: isDark,
-            icon: Icons.label_important_rounded,
-            iconColor: const Color(0xFFE53935),
-            title: '关系标签管理',
-            children: [
-              Text(
-                '管理客户关系标签，添加关系时可从中选择。自定义标签会保存到本地。',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-              ),
-              const SizedBox(height: 14),
-              // 当前标签列表
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: appState.relationshipLabels.map<Widget>((label) {
-                  return Chip(
-                    label: Text(label, style: const TextStyle(fontSize: 13)),
-                    backgroundColor: _relLabelColor(
-                      label,
-                    ).withValues(alpha: 0.1),
-                    side: BorderSide(
-                      color: _relLabelColor(label).withValues(alpha: 0.3),
-                    ),
-                    deleteIconColor: Colors.grey.shade500,
-                    onDeleted: () async {
-                      if (appState.relationshipLabels.length <= 1) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('至少保留一个关系标签')),
-                        );
-                        return;
-                      }
-                      await appState.removeRelationshipLabel(label);
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('已删除标签「$label」')));
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 14),
-              // 添加新标签
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _newRelLabelController,
-                      decoration: InputDecoration(
-                        labelText: '新标签名称',
-                        hintText: '输入关系标签',
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '设置',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '个性化配置与系统管理',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onSubmitted: (value) async {
-                        final success = await _addRelationshipLabel(
-                          value,
-                          appState,
-                        );
-                        if (success) _newRelLabelController.clear();
-                      },
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      final text = _newRelLabelController.text.trim();
-                      if (text.isNotEmpty) {
-                        final success = await _addRelationshipLabel(
-                          text,
-                          appState,
-                        );
-                        if (success) _newRelLabelController.clear();
-                      }
-                    },
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('添加'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE53935),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
+                ),
+              ),
+            ),
+            titleTextStyle: const TextStyle(color: Colors.white, fontSize: 17),
+            iconTheme: const IconThemeData(color: Colors.white, size: 24),
+          ),
+
+          // ── 内容列表 ──
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                return _buildSettingsContent(context, appState, isDark);
+              }, childCount: 1),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsContent(
+    BuildContext context,
+    AppState appState,
+    bool isDark,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 外观设置
+        _buildSectionCard(
+          isDark: isDark,
+          icon: Icons.palette_rounded,
+          iconColor: const Color(0xFFAB47BC),
+          title: '外观设置',
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('深色模式'),
+              subtitle: const Text('减少夜间使用对眼睛的刺激'),
+              secondary: Icon(
+                appState.darkMode
+                    ? Icons.dark_mode_rounded
+                    : Icons.light_mode_rounded,
+                color: appState.darkMode
+                    ? const Color(0xFFFFB74D)
+                    : const Color(0xFFFFA726),
+              ),
+              value: appState.darkMode,
+              activeThumbColor: Theme.of(context).primaryColor,
+              onChanged: (value) => appState.toggleDarkMode(value),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 语音识别模型
+        _buildModelSection(
+          isDark: isDark,
+          icon: Icons.mic_rounded,
+          iconColor: const Color(0xFF00897B),
+          title: '语音识别模型',
+          description: 'Sherpa-ONNX Paraformer 中文语音识别，无需网络，数据不离开设备。',
+          modelName: 'Paraformer 中文离线',
+          modelSize: '~120 MB',
+          isActive: SherpaASRService.instance.isInitialized,
+          activeColor: const Color(0xFF00897B),
+          onToggle: (enable) async {
+            if (enable) {
+              return await SherpaASRService.instance.initialize();
+            } else {
+              SherpaASRService.instance.deactivate();
+              return true;
+            }
+          },
+          successMsg: '已启用语音识别模型',
+          failMsg: '启用语音识别模型失败',
+        ),
+        const SizedBox(height: 16),
+
+        // 文字识别模型
+        _buildModelSection(
+          isDark: isDark,
+          icon: Icons.document_scanner_rounded,
+          iconColor: const Color(0xFF43A047),
+          title: '文字识别模型',
+          description: 'PaddleOCR PP-OCRv5 文字识别，无需网络，数据不离开设备。支持中英文。',
+          modelName: 'PP-OCRv5 中英离线',
+          modelSize: '~21 MB',
+          isActive: OcrService.instance.isInitialized,
+          activeColor: const Color(0xFF43A047),
+          onToggle: (enable) async {
+            if (enable) {
+              return await OcrService.instance.initialize();
+            } else {
+              await OcrService.instance.deactivate();
+              return true;
+            }
+          },
+          successMsg: '已启用文字识别模型',
+          failMsg: '启用文字识别模型失败',
+        ),
+        const SizedBox(height: 16),
+
+        // 语义分析模型
+        _buildModelSection(
+          isDark: isDark,
+          icon: Icons.psychology_rounded,
+          iconColor: const Color(0xFF5C6BC0),
+          title: '语义分析模型',
+          description: 'BGE-small-zh 语义嵌入模型，无需网络，数据不离开设备。用于产品推荐智能匹配。',
+          modelName: 'BGE-small-zh 语义嵌入',
+          modelSize: '~91 MB',
+          isActive: SemanticService.instance.isInitialized,
+          activeColor: const Color(0xFF5C6BC0),
+          onToggle: (enable) async {
+            if (enable) {
+              return await SemanticService.instance.initialize();
+            } else {
+              SemanticService.instance.deactivate();
+              return true;
+            }
+          },
+          successMsg: '已启用语义分析模型',
+          failMsg: '启用语义分析模型失败',
+        ),
+        const SizedBox(height: 16),
+
+        // 关系标签管理
+        _buildSectionCard(
+          isDark: isDark,
+          icon: Icons.label_important_rounded,
+          iconColor: const Color(0xFFE53935),
+          title: '关系标签管理',
+          children: [
+            Text(
+              '管理客户关系标签，添加关系时可从中选择。自定义标签会保存到本地。',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: appState.relationshipLabels.map<Widget>((label) {
+                return Chip(
+                  label: Text(label, style: const TextStyle(fontSize: 13)),
+                  backgroundColor: _relLabelColor(label).withValues(alpha: 0.1),
+                  side: BorderSide(
+                    color: _relLabelColor(label).withValues(alpha: 0.3),
+                  ),
+                  deleteIconColor: Colors.grey.shade500,
+                  onDeleted: () async {
+                    if (appState.relationshipLabels.length <= 1) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('至少保留一个关系标签')),
+                      );
+                      return;
+                    }
+                    await appState.removeRelationshipLabel(label);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('已删除标签「$label」')));
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _newRelLabelController,
+                    decoration: InputDecoration(
+                      labelText: '新标签名称',
+                      hintText: '输入关系标签',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
                         vertical: 10,
                       ),
-                      shape: RoundedRectangleBorder(
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // 重置按钮
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('重置关系标签'),
-                        content: const Text('确定要恢复默认关系标签吗？自定义添加的标签将被移除。'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('取消'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE53935),
-                            ),
-                            child: const Text('重置'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirmed == true) {
-                      await appState.resetRelationshipLabels();
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('关系标签已重置为默认')),
+                    onSubmitted: (value) async {
+                      final success = await _addRelationshipLabel(
+                        value,
+                        appState,
                       );
+                      if (success) _newRelLabelController.clear();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final text = _newRelLabelController.text.trim();
+                    if (text.isNotEmpty) {
+                      final success = await _addRelationshipLabel(
+                        text,
+                        appState,
+                      );
+                      if (success) _newRelLabelController.clear();
                     }
                   },
-                  icon: const Icon(Icons.restore_rounded, size: 16),
-                  label: const Text('恢复默认标签', style: TextStyle(fontSize: 13)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // 同事管理
-          _buildSectionCard(
-            isDark: isDark,
-            icon: Icons.group_rounded,
-            iconColor: const Color(0xFF43A047),
-            title: '同事管理',
-            children: [
-              Text(
-                '管理同事信息，包括添加、编辑和删除同事资料',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ColleagueManagementPage(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                  label: const Text('进入同事管理页面'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // 数据备份
-          _buildSectionCard(
-            isDark: isDark,
-            icon: Icons.cloud_sync_rounded,
-            iconColor: const Color(0xFF0288D1),
-            title: '数据备份',
-            children: [
-              Text(
-                '自动定时本地备份、数据恢复、备份分享',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BackupRestorePage(),
-                      ),
-                    );
-                  },
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('添加'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0288D1),
+                    backgroundColor: const Color(0xFFE53935),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  icon: const Icon(Icons.backup_table_rounded, size: 18),
-                  label: const Text('进入备份管理'),
                 ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('重置关系标签'),
+                      content: const Text('确定要恢复默认关系标签吗？自定义添加的标签将被移除。'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('取消'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE53935),
+                          ),
+                          child: const Text('重置'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await appState.resetRelationshipLabels();
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('关系标签已重置为默认')));
+                  }
+                },
+                icon: const Icon(Icons.restore_rounded, size: 16),
+                label: const Text('恢复默认标签', style: TextStyle(fontSize: 13)),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
 
-          // 关于
-          _buildSectionCard(
-            isDark: isDark,
-            icon: Icons.info_rounded,
-            iconColor: const Color(0xFF78909C),
-            title: '关于',
-            children: [
-              _buildAboutRow('版本', '1.0.0'),
-              const Divider(height: 20),
-              _buildAboutRow('应用', '保险经纪人 v1.0'),
-              const Divider(height: 20),
-              _buildAboutRow('版权', '\u00a9 2026 保险经纪人'),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const SizedBox(height: 40),
-        ],
-      ),
+        // 同事管理
+        _buildSectionCard(
+          isDark: isDark,
+          icon: Icons.group_rounded,
+          iconColor: const Color(0xFF43A047),
+          title: '同事管理',
+          children: [
+            Text(
+              '管理同事信息，包括添加、编辑和删除同事资料',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ColleagueManagementPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                label: const Text('进入同事管理页面'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 数据备份
+        _buildSectionCard(
+          isDark: isDark,
+          icon: Icons.cloud_sync_rounded,
+          iconColor: const Color(0xFF0288D1),
+          title: '数据备份',
+          children: [
+            Text(
+              '自动定时本地备份、数据恢复、备份分享',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BackupRestorePage(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0288D1),
+                ),
+                icon: const Icon(Icons.backup_table_rounded, size: 18),
+                label: const Text('进入备份管理'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 关于
+        _buildSectionCard(
+          isDark: isDark,
+          icon: Icons.info_rounded,
+          iconColor: const Color(0xFF78909C),
+          title: '关于',
+          children: [
+            _buildAboutRow('版本', '1.0.0'),
+            const Divider(height: 20),
+            _buildAboutRow('应用', '保险经纪人 v1.0'),
+            const Divider(height: 20),
+            _buildAboutRow('版权', '\u00a9 2026 保险经纪人'),
+          ],
+        ),
+        const SizedBox(height: 40),
+      ],
     );
   }
 
@@ -429,7 +495,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// 通用模型配置区
   Widget _buildModelSection({
     required bool isDark,
     required IconData icon,
