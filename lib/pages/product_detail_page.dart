@@ -1322,81 +1322,43 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             }
             return Column(
               children: snapshot.data!.asMap().entries.map<Widget>((entry) {
-                final index = entry.key;
                 final customer = entry.value;
-                final isLast = index == snapshot.data!.length - 1;
-                return InkWell(
-                  onTap: () => Navigator.push(
-                    ctx,
-                    MaterialPageRoute(
-                      builder: (_) => CustomerDetailPage(customer: customer),
-                    ),
+                final cpEntry = customer.products.where((p) => p['id'] == widget.product?.id).firstOrNull;
+                final cpId = (cpEntry?['cp_id'] ?? cpEntry?['id']) as num?;
+                return Dismissible(
+                  key: ValueKey('cp_customer_${cpId ?? entry.key}'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(color: Colors.red.shade400, borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.delete_rounded, color: Colors.white),
                   ),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: CircleAvatar(
-                                radius: 16,
-                                backgroundColor: const Color(
-                                  0xFF1565C0,
-                                ).withValues(alpha: 0.1),
-                                child: Text(
-                                  customer.name.isNotEmpty
-                                      ? customer.name.substring(0, 1)
-                                      : '?',
-                                  style: const TextStyle(
-                                    color: Color(0xFF1565C0),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    customer.name,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Text(
-                                    customer.phones.isNotEmpty
-                                        ? customer.phones[0]
-                                        : '无联系方式',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.chevron_right,
-                              size: 18,
-                              color: Colors.grey.shade400,
-                            ),
-                          ],
-                        ),
+                  confirmDismiss: (direction) async {
+                    if (cpId == null) return false;
+                    return await showDialog<bool>(
+                      context: ctx,
+                      builder: (c) => AlertDialog(
+                        title: const Text('移除购买客户'),
+                        content: Text('确定要移除「${customer.name}」对此产品的购买记录吗？'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('取消')),
+                          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('移除', style: TextStyle(color: Colors.red))),
+                        ],
                       ),
-                      if (!isLast)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 44),
-                          child: Divider(height: 1, thickness: 0.5),
-                        ),
-                    ],
+                    );
+                  },
+                  onDismissed: (direction) async {
+                    if (cpId != null) await Provider.of<AppState>(ctx, listen: false).deleteCustomerProduct(cpId.toInt());
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Row(children: [
+                      Padding(padding: const EdgeInsets.only(right: 12), child: CircleAvatar(radius: 16, backgroundColor: const Color(0xFF1565C0).withValues(alpha: 0.1), child: Text(customer.name.isNotEmpty ? customer.name.substring(0, 1) : '?', style: const TextStyle(color: Color(0xFF1565C0), fontSize: 12, fontWeight: FontWeight.w600)))),
+                      Expanded(child: InkWell(onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: customer))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(customer.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)), Text(customer.phones.isNotEmpty ? customer.phones[0] : '无联系方式', style: TextStyle(fontSize: 12, color: Colors.grey.shade500))]))),
+                      Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                    ]),
                   ),
                 );
               }).toList(),

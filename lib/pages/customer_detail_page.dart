@@ -245,6 +245,91 @@ class RelationshipGraphPainter extends CustomPainter {
   }
 }
 
+/// 单条关系的横线连接卡片：[头像A] ──关系类型── [头像B]  [编辑] [删除]
+Widget buildRelationshipRow({
+  required BuildContext context,
+  required Customer centerCustomer,
+  required Map<String, dynamic> rel,
+  required Map<int, Customer> customerById,
+  required VoidCallback onEdit,
+}) {
+  final relType = rel['relationship'] as String? ?? '未知';
+  final relatedName = rel['name'] as String? ?? '未知客户';
+  final relColor = AppDesign.cnRelColor(relType);
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  final relatedCustomerId =
+      (rel['related_customer_id'] as num?)?.toInt() ?? (rel['id'] as num?)?.toInt();
+  final relatedCustomer = (relatedCustomerId != null) ? customerById[relatedCustomerId] : null;
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: relColor.withValues(alpha: 0.15)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 6,
+          offset: const Offset(0, 1),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        // 左侧：当前客户（小头像+名）
+        Expanded(
+          flex: 3,
+          child: Row(
+            children: [
+              CircleAvatar(radius: 16, backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.15), child: Text(centerCustomer.name.isNotEmpty ? centerCustomer.name.substring(0, 1) : '?', style: TextStyle(fontSize: 13, color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold))),
+              const SizedBox(width: 8),
+              Flexible(child: Text(centerCustomer.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface), overflow: TextOverflow.ellipsis)),
+            ],
+          ),
+        ),
+        // 中间：短线 + 关系标签
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 1.5,
+                decoration: BoxDecoration(color: relColor.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(1)),
+              ),
+              const SizedBox(height: 2),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: relColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.18),
+                child: Text(relType, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: relColor), textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
+              ),
+              const SizedBox(height: 2),
+              Container(width: 48, height: 1.5, decoration: BoxDecoration(color: relColor.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(1))),
+            ],
+          ),
+        ),
+        // 右侧：关联客户 + 操作按钮
+        Expanded(
+          flex: 3,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Flexible(child: InkWell(onTap: () { if (relatedCustomer != null) Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerDetailPage(customer: relatedCustomer))); }, borderRadius: BorderRadius.circular(8), child: Padding(padding: const EdgeInsets.all(4), child: Text(relatedName, style: const TextStyle(fontSize: 14, color: Color(0xFF1565C0)), overflow: TextOverflow.ellipsis)))),
+              const SizedBox(width: 4),
+              Material(color: Colors.transparent, borderRadius: BorderRadius.circular(6), clipBehavior: Clip.antiAlias, child: InkWell(onTap: onEdit, child: Padding(padding: const EdgeInsets.all(8), child: Icon(Icons.edit_outlined, size: 18, color: Colors.blue.shade400)))),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class CustomerDetailPage extends StatefulWidget {
   final Customer? customer;
 
@@ -258,6 +343,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
   // Adaptive text color for dark mode
   Color get _textPrimary => Theme.of(context).colorScheme.onSurface;
   Color get primaryColor => Theme.of(context).primaryColor;
+
+  late AppState appState;
+  Future<List<Map<String, dynamic>>>? _customerProductsWithIdFuture;
+  Future<List<Map<String, dynamic>>>? _customerSalesFuture;
+  int? _lastCustomerId;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _aliasController = TextEditingController();
@@ -1058,6 +1148,68 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     });
   }
 
+  /// 编辑拜访记录 — 预填当前数据，调用 updateVisit
+  void _editVisit(Map<String, dynamic> visit) async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    final dateController = TextEditingController(text: visit['date'] ?? '');
+    final locationController = TextEditingController(text: visit['location'] ?? '');
+    final accompanyingPersonsController = TextEditingController(text: visit['accompanying_persons'] ?? '');
+    final introducedProductsController = TextEditingController(text: visit['introduced_products'] ?? '');
+    final interestedProductsController = TextEditingController(text: visit['interested_products'] ?? '');
+    final competitorsController = TextEditingController(text: visit['competitors'] ?? '');
+    final notesController = TextEditingController(text: visit['notes'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('编辑拜访记录'),
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: dateController, decoration: const InputDecoration(labelText: '日期', prefixIcon: Icon(Icons.calendar_today, size: 20)), readOnly: true, onTap: () async {
+            final DateTime? picked = await showDatePicker(context: context, initialDate: DateTime.tryParse(dateController.text) ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+            if (picked != null && mounted) dateController.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+          }),
+          TextField(controller: locationController, decoration: const InputDecoration(labelText: '地点', prefixIcon: Icon(Icons.location_on, size: 20))),
+          TextField(controller: accompanyingPersonsController, decoration: const InputDecoration(labelText: '随行人员', prefixIcon: Icon(Icons.people, size: 20))),
+          TextField(controller: introducedProductsController, decoration: const InputDecoration(labelText: '介绍的产品', prefixIcon: Icon(Icons.inventory, size: 20))),
+          TextField(controller: interestedProductsController, decoration: const InputDecoration(labelText: '客户意向产品', prefixIcon: Icon(Icons.favorite, size: 20))),
+          TextField(controller: competitorsController, decoration: const InputDecoration(labelText: '同行竞争产品', prefixIcon: Icon(Icons.compare, size: 20))),
+          TextField(controller: notesController, decoration: const InputDecoration(labelText: '备注', prefixIcon: Icon(Icons.note, size: 20)), maxLines: 3),
+        ])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          TextButton(onPressed: () async {
+            final visitId = (visit['id'] as num?)?.toInt();
+            if (visitId == null) return;
+            final updatedVisit = Visit(
+              id: visitId,
+              customerId: widget.customer!.id!,
+              visitDate: dateController.text,
+              location: locationController.text,
+              accompanyingPersons: accompanyingPersonsController.text,
+              productsPresented: introducedProductsController.text,
+              interestedProducts: interestedProductsController.text,
+              competitors: competitorsController.text,
+              notes: notesController.text,
+            );
+            await appState.updateVisit(updatedVisit);
+            if (!context.mounted) return;
+            Navigator.pop(context);
+            if (!mounted) return;
+            ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('拜访记录已更新')));
+          }, child: const Text('保存')),
+        ],
+      ),
+    ).whenComplete(() {
+      dateController.dispose();
+      locationController.dispose();
+      accompanyingPersonsController.dispose();
+      introducedProductsController.dispose();
+      interestedProductsController.dispose();
+      competitorsController.dispose();
+      notesController.dispose();
+    });
+  }
+
   void _addSale() async {
     if (widget.customer?.id == null) return;
     final appState = Provider.of<AppState>(context, listen: false);
@@ -1249,6 +1401,90 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     });
   }
 
+  /// 编辑销售记录 — 预填当前数据，调用 updateSale
+  void _editSale(Map<String, dynamic> sale) async {
+    if (widget.customer?.id == null) return;
+    final appState = Provider.of<AppState>(context, listen: false);
+    final dateController = TextEditingController(text: sale['sale_date'] ?? '');
+    final amountController = TextEditingController(text: sale['amount']?.toString() ?? '');
+    final notesController = TextEditingController(text: sale['notes'] ?? '');
+    final commissionController = TextEditingController(text: sale['commission_rate']?.toString() ?? '0');
+
+    // Pre-select product and colleague
+    Product? selectedProduct;
+    final productId = (sale['product_id'] as num?)?.toInt();
+    if (productId != null) selectedProduct = appState.products.where((p) => p.id == productId).firstOrNull;
+
+    Colleague? selectedColleague;
+    final colleagueId = (sale['colleague_id'] as num?)?.toInt();
+    if (colleagueId != null) selectedColleague = appState.colleagues.where((c) => c.id == colleagueId).firstOrNull;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('编辑销售记录'),
+          content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: dateController, decoration: const InputDecoration(labelText: '日期', prefixIcon: Icon(Icons.calendar_today, size: 20)), readOnly: true, onTap: () async {
+              final DateTime? picked = await showDatePicker(context: context, initialDate: DateTime.tryParse(dateController.text) ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+              if (picked != null && mounted) dateController.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+            }),
+            const SizedBox(height: 10),
+            const Text('选择产品:', style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 5),
+            DropdownButton<Product>(hint: const Text('请选择产品'), value: selectedProduct, isExpanded: true, onChanged: (Product? value) { setDialogState(() { selectedProduct = value; }); },
+              items: appState.products.map<DropdownMenuItem<Product>>((Product p) => DropdownMenuItem<Product>(value: p, child: Text(p.name))).toList()),
+            const SizedBox(height: 10),
+            TextField(controller: amountController, decoration: const InputDecoration(labelText: '金额', hintText: '请输入销售金额', border: OutlineInputBorder(), prefixIcon: Icon(Icons.attach_money)), keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+            const SizedBox(height: 10),TextField(controller: notesController, decoration: const InputDecoration(labelText: '备注', hintText: '请输入备注信息（可多行）', border: OutlineInputBorder()), maxLines: 5, minLines: 3),
+            const SizedBox(height: 10),
+            const Text('选择合作同事:', style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 5),
+            DropdownButton<Colleague>(hint: const Text('请选择同事（可选）'), value: selectedColleague, isExpanded: true, onChanged: (Colleague? value) { setDialogState(() { selectedColleague = value; }); },
+              items: appState.colleagues.map<DropdownMenuItem<Colleague>>((Colleague c) => DropdownMenuItem<Colleague>(value: c, child: Text(c.name))).toList()),
+            if (selectedColleague != null)
+              TextField(controller: commissionController, decoration: const InputDecoration(labelText: '分成比例 (%)'), keyboardType: TextInputType.number),
+          ])),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+            TextButton(onPressed: () async {
+              if (selectedProduct == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请选择产品'))); return; }
+              final amount = double.tryParse(amountController.text);
+              if (amount == null || amount <= 0) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请输入有效的销售金额'))); return; }
+              if (selectedColleague != null) {
+                final commissionRate = double.tryParse(commissionController.text);
+                if (commissionController.text.isNotEmpty && commissionRate == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请输入有效的分成比例'))); return; }
+                if (commissionRate != null && (commissionRate < 0 || commissionRate > 100)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('分成比例应在0-100之间'))); return; }
+              }
+              final saleId = (sale['id'] as num?)?.toInt();
+              if (saleId == null) return;
+              final updatedSale = Sale(
+                id: saleId,
+                customerId: widget.customer!.id!,
+                productId: selectedProduct!.id!,
+                amount: amount,
+                notes: notesController.text,
+                saleDate: dateController.text,
+                colleagueId: selectedColleague?.id,
+                commissionRate: selectedColleague != null ? double.tryParse(commissionController.text) : null,
+              );
+              await appState.updateSale(updatedSale);
+              if (!context.mounted) return;
+              Navigator.pop(context);
+              if (!mounted) return;
+              ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('销售记录已更新')));
+            }, child: const Text('保存')),
+          ],
+        ),
+      ),
+    ).whenComplete(() {
+      dateController.dispose();
+      amountController.dispose();
+      notesController.dispose();
+      commissionController.dispose();
+    });
+  }
+
   void _addCustomerRelationship() async {
     if (widget.customer?.id == null) return;
     final appState = Provider.of<AppState>(context, listen: false);
@@ -1387,7 +1623,67 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     );
   }
 
-  Future<List<Product>> _getCustomerProducts(AppState appState) async {
+  /// 编辑关系 — 弹出对话框修改关系类型
+  void _editCustomerRelationship(Map<String, dynamic> rel) async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    // 关联客户ID可能来自 related_customer_id（内存模式）或 id（数据库JOIN的 c.*）
+    final relatedId =
+        (rel['related_customer_id'] as num?)?.toInt() ?? (rel['id'] as num?)?.toInt();
+    if (widget.customer?.id == null || relatedId == null) return;
+
+    // 查找关联客户名称
+    final relatedCustomer = appState.customers.where((c) => c.id == relatedId).firstOrNull;
+    String newType = rel['relationship'] as String? ?? '其他';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('修改与 ${relatedCustomer?.name ?? '该客户'} 的关系'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButton<String>(
+                value: appState.relationshipLabels.contains(newType) ? newType : null,
+                hint: const Text('选择新关系类型'),
+                isExpanded: true,
+                onChanged: (String? value) {
+                  setDialogState(() => newType = value ?? newType);
+                },
+                items: appState.relationshipLabels
+                    .map<DropdownMenuItem<String>>((String type) {
+                  return DropdownMenuItem<String>(value: type, child: Text(type));
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('保存', style: TextStyle(color: Color(0xFF1565C0))),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // 先删除旧关系，再添加新关系（关系记录ID用 cr_id，关联客户ID用 id）
+    final relId = (rel['cr_id'] as num?)?.toInt() ?? (rel['id'] as num?)?.toInt();
+    if (relId != null) {
+      await appState.deleteCustomerRelationship(relId);
+    }
+    await appState.addCustomerRelationship(widget.customer!.id!, relatedId, newType);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('关系已更新为「$newType」')));
+  }
+
+  /// 删除关系 — 确认后执行
+  /// 获取客户已购产品（保留原始 Map 含 cp_id，用于删除操作）
+  Future<List<Map<String, dynamic>>> _getCustomerProductsWithId(AppState appState) async {
     if (widget.customer?.id == null) return [];
     if (kIsWeb) {
       final updatedCustomer = appState.customers.firstWhere(
@@ -1395,27 +1691,23 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         orElse: () => widget.customer!,
       );
       final customerProductMaps = updatedCustomer.products;
-      final productIds = customerProductMaps
-          .map<int?>((p) => (p['id'] as num?)?.toInt())
-          .where((id) => id != null)
-          .toSet();
-      // Build index for O(1) lookup instead of O(N) linear scan per product
       final productById = <int, Product>{};
       for (final p in appState.products) {
         if (p.id != null) productById[p.id!] = p;
       }
-      return productIds
-          .map<Product?>((id) => productById[id])
-          .whereType<Product>()
-          .toList();
+      return customerProductMaps.map<Map<String, dynamic>>((cp) {
+        final productId = (cp['product_id'] as num?)?.toInt() ?? (cp['id'] as num?)?.toInt();
+        final product = productById[productId];
+        if (product != null) {
+          return {...cp, ...product.toMap(), 'cp_id': cp['id']};
+        }
+        return cp;
+      }).toList();
     } else {
       final db = DatabaseHelper.instance;
-      final customerProductMaps = await db.getCustomerProducts(
-        widget.customer!.id!,
-      );
-      return customerProductMaps
-          .map<Product>((map) => Product.fromMap(map))
-          .toList();
+      final customerProductMaps = await db.getCustomerProducts(widget.customer!.id!);
+      // getCustomerProducts already returns maps with cp_id from the JOIN query
+      return customerProductMaps;
     }
   }
 
@@ -2809,8 +3101,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     return _buildGroupedSection(
       title: '已购产品',
       children: [
-        FutureBuilder<List<Product>>(
-          future: _customerProductsFuture,
+        FutureBuilder<List<Map<String, dynamic>>>(
+          future: _customerProductsWithIdFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Padding(
@@ -2840,73 +3132,46 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             } else {
               return Column(
                 children: snapshot.data!.asMap().entries.map<Widget>((entry) {
-                  final index = entry.key;
-                  final product = entry.value;
-                  final isLast = index == snapshot.data!.length - 1;
-                  return InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              ProductDetailPage(product: product),
+                  final item = entry.value;
+                  final product = Product.fromMap(item);
+                  final cpId = (item['cp_id'] ?? item['id'] as num?) as num?;
+                  return Dismissible(
+                    key: ValueKey('cp_${cpId ?? entry.key}'),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(color: Colors.red.shade400, borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.delete_rounded, color: Colors.white),
+                    ),
+                    confirmDismiss: (direction) async {
+                      if (cpId == null) return false;
+                      return await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('移除已购产品'),
+                          content: Text('确定要为该客户移除「${product.name}」吗？'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('移除', style: TextStyle(color: Colors.red))),
+                          ],
                         ),
                       );
                     },
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(right: 12),
-                                child: Icon(
-                                  Icons.inventory_2,
-                                  size: 20,
-                                  color: Colors.teal,
-                                ),
-                              ),
-                              SizedBox(
-                                width: 56,
-                                child: Text(
-                                  product.category ?? '产品',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  product.name,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: _textPrimary,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.chevron_right,
-                                size: 18,
-                                color: Colors.grey.shade400,
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (!isLast)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 48),
-                            child: Divider(
-                              height: 1,
-                              color: Colors.grey.shade200,
-                              thickness: 0.5,
-                            ),
-                          ),
-                      ],
+                    onDismissed: (direction) async {
+                      if (cpId != null) await Provider.of<AppState>(context, listen: false).deleteCustomerProduct(cpId.toInt());
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      child: Row(children: [
+                        const Padding(padding: EdgeInsets.only(right: 12), child: Icon(Icons.inventory_2, size: 20, color: Colors.teal)),
+                        Expanded(child: InkWell(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailPage(product: product))),
+                          child: Row(children: [SizedBox(width: 56, child: Text(product.category ?? '产品', style: TextStyle(fontSize: 15, color: Colors.grey.shade600))), Expanded(child: Text(product.name, style: TextStyle(fontSize: 15, color: _textPrimary)))]),
+                        )),
+                        Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                      ]),
                     ),
                   );
                 }).toList(),
@@ -2918,7 +3183,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     );
   }
 
-  /// 客户关系区块
+  /// 客户关系区块 — 横向短线连接布局
   Widget _buildRelationshipsSection() {
     return _buildGroupedSection(
       title: '客户关系',
@@ -2932,11 +3197,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               orElse: () => widget.customer!,
             );
             final relationships = updatedCustomer.relationships;
+
             // Build index for O(1) customer lookup
             final customerById = <int, Customer>{};
             for (final c in appState.customers) {
               if (c.id != null) customerById[c.id!] = c;
             }
+
             if (relationships.isEmpty) {
               return const Padding(
                 padding: EdgeInsets.all(16),
@@ -2947,223 +3214,54 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 ),
               );
             }
+
+            // 横向列表：每行一条关系 [当前客户] ──关系── [关联客户]  [编辑]，左滑删除
             return Column(
-              children: [
-                // 关系思维导图
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                  child: SizedBox(
-                    height: relationships.length <= 3 ? 180 : 240,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTapUp: (details) {
-                            final pos = details.localPosition;
-                            final centerX = constraints.maxWidth / 2;
-                            final centerY = constraints.maxHeight / 2;
-                            const nodeRadius = 24.0;
-                            final r =
-                                math.min(centerX, centerY) - nodeRadius - 16;
-                            for (int i = 0; i < relationships.length; i++) {
-                              final angleStep =
-                                  2 * math.pi / relationships.length;
-                              final angle = i * angleStep - math.pi / 2;
-                              final nodeX = centerX + r * math.cos(angle);
-                              final nodeY = centerY + r * math.sin(angle);
-                              final dx = pos.dx - nodeX;
-                              final dy = pos.dy - nodeY;
-                              if (dx * dx + dy * dy <=
-                                  (nodeRadius + 4) * (nodeRadius + 4)) {
-                                final relatedId =
-                                    (relationships[i]['related_customer_id']
-                                            as num?)
-                                        ?.toInt() ??
-                                    (relationships[i]['id'] as num?)?.toInt();
-                                if (relatedId != null) {
-                                  final relatedCustomer =
-                                      customerById[relatedId];
-                                  if (relatedCustomer != null) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => CustomerDetailPage(
-                                          customer: relatedCustomer,
-                                        ),
-                                      ),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('该客户已被删除')),
-                                    );
-                                  }
-                                }
-                                return;
-                              }
-                            }
-                          },
-                          child: CustomPaint(
-                            painter: RelationshipGraphPainter(
-                              centerCustomer: updatedCustomer,
-                              relationships: relationships,
-                              scaffoldBgColor: Theme.of(
-                                context,
-                              ).scaffoldBackgroundColor,
-                            ),
-                            size: Size(
-                              constraints.maxWidth,
-                              constraints.maxHeight,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+              children: relationships.asMap().entries.map<Widget>((entry) {
+                final index = entry.key;
+                final rel = entry.value;
+                final relId = (rel['cr_id'] as num?)?.toInt() ?? (rel['id'] as num?)?.toInt();
+                final relatedName = rel['name'] as String? ?? '';
+
+                return Dismissible(
+                  key: ValueKey('rel_${relId}_$index'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.delete_rounded, color: Colors.white),
                   ),
-                ),
-                // 关系列表
-                ...relationships.asMap().entries.map<Widget>((entry) {
-                  final index = entry.key;
-                  final rel = entry.value;
-                  final isLast = index == relationships.length - 1;
-                  return Dismissible(
-                    key: ValueKey('rel_${rel['id'] ?? rel.hashCode}'),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 20),
-                      margin: const EdgeInsets.symmetric(vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE53935),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.delete_rounded,
-                        color: Colors.white,
-                      ),
-                    ),
-                    confirmDismiss: (direction) async {
-                      return await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('确认删除'),
-                          content: const Text('确定要删除这条客户关系吗？'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: const Text('取消'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: const Text(
-                                '删除',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    onDismissed: (direction) async {
-                      final appState = Provider.of<AppState>(
-                        context,
-                        listen: false,
-                      );
-                      if (rel['id'] != null) {
-                        await appState.deleteCustomerRelationship(
-                          (rel['id'] as num?)?.toInt() ?? -1,
-                        );
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('客户关系已删除')),
-                        );
-                      }
-                    },
-                    child: InkWell(
-                      onTap: () {
-                        // Use related_customer_id if available (DB mode returns customer fields via JOIN),
-                        // otherwise fall back to 'id' which in Web in-memory mode stores the related customer id too
-                        // because DB mode: SELECT c.* gives customer id; Web mode: we now store related_customer_id
-                        final relatedCustomerId =
-                            (rel['related_customer_id'] as num?)?.toInt() ??
-                            (rel['id'] as num?)?.toInt();
-                        if (relatedCustomerId != null) {
-                          final relatedCustomer =
-                              customerById[relatedCustomerId];
-                          if (relatedCustomer != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CustomerDetailPage(
-                                  customer: relatedCustomer,
-                                ),
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('该客户已被删除')),
-                            );
-                          }
-                        }
-                      },
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            child: Row(
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 12),
-                                  child: Icon(
-                                    Icons.person_outline,
-                                    size: 20,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 56,
-                                  child: Text(
-                                    rel['relationship'] ?? '',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    rel['name'] ?? '',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: _textPrimary,
-                                    ),
-                                  ),
-                                ),
-                                Icon(
-                                  Icons.chevron_right,
-                                  size: 18,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!isLast)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 48),
-                              child: Divider(
-                                height: 1,
-                                color: Colors.grey.shade200,
-                                thickness: 0.5,
-                              ),
-                            ),
+                  confirmDismiss: (direction) async {
+                    return await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('确认删除'),
+                        content: Text('确定要删除与「$relatedName」的客户关系吗？'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('删除', style: TextStyle(color: Colors.red))),
                         ],
                       ),
-                    ),
-                  );
-                }),
-              ],
+                    );
+                  },
+                  onDismissed: (direction) async {
+                    if (relId != null && relId > 0) {
+                      await Provider.of<AppState>(context, listen: false).deleteCustomerRelationship(relId);
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('已删除与「$relatedName」的关系')));
+                    }
+                  },
+                  child: buildRelationshipRow(
+                    context: context,
+                    centerCustomer: updatedCustomer,
+                    rel: rel,
+                    customerById: customerById,
+                    onEdit: () => _editCustomerRelationship(rel),
+                  ),
+                );
+              }).toList(),
             );
           },
         ),
@@ -3264,58 +3362,42 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.event, size: 16, color: primaryColor),
-              const SizedBox(width: 6),
-              Text(
-                visit['date'] ?? '',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: primaryColor,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.event, size: 16, color: primaryColor),
+                        const SizedBox(width: 6),
+                        Text(
+                          visit['date'] ?? '',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: primaryColor),
+                        ),
+                        if (visit['location'] != null && visit['location'].toString().isNotEmpty) ...[
+                          const SizedBox(width: 12),
+                          Icon(Icons.location_on, size: 14, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Expanded(child: Text(visit['location'], style: TextStyle(fontSize: 13, color: Colors.grey.shade600), overflow: TextOverflow.ellipsis)),
+                        ],
+                      ],
+                    ),
+                    if (visit['introduced_products'] != null && visit['introduced_products'].toString().isNotEmpty)
+                      Padding(padding: const EdgeInsets.only(top: 4, left: 22), child: Text('介绍: ${visit['introduced_products']}', style: TextStyle(fontSize: 13, color: Colors.grey.shade700))),
+                    if (visit['interested_products'] != null && visit['interested_products'].toString().isNotEmpty)
+                      Padding(padding: const EdgeInsets.only(top: 2, left: 22), child: Text('意向: ${visit['interested_products']}', style: TextStyle(fontSize: 13, color: Colors.grey.shade700))),
+                    if (visit['notes'] != null && visit['notes'].toString().isNotEmpty)
+                      Padding(padding: const EdgeInsets.only(top: 2, left: 22), child: Text('备注: ${visit['notes']}', style: TextStyle(fontSize: 13, color: Colors.grey.shade500))),
+                  ],
                 ),
               ),
-              if (visit['location'] != null &&
-                  visit['location'].toString().isNotEmpty) ...[
-                const SizedBox(width: 12),
-                Icon(Icons.location_on, size: 14, color: Colors.grey.shade500),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    visit['location'],
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+              Material(color: Colors.transparent, borderRadius: BorderRadius.circular(6), clipBehavior: Clip.antiAlias,
+                child: InkWell(onTap: () => _editVisit(visit), child: Padding(padding: const EdgeInsets.all(6), child: Icon(Icons.edit_outlined, size: 16, color: Colors.blue.shade400))),
+              ),
             ],
           ),
-          if (visit['introduced_products'] != null &&
-              visit['introduced_products'].toString().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, left: 22),
-              child: Text(
-                '介绍: ${visit['introduced_products']}',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-              ),
-            ),
-          if (visit['interested_products'] != null &&
-              visit['interested_products'].toString().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 2, left: 22),
-              child: Text(
-                '意向: ${visit['interested_products']}',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-              ),
-            ),
-          if (visit['notes'] != null && visit['notes'].toString().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 2, left: 22),
-              child: Text(
-                '备注: ${visit['notes']}',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-              ),
-            ),
         ],
       ),
     );
@@ -3431,51 +3513,30 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.sell, size: 16, color: Colors.green.shade700),
-              const SizedBox(width: 6),
-              Text(
-                sale['sale_date'] ?? '',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: Colors.green.shade700,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [Icon(Icons.sell, size: 16, color: Colors.green.shade700), const SizedBox(width: 6), Text(sale['sale_date'] ?? '', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.green.shade700))]),
+                    Padding(padding: const EdgeInsets.only(top: 4, left: 22), child: Text('产品: ${sale['product_name'] ?? ''}', style: const TextStyle(fontSize: 14, color: Colors.black87))),
+                    if (sale['notes'] != null && sale['notes'].toString().isNotEmpty)
+                      Padding(padding: const EdgeInsets.only(top: 2, left: 22), child: Text('备注: ${sale['notes']}', style: TextStyle(fontSize: 13, color: Colors.grey.shade500))),
+                    if (sale['colleague_name'] != null)
+                      Padding(padding: const EdgeInsets.only(top: 2, left: 22), child: Text('合作: ${sale['colleague_name']}${sale['commission_rate'] != null ? ' (${sale['commission_rate']}%)' : ''}', style: TextStyle(fontSize: 13, color: Colors.grey.shade500))),
+                  ],
                 ),
+              ),
+              Material(color: Colors.transparent, borderRadius: BorderRadius.circular(6), clipBehavior: Clip.antiAlias,
+                child: InkWell(onTap: () => _editSale(sale), child: Padding(padding: const EdgeInsets.all(6), child: Icon(Icons.edit_outlined, size: 16, color: Colors.blue.shade400))),
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 22),
-            child: Text(
-              '产品: ${sale['product_name'] ?? ''}',
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
-            ),
-          ),
-          if (sale['notes'] != null && sale['notes'].toString().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 2, left: 22),
-              child: Text(
-                '备注: ${sale['notes']}',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-              ),
-            ),
-          if (sale['colleague_name'] != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 2, left: 22),
-              child: Text(
-                '合作: ${sale['colleague_name']}${sale['commission_rate'] != null ? ' (${sale['commission_rate']}%)' : ''}',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-              ),
-            ),
         ],
       ),
     );
   }
-
-  late AppState appState;
-  Future<List<Product>>? _customerProductsFuture;
-  Future<List<Map<String, dynamic>>>? _customerSalesFuture;
-  int? _lastCustomerId;
 
   @override
   void didChangeDependencies() {
@@ -3485,7 +3546,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     final currentId = widget.customer?.id;
     if (currentId != _lastCustomerId) {
       _lastCustomerId = currentId;
-      _customerProductsFuture = _getCustomerProducts(appState);
+      _customerProductsWithIdFuture = _getCustomerProductsWithId(appState);
       if (currentId != null) {
         _customerSalesFuture = appState.getCustomerSales(currentId);
       }
