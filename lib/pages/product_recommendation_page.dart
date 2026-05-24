@@ -92,9 +92,62 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     final sherpaASR = SherpaASRService.instance;
     if (sherpaASR.isInitialized) {
       await _startRecordingForOfflineASR();
+    } else if (!kIsWeb) {
+      // 按需加载 ASR 模型
+      final ok = await _ensureModelLoaded(
+        '语音识别模型',
+        '正在初始化 Paraformer 语音识别模型...',
+        () => sherpaASR.initialize(),
+      );
+      if (ok && sherpaASR.isInitialized) {
+        await _startRecordingForOfflineASR();
+      } else {
+        await _startSystemASR();
+      }
     } else {
       await _startSystemASR();
     }
+  }
+
+  /// 统一模型按需加载方法：显示进度弹窗，完成后返回是否成功
+  Future<bool> _ensureModelLoaded(
+    String modelName,
+    String message,
+    Future<bool> Function() initFn,
+  ) async {
+    bool? result;
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        // 异步执行初始化，完成后关闭弹窗
+        initFn().then((success) {
+          result = success;
+          if (ctx.mounted) Navigator.pop(ctx, success);
+        }).catchError((e) {
+          AppLogger.error('加载$modelName 失败: $e');
+          result = false;
+          if (ctx.mounted) Navigator.pop(ctx, false);
+        });
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 16),
+                Expanded(child: Text(message)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    return result ?? false;
   }
 
   Future<void> _startSystemASR() async {
@@ -390,6 +443,15 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
       final ocr = OcrService.instance;
       String? ocrTextResult;
+
+      // 按需加载 OCR 模型
+      if (!ocr.isInitialized) {
+        await _ensureModelLoaded(
+          '文字识别模型',
+          '正在初始化 PP-OCRv5 文字识别模型...',
+          () => ocr.initialize(),
+        );
+      }
       if (ocr.isInitialized) {
         ocrTextResult = await ocr.recognizeText(image.path);
       }
@@ -489,7 +551,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     });
   }
 
-  void _analyzeProducts() {
+  Future<void> _analyzeProducts() async {
     final requirement = _fullRequirement;
     if (requirement.isEmpty) {
       ScaffoldMessenger.of(
@@ -521,6 +583,15 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
     final appState = Provider.of<AppState>(context, listen: false);
     final semantic = SemanticService.instance;
+
+    // 按需加载语义分析模型
+    if (!semantic.isInitialized) {
+      await _ensureModelLoaded(
+        '语义分析模型',
+        '正在初始化 BGE-small-zh 语义分析模型...',
+        () => semantic.initialize(),
+      );
+    }
 
     // 语义分析模式：使用嵌入模型计算相似度
     if (semantic.isInitialized) {

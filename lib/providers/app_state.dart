@@ -10,9 +10,7 @@ import 'package:insurance_manager/models/sale.dart';
 import 'package:insurance_manager/models/user.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:insurance_manager/services/sherpa_asr_service.dart';
-import 'package:insurance_manager/services/ocr_service.dart';
-import 'package:insurance_manager/services/semantic_service.dart';
+import 'package:insurance_manager/services/backup_service.dart';
 import 'package:insurance_manager/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -159,37 +157,16 @@ class AppState extends ChangeNotifier {
         loadSystemNotifications(),
       ]);
 
-      // 阶段5: 预加载离线语音模型
+      // 阶段5: 自动备份检查（后台执行，不阻塞启动）
       if (!kIsWeb) {
-        _setLoadingStage('Paraformer 语音识别模型', 0.60, isModel: true);
-        await Future.delayed(const Duration(milliseconds: 500));
-        try {
-          await SherpaASRService.instance.initialize();
-        } catch (e) {
-          AppLogger.error('init ASR: $e');
-        }
-
-        // 阶段6: 预加载OCR模型
-        _setLoadingStage('PP-OCRv5 文字识别模型', 0.75, isModel: true);
-        await Future.delayed(const Duration(milliseconds: 500));
-        try {
-          await OcrService.instance.initialize();
-        } catch (e) {
-          AppLogger.error('init OCR: $e');
-        }
-
-        // 阶段7: 预加载语义分析模型
-        _setLoadingStage('BGE-small-zh 语义分析模型', 0.90, isModel: true);
-        await Future.delayed(const Duration(milliseconds: 500));
-        try {
-          await SemanticService.instance.initialize();
-        } catch (e) {
-          AppLogger.error('init Semantic: $e');
-        }
+        _setLoadingStage('加载完成', 1.0);
+        // 后台异步检查自动备份，不阻塞 UI
+        Future.microtask(() => BackupService.instance.runAutoBackupIfNeeded());
+      } else {
+        _setLoadingStage('加载完成', 1.0);
       }
 
       // 完成
-      _setLoadingStage('加载完成', 1.0);
       _isInitialized = true;
       notifyListeners();
     } catch (e) {

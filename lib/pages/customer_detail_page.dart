@@ -695,8 +695,11 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         ),
       );
 
-      // 使用本地 OCR 识别文字
+      // 使用本地 OCR 识别文字（按需加载模型）
       final ocr = OcrService.instance;
+      if (!ocr.isInitialized) {
+        await _ensureOcrModelLoaded();
+      }
       String fullText = '';
       if (ocr.isInitialized) {
         final result = await ocr.recognizeText(picked.path);
@@ -883,6 +886,39 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           ),
         ],
       ),
+    );
+  }
+
+  /// 按需加载 OCR 模型
+  Future<void> _ensureOcrModelLoaded() async {
+    final ocr = OcrService.instance;
+    if (ocr.isInitialized) return;
+
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        ocr.initialize().then((success) {
+          if (ctx.mounted) Navigator.pop(ctx, success);
+        }).catchError((e) {
+          if (ctx.mounted) Navigator.pop(ctx, false);
+        });
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Row(
+              children: [
+                const SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 16),
+                Expanded(child: const Text('正在初始化文字识别模型...')),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

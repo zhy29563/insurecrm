@@ -136,12 +136,21 @@ class _SplashPageState extends State<SplashPage>
                     ),
                   ),
                   const Spacer(flex: 2),
-                  // 进度区域
-                  if (!data.isInitialized) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Column(
-                        children: [
+                  // 进度区域 - 始终渲染，避免布局跳变
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: Column(
+                      children: [
+                        if (data.isInitialized)
+                          Text(
+                            '加载完成',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        else ...[
                           // 模型加载卡片
                           if (data.isLoadingModel && data.stage.isNotEmpty)
                             Container(
@@ -255,9 +264,9 @@ class _SplashPageState extends State<SplashPage>
                             ),
                           ],
                         ],
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                   const Spacer(flex: 1),
                 ],
               ),
