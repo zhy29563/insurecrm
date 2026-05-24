@@ -1,18 +1,12 @@
 import 'package:insurance_manager/widgets/app_components.dart';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:insurance_manager/providers/app_state.dart';
 import 'package:insurance_manager/pages/colleague_management_page.dart';
 import 'package:insurance_manager/pages/backup_restore_page.dart';
-import 'package:insurance_manager/services/backup_service.dart';
 import 'package:insurance_manager/services/sherpa_asr_service.dart';
 import 'package:insurance_manager/services/ocr_service.dart';
 import 'package:insurance_manager/services/semantic_service.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:file_picker/file_picker.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -44,7 +38,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
     await appState.addRelationshipLabel(label);
     if (!mounted) return false;
-    // No setState needed - Provider.of<AppState>(context) in build() will auto-rebuild
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('已添加标签「$label」')));
@@ -331,15 +324,15 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 16),
 
-          // 数据备份与同步
+          // 数据备份
           _buildSectionCard(
             isDark: isDark,
             icon: Icons.cloud_sync_rounded,
             iconColor: const Color(0xFF0288D1),
-            title: '数据备份与同步',
+            title: '数据备份',
             children: [
               Text(
-                '自动定时本地备份、数据恢复、云端备份分享',
+                '自动定时本地备份、数据恢复、备份分享',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               ),
               const SizedBox(height: 14),
@@ -365,71 +358,6 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 16),
 
-          // 数据库管理
-          _buildSectionCard(
-            isDark: isDark,
-            icon: Icons.storage_rounded,
-            iconColor: const Color(0xFFFF7043),
-            title: '数据库管理',
-            children: [
-              Text(
-                '管理数据备份与恢复，包含数据库和附件的完整导出导入',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: kIsWeb ? null : () => _exportBackup(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1565C0),
-                      ),
-                      icon: const Icon(Icons.download_rounded, size: 18),
-                      label: const Text('完整备份'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: kIsWeb ? null : () => _importBackup(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00897B),
-                      ),
-                      icon: const Icon(Icons.upload_rounded, size: 18),
-                      label: const Text('恢复备份'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: kIsWeb
-                          ? null
-                          : () => _exportCSV(context, appState, 'customers'),
-                      icon: const Icon(Icons.table_chart_rounded, size: 18),
-                      label: const Text('导出客户CSV'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: kIsWeb
-                          ? null
-                          : () => _exportCSV(context, appState, 'products'),
-                      icon: const Icon(Icons.table_chart_rounded, size: 18),
-                      label: const Text('导出产品CSV'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
           // 关于
           _buildSectionCard(
             isDark: isDark,
@@ -441,7 +369,7 @@ class _SettingsPageState extends State<SettingsPage> {
               const Divider(height: 20),
               _buildAboutRow('应用', '保险经纪人 v1.0'),
               const Divider(height: 20),
-              _buildAboutRow('版权', '© 2026 保险经纪人'),
+              _buildAboutRow('版权', '\u00a9 2026 保险经纪人'),
             ],
           ),
           const SizedBox(height: 24),
@@ -541,7 +469,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           title: Text(modelName),
           subtitle: Text(
-            '$modelSize · ${isActive ? "使用中" : "已内置"}',
+            '$modelSize \u00b7 ${isActive ? "使用中" : "已内置"}',
             style: const TextStyle(fontSize: 12),
           ),
           trailing: isActive
@@ -587,281 +515,5 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ],
     );
-  }
-
-  Future<void> _exportBackup(BuildContext ctx) async {
-    try {
-      final backupService = BackupService.instance;
-      final backupPath = await backupService.createFullBackup(
-        isAutoBackup: false,
-      );
-      if (!ctx.mounted) return;
-
-      // Offer to share the backup
-      try {
-        await Share.shareXFiles([
-          XFile(backupPath),
-        ], subject: '保险经纪人数据备份 ${DateTime.now().year}');
-      } catch (_) {
-        // Share not available or cancelled — just show path
-        ScaffoldMessenger.of(
-          ctx,
-        ).showSnackBar(SnackBar(content: Text('备份已创建：$backupPath')));
-      }
-    } catch (e) {
-      if (!ctx.mounted) return;
-      ScaffoldMessenger.of(
-        ctx,
-      ).showSnackBar(SnackBar(content: Text('创建备份失败：$e')));
-    }
-  }
-
-  Future<void> _importBackup(BuildContext ctx) async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['zip'],
-        dialogTitle: '选择备份文件',
-      );
-
-      if (result == null || result.files.isEmpty) return;
-
-      final platformFile = result.files.first;
-      if (platformFile.path == null) {
-        if (!ctx.mounted) return;
-        ScaffoldMessenger.of(
-          ctx,
-        ).showSnackBar(const SnackBar(content: Text('无法获取文件路径')));
-        return;
-      }
-
-      final importFile = File(platformFile.path!);
-
-      // Confirm dialog
-      if (!ctx.mounted) return;
-      final confirmed = await showDialog<bool>(
-        context: ctx,
-        builder: (dialogCtx) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('恢复备份'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('即将从以下备份恢复所有数据（含附件）：'),
-              const SizedBox(height: 4),
-              Container(
-                margin: const EdgeInsets.all(8),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  platformFile.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '注意：',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red.shade800,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '当前所有数据将被覆盖替换！建议先创建当前数据的备份再进行恢复。',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.red.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx, false),
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(dialogCtx, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('确认恢复', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      );
-
-      if (confirmed != true) return;
-
-      // Show loading
-      if (!ctx.mounted) return;
-      showDialog(
-        barrierDismissible: false,
-        context: ctx,
-        builder: (loadingCtx) => const PopScope(
-          canPop: false,
-          child: AlertDialog(
-            content: Row(
-              children: [
-                CircularProgressIndicator(strokeWidth: 3),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '正在恢复数据...',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      Text(
-                        '请勿关闭应用',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-
-      final backupService = BackupService.instance;
-      final (success, message) = await backupService.restoreFromBackup(
-        importFile.path,
-      );
-
-      if (!ctx.mounted) return;
-      // Close loading dialog
-      Navigator.pop(ctx);
-      if (!ctx.mounted) return;
-
-      if (success) {
-        // Reload app state data
-        final appState = Provider.of<AppState>(ctx, listen: false);
-        await appState.initializeApp();
-
-        if (!ctx.mounted) return;
-        showDialog(
-          context: ctx,
-          builder: (successCtx) => AlertDialog(
-            icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
-            title: const Text('恢复成功！'),
-            content: Text('$message\n\n建议重启应用以完整加载恢复的数据。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(successCtx),
-                child: const Text('好的'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!ctx.mounted) return;
-      // Close loading dialog if still showing
-      try {
-        Navigator.pop(ctx);
-      } catch (_) {}
-      ScaffoldMessenger.of(
-        ctx,
-      ).showSnackBar(SnackBar(content: Text('恢复失败：$e')));
-    }
-  }
-
-  Future<void> _exportCSV(
-    BuildContext context,
-    AppState appState,
-    String type,
-  ) async {
-    if (kIsWeb) return;
-    try {
-      // CSV escape: double quotes inside fields must be doubled
-      String esc(String? v) => (v ?? '').replaceAll('"', '""');
-
-      String csvContent;
-
-      if (type == 'customers') {
-        const header = '姓名,别名,年龄,性别,评级,电话,地址,标签,创建时间';
-        final rows = appState.customers
-            .map((c) {
-              final phones = esc(c.phones.join('; '));
-              final addresses = esc(c.addresses.join('; '));
-              final tags = esc(c.tagList.join('; '));
-              return '"${esc(c.name)}","${esc(c.alias)}","${esc(c.age?.toString())}","${esc(c.gender)}","${esc(c.rating?.toString())}","$phones","$addresses","$tags","${esc(c.createdAt)}"';
-            })
-            .join('\n');
-        csvContent = '$header\n$rows';
-      } else {
-        const header = '公司,名称,描述,优势,分类,开始日期,结束日期,创建时间';
-        final rows = appState.products
-            .map((p) {
-              return '"${esc(p.company)}","${esc(p.name)}","${esc(p.description)}","${esc(p.sellingPoints)}","${esc(p.category)}","${esc(p.salesStartDate)}","${esc(p.salesEndDate)}","${esc(p.createdAt)}"';
-            })
-            .join('\n');
-        csvContent = '$header\n$rows';
-      }
-
-      final directory = await getApplicationDocumentsDirectory();
-      final exportDir = Directory('${directory.path}/exports');
-      if (!exportDir.existsSync()) {
-        exportDir.createSync(recursive: true);
-      }
-
-      final timestamp = DateTime.now().toString().replaceAll(
-        RegExp(r'[\\/:*?"<>|]'),
-        '_',
-      );
-      final file = File('${exportDir.path}/${type}_$timestamp.csv');
-      await file.writeAsString(
-        '\ufeff$csvContent',
-      ); // Add UTF-8 BOM for Excel compatibility
-
-      try {
-        await Share.shareXFiles([XFile(file.path)], subject: '$type 导出');
-      } catch (e) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('分享失败，CSV已保存到: ${file.path}')));
-      }
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('导出CSV失败: $e')));
-    }
   }
 }

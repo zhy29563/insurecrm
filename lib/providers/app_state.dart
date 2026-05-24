@@ -10,7 +10,6 @@ import 'package:insurance_manager/models/sale.dart';
 import 'package:insurance_manager/models/user.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:insurance_manager/services/backup_service.dart';
 import 'package:insurance_manager/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -133,38 +132,45 @@ class AppState extends ChangeNotifier {
   // Initialize app data (parallelized for performance)
   Future<void> initializeApp() async {
     try {
-      // 阶段1: 加载配置
-      _setLoadingStage('正在加载配置...', 0.05);
-      await Future.delayed(const Duration(milliseconds: 50));
+      // 阶段1: 加载配置 (最少停留 400ms)
+      _setLoadingStage('正在加载配置...', 0.10);
+      final sw1 = Stopwatch()..start();
       await Future.wait([_loadRelationshipLabels()]);
+      if (sw1.elapsedMilliseconds < 400) {
+        await Future.delayed(Duration(milliseconds: 400 - sw1.elapsedMilliseconds));
+      }
 
-      // 阶段2: 加载客户数据
-      _setLoadingStage('正在加载客户数据...', 0.15);
-      await Future.delayed(const Duration(milliseconds: 50));
+      // 阶段2: 加载客户数据 (最少停留 600ms)
+      _setLoadingStage('正在加载客户数据...', 0.30);
+      final sw2 = Stopwatch()..start();
       await loadCustomers();
+      if (sw2.elapsedMilliseconds < 600) {
+        await Future.delayed(Duration(milliseconds: 600 - sw2.elapsedMilliseconds));
+      }
 
-      // 阶段3: 加载产品、同事、销售
-      _setLoadingStage('正在加载业务数据...', 0.30);
-      await Future.delayed(const Duration(milliseconds: 50));
+      // 阶段3: 加载产品、同事、销售 (最少停留 600ms)
+      _setLoadingStage('正在加载业务数据...', 0.55);
+      final sw3 = Stopwatch()..start();
       await Future.wait([loadProducts(), loadColleagues(), loadSales()]);
+      if (sw3.elapsedMilliseconds < 600) {
+        await Future.delayed(Duration(milliseconds: 600 - sw3.elapsedMilliseconds));
+      }
 
-      // 阶段4: 加载提醒、统计、通知
-      _setLoadingStage('正在加载统计数据...', 0.45);
-      await Future.delayed(const Duration(milliseconds: 50));
+      // 阶段4: 加载提醒、统计、通知 (最少停留 700ms)
+      _setLoadingStage('正在加载统计数据...', 0.80);
+      final sw4 = Stopwatch()..start();
       await Future.wait([
         loadReminders(),
         loadStatistics(),
         loadSystemNotifications(),
       ]);
-
-      // 阶段5: 自动备份检查（后台执行，不阻塞启动）
-      if (!kIsWeb) {
-        _setLoadingStage('加载完成', 1.0);
-        // 后台异步检查自动备份，不阻塞 UI
-        Future.microtask(() => BackupService.instance.runAutoBackupIfNeeded());
-      } else {
-        _setLoadingStage('加载完成', 1.0);
+      if (sw4.elapsedMilliseconds < 700) {
+        await Future.delayed(Duration(milliseconds: 700 - sw4.elapsedMilliseconds));
       }
+
+      // 阶段5: 准备就绪 (最少停留 500ms，让用户看到"加载完成")
+      _setLoadingStage('加载完成', 1.0);
+      await Future.delayed(const Duration(milliseconds: 500));
 
       // 完成
       _isInitialized = true;

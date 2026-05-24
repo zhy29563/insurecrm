@@ -903,17 +903,17 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         }).catchError((e) {
           if (ctx.mounted) Navigator.pop(ctx, false);
         });
-        return PopScope(
+        return const PopScope(
           canPop: false,
           child: AlertDialog(
             content: Row(
               children: [
-                const SizedBox(
+                SizedBox(
                   width: 20, height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                const SizedBox(width: 16),
-                Expanded(child: const Text('正在初始化文字识别模型...')),
+                SizedBox(width: 16),
+                Expanded(child: Text('正在初始化文字识别模型...')),
               ],
             ),
           ),
@@ -3219,7 +3219,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     );
   }
 
-  /// 客户关系区块 — 横向短线连接布局
+  /// 客户关系区块 — 辐射图 + 横向短线连接布局
   Widget _buildRelationshipsSection() {
     return _buildGroupedSection(
       title: '客户关系',
@@ -3251,9 +3251,26 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               );
             }
 
-            // 横向列表：每行一条关系 [当前客户] ──关系── [关联客户]  [编辑]，左滑删除
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+
             return Column(
-              children: relationships.asMap().entries.map<Widget>((entry) {
+              children: [
+                // 关系辐射图
+                SizedBox(
+                  width: double.infinity,
+                  height: 280,
+                  child: CustomPaint(
+                    painter: RelationshipGraphPainter(
+                      centerCustomer: updatedCustomer,
+                      relationships: relationships,
+                      scaffoldBgColor: isDark ? const Color(0xFF121212) : Colors.white,
+                    ),
+                    size: const Size(double.infinity, 280),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // 关系列表
+                ...relationships.asMap().entries.map<Widget>((entry) {
                 final index = entry.key;
                 final rel = entry.value;
                 final relId = (rel['cr_id'] as num?)?.toInt() ?? (rel['id'] as num?)?.toInt();
@@ -3297,7 +3314,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     onEdit: () => _editCustomerRelationship(rel),
                   ),
                 );
-              }).toList(),
+                }),
+              ],
             );
           },
         ),
