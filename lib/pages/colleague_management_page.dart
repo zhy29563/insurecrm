@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:insurance_manager/providers/app_state.dart';
 import 'package:insurance_manager/models/colleague.dart';
 import 'package:insurance_manager/widgets/app_components.dart';
@@ -435,7 +436,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                     itemCount: colleagues.length,
                     itemBuilder: (context, index) {
                       final c = colleagues[index];
-                      return _buildColleagueTile(c, isDark);
+                      return _buildDismissibleColleagueTile(c, isDark);
                     },
                   ),
           ),
@@ -449,6 +450,82 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
       icon: Icons.group_off_rounded,
       message: _searchQuery.isEmpty ? '暂无同事信息' : '未找到匹配的同事',
       actionHint: _searchQuery.isEmpty ? '点击右上角按钮添加第一位同事' : '尝试使用其他关键词搜索',
+    );
+  }
+
+  /// 左滑删除的同事条目
+  Widget _buildDismissibleColleagueTile(Colleague c, bool isDark) {
+    return Dismissible(
+      key: ValueKey(c.id ?? c.name),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            icon: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child:
+                  const Icon(Icons.delete_rounded, size: 24, color: Colors.red),
+            ),
+            title: const Text('确认删除'),
+            content: Text('确定要删除同事「${c.name}」吗？此操作无法撤销。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('取消'),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(ctx, true),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('删除'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ) ?? false;
+      },
+      onDismissed: (direction) {
+        if (c.id == null) return;
+        final appState = Provider.of<AppState>(context, listen: false);
+        appState.deleteColleague(c.id!);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('「${c.name}」已删除')),
+        );
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.only(right: 20),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.delete_rounded, color: Colors.white, size: 22),
+              SizedBox(width: 6),
+              Text('删除',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  )),
+            ],
+          ),
+        ),
+      ),
+      child: _buildColleagueTile(c, isDark),
     );
   }
 
@@ -471,7 +548,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
-          onTap: () => _showEditorSheet(colleague: c),
+          onTap: () => _showDetailDialog(c),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -548,40 +625,16 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                         Row(
                           children: [
                             if (hasPhone) ...[
-                              Icon(
-                                Icons.phone,
-                                size: 13,
-                                color: Colors.grey.shade500,
-                              ),
+                              Icon(Icons.phone, size: 13, color: Colors.grey.shade500),
                               const SizedBox(width: 3),
-                              Text(
-                                c.phone!,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
+                              Text(c.phone!, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
                             ],
-                            if (hasPhone && hasEmail) ...[
+                            if (hasPhone && hasEmail)
                               const SizedBox(width: 12),
-                            ],
                             if (hasEmail) ...[
-                              Icon(
-                                Icons.email,
-                                size: 13,
-                                color: Colors.grey.shade500,
-                              ),
+                              Icon(Icons.email, size: 13, color: Colors.grey.shade500),
                               const SizedBox(width: 3),
-                              Flexible(
-                                child: Text(
-                                  c.email!,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
+                              Flexible(child: Text(c.email!, style: TextStyle(fontSize: 13, color: Colors.grey.shade600), overflow: TextOverflow.ellipsis)),
                             ],
                           ],
                         ),
@@ -589,17 +642,142 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
                     ],
                   ),
                 ),
-                // Action
-                Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey.shade400,
-                  size: 22,
-                ),
+                // Action arrow
+                Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 22),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  /// 查看同事详情弹窗（含编辑/删除入口）
+  void _showDetailDialog(Colleague c) {
+    final hasPhone = c.phone != null && c.phone!.isNotEmpty;
+    final hasEmail = c.email != null && c.email!.isNotEmpty;
+    final hasSpecialty = c.departmentAndRole != null && c.departmentAndRole!.isNotEmpty;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 头像 + 姓名
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF43A047).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
+                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF43A047)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(c.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                if (hasSpecialty) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: Colors.orange[50], borderRadius: BorderRadius.circular(12)),
+                    child: Text(c.departmentAndRole!, style: TextStyle(fontSize: 12, color: Colors.orange[800], fontWeight: FontWeight.w500)),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                // 联系信息
+                if (hasPhone || hasEmail)
+                  Column(
+                    children: [
+                      Divider(color: Colors.grey.shade200),
+                      const SizedBox(height: 10),
+                      if (hasPhone)
+                        GestureDetector(
+                          onTap: () async {
+                            final uri = Uri.parse('tel:${c.phone}');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF43A047).withValues(alpha: 0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(color: const Color(0xFF43A047).withValues(alpha: 0.1), shape: BoxShape.circle),
+                                  child: const Icon(Icons.call_rounded, size: 18, color: Color(0xFF43A047)),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(c.phone!, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.green[800])),
+                                const SizedBox(width: 8),
+                                Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.green[400]),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (hasPhone && hasEmail) const SizedBox(height: 8),
+                      if (hasEmail)
+                        _detailInfoRow(Icons.email_rounded, c.email!),
+                      const SizedBox(height: 14),
+                    ],
+                  ),
+
+                // 操作按钮行
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () { Navigator.pop(ctx); _confirmDelete(c.id!); },
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.delete_outline, size: 16), SizedBox(width: 4), Text('删除'),
+                      ]),
+                    ),
+                    const SizedBox(width: 4),
+                    FilledButton.icon(
+                      onPressed: () { Navigator.pop(ctx); _showEditorSheet(colleague: c); },
+                      icon: const Icon(Icons.edit_outlined, size: 16),
+                      label: const Text('编辑'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(ctx).primaryColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 详情弹窗中的信息行
+  Widget _detailInfoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 17, color: Colors.grey.shade500),
+        const SizedBox(width: 10),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 15))),
+      ],
     );
   }
 }

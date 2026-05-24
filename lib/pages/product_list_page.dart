@@ -32,13 +32,17 @@ class _ProductListPageState extends State<ProductListPage> {
     }
   }
 
-  void _navigateToProductDetail([Product? product]) {
-    Navigator.push(
+  void _navigateToProductDetail([Product? product]) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ProductDetailPage(product: product),
       ),
     );
+    // addMode 下从详情返回时（保存或取消），直接回到上一级页面
+    if (widget.addMode && mounted && Navigator.of(context).canPop()) {
+      Navigator.pop(context, result);
+    }
   }
 
   @override

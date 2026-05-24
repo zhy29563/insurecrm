@@ -72,18 +72,22 @@ class _CustomerListPageState extends State<CustomerListPage>
     });
   }
 
-  void _navigateToCustomerDetail([Customer? customer]) {
+  void _navigateToCustomerDetail([Customer? customer]) async {
     if (!mounted) return;
     if (widget.visitMode && customer != null) {
       Navigator.pop(context, customer);
       return;
     }
-    Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CustomerDetailPage(customer: customer),
       ),
     );
+    // addMode 下从详情返回时（保存或取消），直接回到上一级页面
+    if (widget.addMode && mounted && Navigator.of(context).canPop()) {
+      Navigator.pop(context, result);
+    }
   }
 
   @override

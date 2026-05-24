@@ -312,7 +312,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Row(
               children: [
                 SizedBox(
@@ -323,11 +323,11 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Text('正在离线识别语音...'),
+                SizedBox(width: 12),
+                Text('正在离线识别语音...'),
               ],
             ),
-            duration: const Duration(seconds: 30),
+            duration: Duration(seconds: 30),
           ),
         );
       }
@@ -574,8 +574,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: const Color(0xFF43A047),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF43A047),
                       width: 1.5,
                     ),
                   ),
@@ -1009,7 +1009,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
-                              '${_inputLength} 字',
+                              '$_inputLength 字',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 11,
@@ -1537,7 +1537,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage>
                         gradient: LinearGradient(
                           colors: [
                             Colors.transparent,
-                            (Colors.grey.shade200).withValues(alpha: 0.4),
+                            Colors.grey.shade200.withValues(alpha: 0.4),
                             Colors.transparent,
                           ],
                         ),
