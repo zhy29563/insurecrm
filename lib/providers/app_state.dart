@@ -10,7 +10,6 @@ import 'package:insurance_manager/models/sale.dart';
 import 'package:insurance_manager/models/user.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:insurance_manager/services/backup_service.dart';
 import 'package:insurance_manager/services/sherpa_asr_service.dart';
 import 'package:insurance_manager/services/ocr_service.dart';
 import 'package:insurance_manager/services/semantic_service.dart';
@@ -2355,8 +2354,7 @@ class AppState extends ChangeNotifier {
         final relatedCustomer = customers[relatedCustomerIndex];
 
         // 为 customerId 添加关系
-        final maxIdA =
-            _nextRelationshipId(customer.relationships);
+        final maxIdA = _nextRelationshipId(customer.relationships);
         final relA = {
           'id': maxIdA,
           'related_customer_id': relatedCustomerId,
@@ -2368,8 +2366,7 @@ class AppState extends ChangeNotifier {
         )..add(relA);
 
         // 为 relatedCustomerId 添加反向关系
-        final maxIdB = _nextRelationshipId(
-            relatedCustomer.relationships);
+        final maxIdB = _nextRelationshipId(relatedCustomer.relationships);
         final relB = {
           'id': maxIdB,
           'related_customer_id': customerId,
@@ -2381,8 +2378,9 @@ class AppState extends ChangeNotifier {
         )..add(relB);
 
         customers[customerIndex] = customer.withRelationships(updatedRelA);
-        customers[relatedCustomerIndex] =
-            relatedCustomer.withRelationships(updatedRelB);
+        customers[relatedCustomerIndex] = relatedCustomer.withRelationships(
+          updatedRelB,
+        );
         notifyListeners();
       } else {
         // For mobile platforms, use database (双向)
@@ -2918,27 +2916,33 @@ class AppState extends ChangeNotifier {
           }
           if (targetRel != null) break;
         }
-        if (targetRel == null || customerId == null || relatedCustomerId == null)
-            return;
+        if (targetRel == null ||
+            customerId == null ||
+            relatedCustomerId == null) {
+          return;
+        }
 
         for (int i = 0; i < customers.length; i++) {
           final customer = customers[i];
-          final hadRelationship =
-              customer.relationships.any((r) => r['id'] == id);
+          final hadRelationship = customer.relationships.any(
+            (r) => r['id'] == id,
+          );
           if (hadRelationship) {
             final updatedRelationships = List<Map<String, dynamic>>.from(
-                customer.relationships)
-              ..removeWhere((r) => r['id'] == id);
+              customer.relationships,
+            )..removeWhere((r) => r['id'] == id);
             customers[i] = customer.withRelationships(updatedRelationships);
           }
           // 同时删除反向关系
           if (customer.id == relatedCustomerId) {
             final reverseUpdated =
                 List<Map<String, dynamic>>.from(customer.relationships)
-                  ..removeWhere((r) =>
-                      (r['related_customer_id'] as num?)?.toInt() ==
-                      customerId &&
-                      r['relationship'] == targetRel!['relationship']);
+                  ..removeWhere(
+                    (r) =>
+                        (r['related_customer_id'] as num?)?.toInt() ==
+                            customerId &&
+                        r['relationship'] == targetRel!['relationship'],
+                  );
             if (reverseUpdated.length != customer.relationships.length) {
               customers[i] = customer.withRelationships(reverseUpdated);
             }

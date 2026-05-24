@@ -58,10 +58,4 @@ class User {
 
   /// Check if user is admin
   bool get isAdmin => role == 'admin';
-
-  /// Get display name or fallback to username
-  String get displayNameOrUsername =>
-      (displayName != null && displayName!.isNotEmpty)
-      ? displayName!
-      : username;
 }

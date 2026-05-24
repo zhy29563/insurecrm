@@ -433,7 +433,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         await launchUrl(geoUri, mode: LaunchMode.externalApplication);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('未找到可用的地图应用')),
+          const SnackBar(content: Text('未找到可用的地图应用')),
         );
       }
       return;
@@ -458,8 +458,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
                 child: Text(
                   '导航到该地址',
                   style: TextStyle(

@@ -5,17 +5,12 @@ class AppDesign {
   AppDesign._();
 
   // ── Spacing ──
-  static const double paddingPage = 16;
   static const double paddingCard = 16;
-  static const double spacingSection = 24;
-  static const double spacingItem = 8;
 
   // ── Border Radius ──
   static const double radiusCard = 14;
   static const double radiusSearch = 14;
-  static const double radiusChip = 8;
   static const double radiusButton = 12;
-  static const double radiusAvatar = 12;
 
   // ── Card Background Color ──
   static Color cardBg(bool isDark) =>
@@ -52,29 +47,6 @@ class AppDesign {
   static Color ratingColor(int? rating) => ratingColors[rating] ?? Colors.grey;
 
   static String ratingLabel(int? rating) => ratingLabels[rating] ?? '未评级';
-
-  // ── Relationship Colors & Labels ──
-  static const Map<String, Color> relationshipColors = {
-    'family': Color(0xFFE53935),
-    'friend': Color(0xFF1E88E5),
-    'colleague': Color(0xFF43A047),
-    'client_referral': Color(0xFFFF9800),
-    'other': Color(0xFF78909C),
-  };
-
-  static const Map<String, String> relationshipLabels = {
-    'family': '家人',
-    'friend': '朋友',
-    'colleague': '同事',
-    'client_referral': '客户转介',
-    'other': '其他',
-  };
-
-  static Color relColor(String? type) =>
-      relationshipColors[type] ?? relationshipColors['other']!;
-
-  static String relLabel(String? type) =>
-      relationshipLabels[type] ?? relationshipLabels['other']!;
 
   // ── Reminder Type Icons & Colors ──
   static const Map<String, IconData> reminderTypeIcons = {
@@ -129,14 +101,6 @@ class AppDesign {
 
   static String reminderTypeLabel(String? type) =>
       reminderTypeLabels[type] ?? '其他';
-
-  // ── Grouped Section Background ──
-  static Color groupedBg(bool isDark) =>
-      isDark ? const Color(0xFF1E1E1E) : Colors.white;
-
-  // ── iOS-style background (0xFFF2F2F7 light, dark mode equivalent) ──
-  static Color iosBg(bool isDark) =>
-      isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7);
 }
 
 /// Unified card container with consistent styling, optional InkWell for tap.
@@ -465,45 +429,6 @@ class AddSectionButton extends StatelessWidget {
             Text('添加', style: TextStyle(color: primaryColor, fontSize: 13)),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Unified SnackBar helper for consistent styling.
-class AppSnackBar {
-  AppSnackBar._();
-
-  static void success(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green.shade700,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
-  static void error(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
-  static void info(BuildContext context, String message) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade700,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }

@@ -11,8 +11,6 @@ class NotificationCenterPage extends StatefulWidget {
 }
 
 class _NotificationCenterPageState extends State<NotificationCenterPage> {
-  // Reminder type labels - using AppDesign.reminderTypeLabel()
-
   // Cached filtered results to avoid recomputing on every build
   List<Map<String, dynamic>> _cachedOverdue = [];
   List<Map<String, dynamic>> _cachedToday = [];

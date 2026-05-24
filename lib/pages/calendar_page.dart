@@ -16,8 +16,6 @@ class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  // Reminder type label map removed - using AppDesign.reminderTypeLabel()
-
   @override
   void initState() {
     super.initState();

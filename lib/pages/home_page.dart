@@ -7,6 +7,7 @@ import 'package:insurance_manager/pages/product_recommendation_page.dart';
 import 'package:insurance_manager/pages/statistics_dashboard_page.dart';
 import 'package:insurance_manager/pages/calendar_page.dart';
 
+import 'package:insurance_manager/pages/nearby_customers_page.dart';
 import 'package:insurance_manager/pages/notification_center_page.dart';
 import 'package:insurance_manager/pages/colleague_management_page.dart';
 import 'package:provider/provider.dart';
@@ -341,7 +342,7 @@ class _HomeContentState extends State<_HomeContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 10), // 增加与上方统计卡片的间距
+                const SizedBox(height: 6), // 增加与上方统计卡片的间距
                 // 统计卡片 - 第二行
                 Row(
                   children: [
@@ -370,7 +371,7 @@ class _HomeContentState extends State<_HomeContent> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 // 快捷操作
                 const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -384,64 +385,87 @@ class _HomeContentState extends State<_HomeContent> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                GridView.count(
-                  crossAxisCount: 4,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 4,
-                  crossAxisSpacing: 4,
-                  childAspectRatio: 0.85,
-                  children: [
-                    _buildQuickAction(
-                      context,
-                      '添加客户',
-                      Icons.person_add_rounded,
-                      const Color(0xFF42A5F5),
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CustomerListPage(addMode: true),
+                const SizedBox(height: 10),
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _buildQuickAction(
+                          context,
+                          '添加客户',
+                          Icons.person_add_rounded,
+                          const Color(0xFF42A5F5),
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CustomerListPage(addMode: true),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    _buildQuickAction(
-                      context,
-                      '添加产品',
-                      Icons.add_circle_rounded,
-                      const Color(0xFF26A69A),
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ProductListPage(addMode: true),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: _buildQuickAction(
+                          context,
+                          '添加产品',
+                          Icons.add_circle_rounded,
+                          const Color(0xFF26A69A),
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ProductListPage(addMode: true),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    _buildQuickAction(
-                      context,
-                      '产品推荐',
-                      Icons.recommend_rounded,
-                      const Color(0xFFAB47BC),
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ProductRecommendationPage(),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: _buildQuickAction(
+                          context,
+                          '添加同事',
+                          Icons.group_add_rounded,
+                          const Color(0xFFFF7043),
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ColleagueManagementPage(),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    _buildQuickAction(
-                      context,
-                      '添加同事',
-                      Icons.group_add_rounded,
-                      const Color(0xFFFF7043),
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ColleagueManagementPage(),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: _buildQuickAction(
+                          context,
+                          '产品推荐',
+                          Icons.recommend_rounded,
+                          const Color(0xFFAB47BC),
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ProductRecommendationPage(),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: _buildQuickAction(
+                          context,
+                          '附近客户',
+                          Icons.near_me_rounded,
+                          const Color(0xFF1E88E5),
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const NearbyCustomersPage(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 32),
                 // 数据看板入口
@@ -755,6 +779,7 @@ class _HomeContentState extends State<_HomeContent> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: AppDesign.cardBg(isDark),
             borderRadius: BorderRadius.circular(16),
@@ -770,14 +795,14 @@ class _HomeContentState extends State<_HomeContent> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, size: 24, color: color),
+                child: Icon(icon, size: 22, color: color),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
                 title,
                 style: TextStyle(

@@ -32,7 +32,6 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
   bool _isRecordingForASR = false;
   bool _isRecognizingImage = false;
   String? _recordingPath;
-  File? _selectedImage;
 
   // 语音/OCR 识别的片段列表（可单独删除）
   final List<_InputSegment> _segments = [];
@@ -317,18 +316,11 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     setState(() => _isListening = false);
   }
 
-  void _removeSegment(int index) {
-    setState(() {
-      _segments.removeAt(index);
-    });
-  }
-
   void _clearAllInputs() {
     setState(() {
       _segments.clear();
       _requirementController.clear();
       _manualText = '';
-      _selectedImage = null;
       _recommendedProducts = [];
       _hasAnalyzed = false;
       _analysisMode = null;
@@ -392,9 +384,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       final XFile? image = await picker.pickImage(source: source);
       if (!context.mounted || image == null) return;
 
-      final imageFile = File(image.path);
       setState(() {
-        _selectedImage = imageFile;
         _isRecognizingImage = true;
       });
 
@@ -510,18 +500,18 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     // 去除标点和空格后，有效内容至少需要2个字符
     final cleaned = requirement.replaceAll(RegExp(r'[，。、；：！？\s,.;:!?]'), '');
     if (cleaned.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入有效的客户需求（至少2个字）')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入有效的客户需求（至少2个字）')));
       return;
     }
     // 检测是否包含至少一个中文或有意义的英文单词
     final hasChinese = RegExp(r'[\u4e00-\u9fa5]').hasMatch(cleaned);
     final hasWord = RegExp(r'[a-zA-Z]{3,}').hasMatch(cleaned);
     if (!hasChinese && !hasWord) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入有意义的客户需求描述')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入有意义的客户需求描述')));
       return;
     }
 
@@ -568,8 +558,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
       // 区分校验：最高分必须比平均分高 15% 以上，否则认为输入无区分度
       if (scored.length >= 3) {
-        final avgScore =
-            scored.values.reduce((a, b) => a + b) / scored.length;
+        final avgScore = scored.values.reduce((a, b) => a + b) / scored.length;
         final topScore = sorted.first.value;
         if ((topScore - avgScore) / avgScore < 0.15) {
           AppLogger.info(
@@ -667,7 +656,6 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).primaryColor;
     final hasAnyInput = _segments.isNotEmpty || _manualText.isNotEmpty;
@@ -882,7 +870,10 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                   if (_analysisMode != null) ...[
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: _analysisMode == 'semantic'
                             ? const Color(0xFF1E88E5).withValues(alpha: 0.1)
@@ -932,153 +923,6 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                     : '输入客户需求，将为您推荐合适的产品',
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 识别片段 chip（带删除按钮和来源标识）
-  Widget _buildSegmentChip(_InputSegment seg, int index, bool isDark) {
-    final Color color;
-    final IconData sourceIcon;
-    switch (seg.source) {
-      case _InputSource.offlineASR:
-        color = const Color(0xFF1E88E5);
-        sourceIcon = Icons.mic_rounded;
-        break;
-      case _InputSource.systemASR:
-        color = const Color(0xFF9C27B0);
-        sourceIcon = Icons.mic_rounded;
-        break;
-      case _InputSource.ocr:
-        color = const Color(0xFF43A047);
-        sourceIcon = Icons.document_scanner_rounded;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.only(left: 10, top: 6, bottom: 6, right: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(sourceIcon, size: 14, color: color),
-          const SizedBox(width: 4),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.55,
-            ),
-            child: Text(
-              seg.text,
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 2),
-          InkWell(
-            onTap: () => _removeSegment(index),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.close_rounded,
-                size: 16,
-                color: Colors.grey.shade500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getAsrLabel(AppState appState) {
-    final sherpaASR = SherpaASRService.instance;
-    if (sherpaASR.isInitialized) {
-      return '语音';
-    }
-    return '语音(系统)';
-  }
-
-  Widget _buildVoiceButton(AppState appState) {
-    final isActive = _isListening || _isRecordingForASR;
-    final color = isActive ? const Color(0xFFE53935) : const Color(0xFF1E88E5);
-    final icon = isActive ? Icons.mic_rounded : Icons.mic_none_rounded;
-    final label = _isRecordingForASR
-        ? '松开结束'
-        : _isListening
-        ? '识别中'
-        : _getAsrLabel(appState);
-
-    return GestureDetector(
-      onLongPressStart: (_) => _startListening(),
-      onLongPressEnd: (_) => _stopListening(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: isActive
-              ? Border.all(color: color.withValues(alpha: 0.5), width: 1.5)
-              : Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToolButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
           ],
         ),
       ),
@@ -1204,6 +1048,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 }
 
 /// 识别片段来源
+// ignore: unused_field
 enum _InputSource { offlineASR, systemASR, ocr }
 
 /// 识别片段
