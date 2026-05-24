@@ -162,7 +162,7 @@ class AppState extends ChangeNotifier {
 
       // 阶段5: 预加载离线语音模型
       if (!kIsWeb) {
-        _setLoadingStage('Paraformer 中文离线语音模型', 0.60, isModel: true);
+        _setLoadingStage('Paraformer 语音识别模型', 0.60, isModel: true);
         await Future.delayed(const Duration(milliseconds: 500));
         try {
           await SherpaASRService.instance.initialize();
@@ -171,7 +171,7 @@ class AppState extends ChangeNotifier {
         }
 
         // 阶段6: 预加载OCR模型
-        _setLoadingStage('PP-OCRv5 离线文字识别模型', 0.75, isModel: true);
+        _setLoadingStage('PP-OCRv5 文字识别模型', 0.75, isModel: true);
         await Future.delayed(const Duration(milliseconds: 500));
         try {
           await OcrService.instance.initialize();
@@ -2145,26 +2145,10 @@ class AppState extends ChangeNotifier {
   Future<void> _addSampleColleagues() async {
     if (kIsWeb) {
       final testColleagues = [
-        Colleague(
-          name: '张三',
-          phone: '13800138001',
-          departmentAndRole: '销售经理',
-        ),
-        Colleague(
-          name: '李四',
-          phone: '13800138002',
-          departmentAndRole: '销售代表',
-        ),
-        Colleague(
-          name: '王五',
-          phone: '13800138003',
-          departmentAndRole: '市场专员',
-        ),
-        Colleague(
-          name: '赵六',
-          phone: '13800138004',
-          departmentAndRole: '客服经理',
-        ),
+        Colleague(name: '张三', phone: '13800138001', departmentAndRole: '销售经理'),
+        Colleague(name: '李四', phone: '13800138002', departmentAndRole: '销售代表'),
+        Colleague(name: '王五', phone: '13800138003', departmentAndRole: '市场专员'),
+        Colleague(name: '赵六', phone: '13800138004', departmentAndRole: '客服经理'),
       ];
       for (int i = 0; i < testColleagues.length; i++) {
         testColleagues[i].id = i + 1;

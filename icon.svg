@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="1024" height="1024">
+  <!-- 白色圆角矩形背景 -->
+  <rect x="0" y="0" width="60" height="60" rx="10" ry="10" fill="#FFFFFF" />
+  <!-- 居中的 shield_outlined 路径 -->
+  <path d="M30 16
+           L40 21
+           L40 31
+           Q40 39, 30 44
+           Q20 39, 20 31
+           L20 21 Z" fill="none" stroke="#1967D2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
