@@ -1,7 +1,6 @@
 import 'package:insurance_manager/utils/app_logger.dart';
 import 'dart:io';
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,14 +8,13 @@ import 'package:insurance_manager/providers/app_state.dart';
 import 'package:insurance_manager/models/product.dart';
 import 'package:insurance_manager/widgets/app_components.dart';
 import 'package:insurance_manager/services/sherpa_asr_service.dart';
+import 'package:insurance_manager/services/semantic_service.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:image_picker/image_picker.dart';
-import 'package:insurance_manager/pages/settings_page.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:insurance_manager/services/ocr_service.dart';
 
 class ProductRecommendationPage extends StatefulWidget {
   const ProductRecommendationPage({super.key});
@@ -36,32 +34,39 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
   String? _recordingPath;
   File? _selectedImage;
 
-  // Use AppDesign.categoryColor instead of local map
+  // 语音/OCR 识别的片段列表（可单独删除）
+  final List<_InputSegment> _segments = [];
+  // 手动输入的文本
+  String _manualText = '';
+
   static Color _categoryColor(String? category) =>
       AppDesign.categoryColor(category);
   List<Product> _recommendedProducts = [];
   bool _isAnalyzing = false;
-  String _selectedAIProviderKey = '';
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final appState = Provider.of<AppState>(context, listen: false);
-      // 默认选择第一个已启用的Chat AI（产品推荐只需chat类型引擎）
-      final enabled = appState.enabledChatEngines;
-      if (enabled.isNotEmpty) {
-        setState(() {
-          _selectedAIProviderKey = enabled.first['key']?.toString() ?? '';
-        });
-      }
-    });
+    _requirementController.addListener(_onManualTextChanged);
+  }
+
+  void _onManualTextChanged() {
+    _manualText = _requirementController.text;
+  }
+
+  /// 获取完整的需求文本（手动 + 片段）
+  String get _fullRequirement {
+    final parts = <String>[];
+    if (_manualText.trim().isNotEmpty) parts.add(_manualText.trim());
+    for (final seg in _segments) {
+      if (seg.text.trim().isNotEmpty) parts.add(seg.text.trim());
+    }
+    return parts.join('，');
   }
 
   void _startListening() async {
     if (_isListening || _isRecordingForASR) return;
 
-    // 先请求麦克风权限
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       var status = await Permission.microphone.status;
       if (!status.isGranted) {
@@ -83,24 +88,15 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       }
     }
 
-    // 优先级：Sherpa离线ASR > 自定义在线ASR > 系统ASR
-    final appState = Provider.of<AppState>(context, listen: false);
-    final asrEngines = appState.enabledASREngines;
     final sherpaASR = SherpaASRService.instance;
     if (sherpaASR.isInitialized) {
-      // 使用 Sherpa-ONNX 离线 ASR
       await _startRecordingForOfflineASR();
-    } else if (asrEngines.isNotEmpty) {
-      // 使用自定义在线 ASR 引擎
-      await _startRecordingForCustomASR(asrEngines);
     } else {
-      // 使用系统级ASR
       await _startSystemASR();
     }
   }
 
   Future<void> _startSystemASR() async {
-    // iOS 还需要语音识别权限
     if (!kIsWeb && Platform.isIOS) {
       var speechStatus = await Permission.speech.status;
       if (!speechStatus.isGranted) {
@@ -124,7 +120,6 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
     final bool available = await _speech.initialize(
       onStatus: (status) {
-        AppLogger.debug('speech status: $status');
         if (status == 'done' || status == 'notListening') {
           if (mounted && _isListening) {
             setState(() => _isListening = false);
@@ -132,9 +127,6 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         }
       },
       onError: (error) {
-        AppLogger.error(
-          'speech error: ${error.errorMsg} (permanent: ${error.permanent})',
-        );
         if (mounted) {
           setState(() => _isListening = false);
           String msg = '语音识别出错';
@@ -156,19 +148,21 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       setState(() => _isListening = true);
       _speech.listen(
         onResult: (result) {
-          if (mounted) {
-            setState(() {
-              _requirementController.text = result.recognizedWords;
-              _requirementController.selection = TextSelection.fromPosition(
-                TextPosition(offset: _requirementController.text.length),
-              );
-            });
+          if (mounted && result.finalResult) {
+            final text = result.recognizedWords;
+            if (text.isNotEmpty) {
+              setState(() {
+                _segments.add(
+                  _InputSegment(text: text, source: _InputSource.systemASR),
+                );
+              });
+            }
           }
         },
         localeId: 'zh_CN',
         listenOptions: stt.SpeechListenOptions(
           listenMode: stt.ListenMode.dictation,
-          partialResults: true,
+          partialResults: false,
         ),
       );
     } else {
@@ -183,52 +177,6 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     }
   }
 
-  Future<void> _startRecordingForCustomASR(
-    List<Map<String, dynamic>> asrEngines,
-  ) async {
-    try {
-      if (kIsWeb) {
-        // Web 平台不支持录音文件方式
-        await _startSystemASR();
-        return;
-      }
-
-      // 获取临时目录用于保存录音文件
-      final tempDir = await getTemporaryDirectory();
-      _recordingPath =
-          '${tempDir.path}/asr_recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-      if (await _audioRecorder.hasPermission()) {
-        await _audioRecorder.start(
-          const RecordConfig(encoder: AudioEncoder.aacLc),
-          path: _recordingPath!,
-        );
-        if (!mounted) return;
-        setState(() => _isRecordingForASR = true);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('麦克风权限未授权'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      AppLogger.error('starting recording for ASR: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('录音启动失败'),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
-  /// 使用 Sherpa-ONNX 离线 ASR 录音识别
   Future<void> _startRecordingForOfflineASR() async {
     try {
       if (kIsWeb) {
@@ -274,7 +222,6 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     }
   }
 
-  /// 停止录音并使用 Sherpa-ONNX 离线识别
   Future<void> _stopRecordingAndOfflineASR() async {
     if (!_isRecordingForASR || _recordingPath == null) return;
 
@@ -295,7 +242,6 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         return;
       }
 
-      // 显示处理中提示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -318,11 +264,9 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         );
       }
 
-      // 使用 Sherpa-ONNX 离线识别
       final sherpaASR = SherpaASRService.instance;
       final transcript = await sherpaASR.recognizeFile(path);
 
-      // 关闭处理中提示
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
@@ -330,9 +274,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       if (transcript != null && transcript.isNotEmpty) {
         if (mounted) {
           setState(() {
-            _requirementController.text = transcript;
-            _requirementController.selection = TextSelection.fromPosition(
-              TextPosition(offset: _requirementController.text.length),
+            _segments.add(
+              _InputSegment(text: transcript, source: _InputSource.offlineASR),
             );
           });
         }
@@ -347,7 +290,6 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         }
       }
 
-      // 清理录音文件
       try {
         if (!kIsWeb) {
           final file = File(path);
@@ -368,194 +310,29 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     }
   }
 
-  Future<void> _stopRecordingAndTranscribe() async {
-    if (!_isRecordingForASR || _recordingPath == null) return;
-
-    try {
-      final path = await _audioRecorder.stop();
-      if (!mounted) return;
-      setState(() => _isRecordingForASR = false);
-
-      if (path == null || (kIsWeb ? false : !File(path).existsSync())) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('录音文件不存在'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-        return;
-      }
-
-      // 获取ASR引擎配置
-      final appState = Provider.of<AppState>(context, listen: false);
-      final asrEngines = appState.enabledASREngines;
-      if (asrEngines.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('ASR引擎未配置'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-        return;
-      }
-
-      final asrConfig = asrEngines.first;
-      final apiKey = asrConfig['apiKey'] as String? ?? '';
-      final baseUrl = asrConfig['baseUrl'] as String? ?? '';
-      final model = asrConfig['model'] as String? ?? '';
-      final asrName = asrConfig['name'] as String? ?? 'ASR';
-
-      if (apiKey.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('$asrName 的 API Key 未配置'),
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-        return;
-      }
-
-      // 显示处理中提示
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text('正在使用 $asrName 识别语音...'),
-              ],
-            ),
-            duration: const Duration(seconds: 30),
-          ),
-        );
-      }
-
-      // 调用 ASR API（兼容 OpenAI Whisper API 格式）
-      final transcript = await _callWhisperAPI(
-        apiKey: apiKey,
-        baseUrl: baseUrl,
-        model: model,
-        audioPath: path,
-      );
-
-      // 关闭处理中提示
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      }
-
-      if (transcript != null && transcript.isNotEmpty) {
-        if (mounted) {
-          setState(() {
-            _requirementController.text = transcript;
-            _requirementController.selection = TextSelection.fromPosition(
-              TextPosition(offset: _requirementController.text.length),
-            );
-          });
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('语音识别结果为空，请重试'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-
-      // 清理录音文件
-      try {
-        if (!kIsWeb) {
-          final file = File(path);
-          if (file.existsSync()) file.deleteSync();
-        }
-      } catch (_) {}
-    } catch (e) {
-      AppLogger.error('transcribing audio: $e');
-      if (mounted) {
-        setState(() => _isRecordingForASR = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('语音识别失败：$e'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<String?> _callWhisperAPI({
-    required String apiKey,
-    required String baseUrl,
-    required String model,
-    required String audioPath,
-  }) async {
-    try {
-      // 构建 API URL：baseUrl/v1/audio/transcriptions
-      String apiUrl = baseUrl;
-      if (!apiUrl.endsWith('/')) apiUrl += '/';
-      apiUrl += 'v1/audio/transcriptions';
-
-      final file = File(audioPath);
-      final fileBytes = await file.readAsBytes();
-      final fileName = audioPath.split('/').last;
-
-      // 构建 multipart request
-      final request = http.MultipartRequest('POST', Uri.parse(apiUrl));
-      request.headers['Authorization'] = 'Bearer $apiKey';
-      request.fields['model'] = model.isNotEmpty ? model : 'whisper-1';
-      request.fields['language'] = 'zh';
-      request.fields['response_format'] = 'json';
-      request.files.add(
-        http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
-      );
-
-      final streamedResponse = await request.send().timeout(
-        const Duration(seconds: 30),
-      );
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return json['text'] as String?;
-      } else {
-        AppLogger.error(
-          'ASR API error: ${response.statusCode} ${response.body}',
-        );
-        return null;
-      }
-    } catch (e) {
-      AppLogger.error('calling Whisper API: $e');
-      return null;
-    }
-  }
-
   void _stopListening() {
     if (_isRecordingForASR) {
-      final sherpaASR = SherpaASRService.instance;
-      if (sherpaASR.isInitialized) {
-        _stopRecordingAndOfflineASR();
-      } else {
-        _stopRecordingAndTranscribe();
-      }
+      _stopRecordingAndOfflineASR();
       return;
     }
     _speech.stop();
     setState(() => _isListening = false);
+  }
+
+  void _removeSegment(int index) {
+    setState(() {
+      _segments.removeAt(index);
+    });
+  }
+
+  void _clearAllInputs() {
+    setState(() {
+      _segments.clear();
+      _requirementController.clear();
+      _manualText = '';
+      _selectedImage = null;
+      _recommendedProducts = [];
+    });
   }
 
   Future<void> _pickImage() async {
@@ -567,7 +344,6 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         return;
       }
 
-      // 选择图片来源：拍照或相册
       final source = await showModalBottomSheet<ImageSource>(
         context: context,
         shape: const RoundedRectangleBorder(
@@ -622,18 +398,12 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         _isRecognizingImage = true;
       });
 
-      // 使用 ML Kit OCR 识别文字
-      final textRecognizer = TextRecognizer(
-        script: TextRecognitionScript.chinese,
-      );
-      final inputImage = InputImage.fromFilePath(image.path);
-
-      final RecognizedText recognizedText = await textRecognizer.processImage(
-        inputImage,
-      );
-      await textRecognizer.close();
-
-      final String ocrText = recognizedText.text.trim();
+      final ocr = OcrService.instance;
+      String? ocrTextResult;
+      if (ocr.isInitialized) {
+        ocrTextResult = await ocr.recognizeText(image.path);
+      }
+      final String ocrText = ocrTextResult?.trim() ?? '';
 
       if (ocrText.isEmpty) {
         if (mounted) {
@@ -648,20 +418,14 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         return;
       }
 
-      // 弹窗确认识别结果，获取用户可能编辑后的文本
       if (!mounted) return;
       final result = await _showOCRResultDialog(ocrText);
       if (mounted) {
         setState(() => _isRecognizingImage = false);
         if (result != null && result.isNotEmpty) {
           setState(() {
-            if (_requirementController.text.isNotEmpty) {
-              _requirementController.text += '\n$result';
-            } else {
-              _requirementController.text = result;
-            }
-            _requirementController.selection = TextSelection.fromPosition(
-              TextPosition(offset: _requirementController.text.length),
+            _segments.add(
+              _InputSegment(text: result, source: _InputSource.ocr),
             );
           });
         }
@@ -735,101 +499,110 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     });
   }
 
-  void _analyzeProducts() async {
-    if (_requirementController.text.isEmpty) {
+  void _analyzeProducts() {
+    final requirement = _fullRequirement;
+    if (requirement.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('请输入客户要求')));
       return;
     }
 
-    if (_selectedAIProviderKey.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先选择AI引擎，或在设置中配置对话分析引擎')));
-      return;
-    }
-
-    // Validate that the selected AI provider key still exists in enabled chat engines
-    final appStateCheck = Provider.of<AppState>(context, listen: false);
-    final enabledKeys = appStateCheck.enabledChatEngines
-        .map((e) => e['key']?.toString() ?? '')
-        .where((k) => k.isNotEmpty)
-        .toList();
-    if (!enabledKeys.contains(_selectedAIProviderKey)) {
-      if (enabledKeys.isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('请先在设置中配置对话分析引擎')));
-        return;
-      }
-      setState(() => _selectedAIProviderKey = enabledKeys.first);
-    }
-
-    setState(() {
-      _isAnalyzing = true;
-    });
-
-    await Future.delayed(const Duration(seconds: 2));
-    if (!context.mounted) return;
+    setState(() => _isAnalyzing = true);
 
     final appState = Provider.of<AppState>(context, listen: false);
-    final List<Product> allProducts = appState.products;
+    final semantic = SemanticService.instance;
 
-    // Split requirement into keywords for better matching
-    var keywords = _requirementController.text
-        .toLowerCase()
-        .split(RegExp(r'[,，、\s]+'))
-        .where(
-          (k) => k.length >= 2,
-        ) // Filter out single-char keywords to avoid overly broad matches
-        .toList();
-    // If no keywords >= 2 chars, fall back to all non-empty tokens
-    if (keywords.isEmpty) {
-      keywords = _requirementController.text
-          .toLowerCase()
-          .split(RegExp(r'[,，、\s]+'))
-          .where((k) => k.isNotEmpty)
-          .toList();
-    }
-    final List<Product> recommended = [];
+    // 语义分析模式：使用嵌入模型计算相似度
+    if (semantic.isInitialized) {
+      final scored = <Product, double>{};
 
-    for (final product in allProducts) {
-      bool matches = false;
+      for (final product in appState.products) {
+        // 组合产品文本信息用于语义匹配
+        final productText = [
+          product.name,
+          product.category ?? '',
+          product.description ?? '',
+          product.sellingPoints ?? '',
+        ].where((s) => s.isNotEmpty).join('，');
 
-      final searchFields = [
-        product.name.toLowerCase(),
-        if (product.description != null) product.description!.toLowerCase(),
-        if (product.category != null) product.category!.toLowerCase(),
-        if (product.sellingPoints != null)
-          ...product.sellingPoints!.split(';').map((a) => a.toLowerCase()),
-      ];
+        if (productText.isEmpty) continue;
 
-      // Match if any keyword is found in any search field
-      for (final keyword in keywords) {
-        for (final field in searchFields) {
-          if (field.contains(keyword)) {
-            matches = true;
-            break;
-          }
+        final similarity = semantic.computeSimilarity(requirement, productText);
+        if (similarity > 0.5) {
+          // 阈值：相似度 > 0.5 才计入
+          scored[product] = similarity;
         }
-        if (matches) break;
       }
 
-      if (matches) {
-        recommended.add(product);
+      final sorted = scored.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final recommended = sorted.take(5).map((e) => e.key).toList();
+
+      if (recommended.isEmpty) {
+        // 语义匹配无结果时降级为关键词匹配
+        _fallbackKeywordMatch(appState, requirement);
+        return;
+      }
+
+      setState(() {
+        _recommendedProducts = recommended;
+        _isAnalyzing = false;
+      });
+    } else {
+      // 模型未初始化，降级为关键词匹配
+      _fallbackKeywordMatch(appState, requirement);
+    }
+  }
+
+  /// 降级方案：关键词匹配
+  void _fallbackKeywordMatch(AppState appState, String requirement) {
+    final reqLower = requirement.toLowerCase();
+    final keywords = reqLower
+        .split(RegExp(r'[,，、\s]+'))
+        .where((s) => s.length >= 2)
+        .toSet();
+
+    final recommended = <Product>[];
+    final scored = <Product, int>{};
+
+    for (final product in appState.products) {
+      int score = 0;
+      final nameLower = product.name.toLowerCase();
+      final categoryLower = product.category?.toLowerCase() ?? '';
+      final descLower = product.description?.toLowerCase() ?? '';
+      final pointsLower = product.sellingPoints?.toLowerCase() ?? '';
+
+      for (final kw in keywords) {
+        if (nameLower.contains(kw)) score += 10;
+        if (categoryLower.contains(kw)) score += 8;
+        if (descLower.contains(kw)) score += 5;
+        if (pointsLower.contains(kw)) score += 5;
+      }
+
+      if (score == 0) {
+        if (nameLower.contains(reqLower) || reqLower.contains(nameLower)) {
+          score += 3;
+        }
+        if (categoryLower.contains(reqLower) ||
+            reqLower.contains(categoryLower)) {
+          score += 2;
+        }
+      }
+
+      if (score > 0) {
+        scored[product] = score;
       }
     }
+
+    final sorted = scored.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    recommended.addAll(sorted.take(5).map((e) => e.key));
 
     if (recommended.isEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('未找到匹配的产品，请尝试其他关键词')));
-      }
+      recommended.addAll(appState.products.take(5));
     }
 
-    if (!context.mounted) return;
     setState(() {
       _recommendedProducts = recommended;
       _isAnalyzing = false;
@@ -838,8 +611,7 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
   @override
   void dispose() {
-    _speech
-        .cancel(); // cancel() releases platform resources, stop() only stops listening
+    _speech.cancel();
     _audioRecorder.dispose();
     _requirementController.dispose();
     super.dispose();
@@ -850,183 +622,37 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     final appState = Provider.of<AppState>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).primaryColor;
-    final enabledEngines = appState.enabledChatEngines;
+    final hasAnyInput = _segments.isNotEmpty || _manualText.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('产品推荐')),
+      appBar: AppBar(
+        title: const Text('产品推荐'),
+        actions: [
+          if (hasAnyInput)
+            IconButton(
+              icon: const Icon(Icons.clear_all_rounded),
+              tooltip: '清空所有',
+              onPressed: _clearAllInputs,
+            ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // AI引擎选择
+            // ── 需求输入区 ──
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppDesign.cardBg(isDark),
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: [AppDesign.cardShadow(context)],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.smart_toy_rounded,
-                          size: 20,
-                          color: primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'AI引擎',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 17,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (enabledEngines.isEmpty)
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const _SettingsAIRedirect(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.settings, size: 16),
-                          label: const Text('去配置'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: primaryColor,
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (enabledEngines.isEmpty)
-                    const EmptyStatePlaceholder(
-                      icon: Icons.smart_toy_rounded,
-                      message: '暂无已启用的对话引擎',
-                      actionHint: '请先在设置中配置AI引擎',
-                      iconSize: 48,
-                    )
-                  else
-                    SizedBox(
-                      width: double.infinity,
-                      child: DropdownButtonFormField<String>(
-                        initialValue:
-                            enabledEngines.any(
-                              (e) => e['key'] == _selectedAIProviderKey,
-                            )
-                            ? _selectedAIProviderKey
-                            : enabledEngines.first['key']?.toString(),
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.memory_rounded,
-                            color: primaryColor,
-                          ),
-                        ),
-                        items: enabledEngines.map<DropdownMenuItem<String>>((
-                          engine,
-                        ) {
-                          final key = engine['key']?.toString() ?? '';
-                          final name = engine['name']?.toString() ?? key;
-                          final model = engine['model']?.toString() ?? '';
-                          return DropdownMenuItem<String>(
-                            value: key,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.smart_toy_rounded,
-                                  size: 18,
-                                  color: primaryColor,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(name),
-                                if (model.isNotEmpty) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? Colors.white.withValues(alpha: 0.08)
-                                          : Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      model,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: isDark
-                                            ? Colors.grey.shade400
-                                            : Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _selectedAIProviderKey = value;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // 客户要求输入卡片
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppDesign.cardBg(isDark),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                  // 标题行
                   Row(
                     children: [
                       Container(
@@ -1041,62 +667,74 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                           color: primaryColor,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       const Text(
                         '客户要求',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          fontSize: 17,
+                          fontSize: 16,
                         ),
                       ),
+                      const Spacer(),
+                      if (_segments.isNotEmpty)
+                        Text(
+                          '${_segments.length} 条识别',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+
+                  // 手动输入框
                   TextField(
                     controller: _requirementController,
-                    maxLines: 4,
+                    maxLines: 3,
                     decoration: InputDecoration(
-                      hintText: '请输入客户的保险需求，例如：健康保险、重疾保险、养老保险等',
+                      hintText: '输入客户的保险需求，如：健康保险、重疾保险...',
                       hintStyle: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade400,
                       ),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: primaryColor, width: 1.5),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  // 语音和拍照按钮
-                  Row(
-                    children: [
-                      _buildToolButton(
-                        icon: _isListening || _isRecordingForASR
-                            ? Icons.mic_rounded
-                            : Icons.mic_none_rounded,
-                        label: _isRecordingForASR
-                            ? '录音中(点击结束)...'
-                            : _isListening
-                            ? '识别中...'
-                            : _getAsrLabel(appState),
-                        color: _isListening || _isRecordingForASR
-                            ? const Color(0xFFE53935)
-                            : const Color(0xFF1E88E5),
-                        onTap: _isListening || _isRecordingForASR
-                            ? _stopListening
-                            : _startListening,
-                      ),
-                      const SizedBox(width: 12),
-                      _buildToolButton(
-                        icon: _isRecognizingImage
-                            ? Icons.hourglass_top_rounded
-                            : Icons.document_scanner_rounded,
-                        label: _isRecognizingImage ? '识别中...' : '拍照识别',
-                        color: const Color(0xFF43A047),
-                        onTap: _isRecognizingImage ? () {} : _pickImage,
-                      ),
-                    ],
-                  ),
+
+                  // 识别片段列表（可单独删除）
+                  if (_segments.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (int i = 0; i < _segments.length; i++)
+                          _buildSegmentChip(_segments[i], i, isDark),
+                      ],
+                    ),
+                  ],
+
+                  // OCR 图片预览
                   if (_selectedImage != null && _isRecognizingImage)
                     Padding(
-                      padding: const EdgeInsets.only(top: 14),
+                      padding: const EdgeInsets.only(top: 10),
                       child: Row(
                         children: [
                           ClipRRect(
@@ -1105,89 +743,76 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                                 ? const SizedBox.shrink()
                                 : Image.file(
                                     _selectedImage!,
-                                    height: 60,
-                                    width: 60,
+                                    height: 48,
+                                    width: 48,
                                     fit: BoxFit.cover,
                                   ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                const SizedBox(
-                                  height: 16,
-                                  width: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '正在识别文字...',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(width: 10),
+                          const SizedBox(
+                            height: 14,
+                            width: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '正在识别文字...',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isAnalyzing ? null : _analyzeProducts,
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+
+                  const SizedBox(height: 12),
+
+                  // 工具栏
+                  Row(
+                    children: [
+                      _buildVoiceButton(appState),
+                      const SizedBox(width: 8),
+                      _buildToolButton(
+                        icon: _isRecognizingImage
+                            ? Icons.hourglass_top_rounded
+                            : Icons.document_scanner_rounded,
+                        label: _isRecognizingImage ? '识别中' : '拍照识别',
+                        color: const Color(0xFF43A047),
+                        onTap: _isRecognizingImage ? () {} : _pickImage,
+                      ),
+                      const Spacer(),
+                      // 分析按钮（紧凑）
+                      FilledButton.icon(
+                        onPressed: _isAnalyzing ? null : _analyzeProducts,
+                        icon: _isAnalyzing
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.auto_awesome_rounded, size: 18),
+                        label: Text(_isAnalyzing ? '分析中' : '推荐'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          textStyle: const TextStyle(fontSize: 14),
                         ),
                       ),
-                      child: _isAnalyzing
-                          ? const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 12),
-                                Text('AI 分析中...'),
-                              ],
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.auto_awesome_rounded,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _selectedAIProviderKey.isEmpty
-                                      ? '分析并推荐产品'
-                                      : '使用 ${_getSelectedAIName(appState)} 分析',
-                                ),
-                              ],
-                            ),
-                    ),
+                    ],
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
 
-            // 推荐产品
+            // ── 推荐结果区 ──
             if (_recommendedProducts.isNotEmpty) ...[
               Row(
                 children: [
@@ -1203,55 +828,24 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                       color: Color(0xFFFF9800),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Text(
                     '推荐产品 (${_recommendedProducts.length})',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 17,
+                      fontSize: 16,
                     ),
                   ),
-                  const Spacer(),
-                  if (_selectedAIProviderKey.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.smart_toy_rounded,
-                            size: 14,
-                            color: primaryColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _getSelectedAIName(appState),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: primaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               ..._recommendedProducts.map<Widget>(
                 (product) => _buildProductCard(product, isDark),
               ),
             ] else if (!_isAnalyzing) ...[
               const EmptyStatePlaceholder(
                 icon: Icons.lightbulb_outline_rounded,
-                message: '输入客户需求，AI 将为您推荐合适的产品',
+                message: '输入客户需求，将为您推荐合适的产品',
               ),
             ],
           ],
@@ -1260,25 +854,116 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     );
   }
 
-  String _getSelectedAIName(AppState appState) {
-    if (_selectedAIProviderKey.isEmpty) return 'AI';
-    final config = appState.aiProviderConfigs[_selectedAIProviderKey];
-    if (config == null) return 'AI';
-    return (config as Map<String, dynamic>)['name']?.toString() ??
-        _selectedAIProviderKey;
+  /// 识别片段 chip（带删除按钮和来源标识）
+  Widget _buildSegmentChip(_InputSegment seg, int index, bool isDark) {
+    final Color color;
+    final IconData sourceIcon;
+    switch (seg.source) {
+      case _InputSource.offlineASR:
+        color = const Color(0xFF1E88E5);
+        sourceIcon = Icons.mic_rounded;
+        break;
+      case _InputSource.systemASR:
+        color = const Color(0xFF9C27B0);
+        sourceIcon = Icons.mic_rounded;
+        break;
+      case _InputSource.ocr:
+        color = const Color(0xFF43A047);
+        sourceIcon = Icons.document_scanner_rounded;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.only(left: 10, top: 6, bottom: 6, right: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(sourceIcon, size: 14, color: color),
+          const SizedBox(width: 4),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.55,
+            ),
+            child: Text(
+              seg.text,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 2),
+          InkWell(
+            onTap: () => _removeSegment(index),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                Icons.close_rounded,
+                size: 16,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _getAsrLabel(AppState appState) {
     final sherpaASR = SherpaASRService.instance;
     if (sherpaASR.isInitialized) {
-      return '语音输入(${sherpaASR.currentModel?.displayName ?? '离线'})';
+      return '语音';
     }
-    final asrEngines = appState.enabledASREngines;
-    if (asrEngines.isNotEmpty) {
-      final name = asrEngines.first['name'] as String? ?? 'ASR';
-      return '语音输入($name)';
-    }
-    return '语音输入(系统)';
+    return '语音(系统)';
+  }
+
+  Widget _buildVoiceButton(AppState appState) {
+    final isActive = _isListening || _isRecordingForASR;
+    final color = isActive ? const Color(0xFFE53935) : const Color(0xFF1E88E5);
+    final icon = isActive ? Icons.mic_rounded : Icons.mic_none_rounded;
+    final label = _isRecordingForASR
+        ? '松开结束'
+        : _isListening
+        ? '识别中'
+        : _getAsrLabel(appState);
+
+    return GestureDetector(
+      onLongPressStart: (_) => _startListening(),
+      onLongPressEnd: (_) => _stopListening(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: isActive
+              ? Border.all(color: color.withValues(alpha: 0.5), width: 1.5)
+              : Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildToolButton({
@@ -1287,73 +972,69 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: Colors.transparent,
+    return InkWell(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(10),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: color),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: color,
-                  fontWeight: FontWeight.w500,
-                ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: color,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildProductCard(Product product, bool isDark) {
-    final List<String> advantages = product.sellingPoints?.split(';') ?? [];
+    final List<String> advantages =
+        product.sellingPoints
+            ?.split(';')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList() ??
+        [];
 
     final color = _categoryColor(product.category);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppDesign.cardBg(isDark),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [AppDesign.cardShadow(context)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 产品头部
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.shield_outlined, color: color, size: 22),
+                child: Icon(Icons.shield_outlined, color: color, size: 20),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1362,14 +1043,14 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                       product.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                        fontSize: 15,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 1),
                     Text(
                       product.company,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: Colors.grey.shade500,
                       ),
                     ),
@@ -1379,17 +1060,17 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
               if (product.category != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
+                    horizontal: 8,
+                    vertical: 3,
                   ),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     product.category!,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: color,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1399,60 +1080,37 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
           ),
           if (product.description != null)
             Padding(
-              padding: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.only(top: 10),
               child: Text(
                 product.description!,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   color: Colors.grey.shade600,
-                  height: 1.5,
+                  height: 1.4,
                 ),
               ),
             ),
           if (advantages.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: (isDark ? Colors.white : Colors.black).withValues(
-                  alpha: 0.03,
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '产品优势',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: color,
-                    ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: advantages.map<Widget>((adv) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: advantages.map<Widget>((adv) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          adv.trim(),
-                          style: TextStyle(fontSize: 12, color: color),
-                        ),
-                      );
-                    }).toList(),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                ],
-              ),
+                  child: Text(
+                    adv.trim(),
+                    style: TextStyle(fontSize: 12, color: color),
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ],
@@ -1461,12 +1119,13 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
   }
 }
 
-/// 一个中间页面，跳转到设置页面的AI配置区域
-class _SettingsAIRedirect extends StatelessWidget {
-  const _SettingsAIRedirect();
+/// 识别片段来源
+enum _InputSource { offlineASR, systemASR, ocr }
 
-  @override
-  Widget build(BuildContext context) {
-    return const SettingsPage();
-  }
+/// 识别片段
+class _InputSegment {
+  final String text;
+  final _InputSource source;
+
+  _InputSegment({required this.text, required this.source});
 }

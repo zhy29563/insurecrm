@@ -389,8 +389,8 @@ class _HomeContentState extends State<_HomeContent> {
                   crossAxisCount: 4,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
                   childAspectRatio: 0.85,
                   children: [
                     _buildQuickAction(

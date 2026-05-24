@@ -11,7 +11,7 @@ import 'dart:convert';
 class DatabaseHelper {
   static const _databaseFileName = 'insurance_manager.db'; // 数据库文件名
   static const _legacyDatabaseFileName = 'insurance_app.db'; // 旧版数据库文件名（用于迁移）
-  static const _databaseVersion = 13;
+  static const _databaseVersion = 14;
   static int get databaseVersion => _databaseVersion;
 
   // Database table names
@@ -322,7 +322,7 @@ class DatabaseHelper {
             api_key TEXT,
             base_url TEXT,
             model TEXT,
-            category TEXT NOT NULL DEFAULT 'chat' CHECK (category IN ('chat', 'asr')),
+            category TEXT NOT NULL DEFAULT 'chat' CHECK (category IN ('chat', 'asr', 'embedding')),
             enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
             created_at TEXT,
             updated_at TEXT
@@ -1240,6 +1240,35 @@ class DatabaseHelper {
 
       // Re-enable foreign keys after migration
       await db.execute('PRAGMA foreign_keys = ON');
+    }
+    if (oldVersion < 14) {
+      // v14: Add 'embedding' category to ai_configs CHECK constraint
+      try {
+        await db.execute('ALTER TABLE ai_configs RENAME TO ai_configs_old');
+        await db.execute('''
+          CREATE TABLE ai_configs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider_key TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            api_key TEXT,
+            base_url TEXT,
+            model TEXT,
+            category TEXT NOT NULL DEFAULT 'chat' CHECK (category IN ('chat', 'asr', 'embedding')),
+            enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
+            created_at TEXT,
+            updated_at TEXT
+          )
+        ''');
+        await db.execute('''
+          INSERT INTO ai_configs (id, provider_key, name, api_key, base_url, model, category, enabled, created_at, updated_at)
+          SELECT id, provider_key, name, api_key, base_url, model,
+            CASE WHEN category IN ('chat', 'asr', 'embedding') THEN category ELSE 'chat' END,
+            CASE WHEN enabled IN (0, 1) THEN enabled ELSE 0 END,
+            created_at, updated_at
+          FROM ai_configs_old
+        ''');
+        await db.execute('DROP TABLE ai_configs_old');
+      } catch (_) {}
     }
 
     // Ensure admin password hash is always correct (fixes stale hashes from older versions)

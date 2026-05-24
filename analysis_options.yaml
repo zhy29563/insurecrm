@@ -47,7 +47,7 @@ linter:
     # === 集合 ===
     prefer_collection_literals: true
     avoid_function_literals_in_foreach_calls: true
-    list_remove_unrelated_type: true
+
 
     # === 函数 ===
     avoid_empty_else: true
@@ -61,7 +61,7 @@ linter:
     no_leading_underscores_for_local_identifiers: true
     null_check_on_nullable_type_parameter: true
     prefer_void_to_null: true
-    return_type_on_setters: true
+
     valid_regexps: true
 
     # === 已禁用 ===

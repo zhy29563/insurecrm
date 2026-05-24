@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:insurance_manager/utils/app_logger.dart';
@@ -10,24 +11,14 @@ enum OfflineASRModel {
   paraformerZh(
     'paraformer-zh',
     'Paraformer 中文离线',
-    'csukuangfj/sherpa-onnx-paraformer-zh-int8-2024-03-09',
     'model.int8.onnx',
     'tokens.txt',
     ~120, // 模型大小 MB
-  ),
-  senseVoice(
-    'sense-voice',
-    'SenseVoice 多语言离线',
-    'csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17',
-    'model.int8.onnx',
-    'tokens.txt',
-    ~150,
   );
 
   const OfflineASRModel(
     this.key,
     this.displayName,
-    this.repoId,
     this.modelFile,
     this.tokensFile,
     this.sizeMB,
@@ -35,7 +26,6 @@ enum OfflineASRModel {
 
   final String key;
   final String displayName;
-  final String repoId;
   final String modelFile;
   final String tokensFile;
   final int sizeMB;
@@ -43,8 +33,7 @@ enum OfflineASRModel {
 
 /// Sherpa-ONNX 离线语音识别服务
 ///
-/// 支持 Paraformer-zh (中文+英文) 和 SenseVoice (中英日韩粤) 模型。
-/// 模型文件需预置在 assets 或首次使用时从 HuggingFace 下载到本地。
+/// 内置 Paraformer-zh 中文离线模型，首次启动时从 assets 拷贝到本地。
 class SherpaASRService {
   static SherpaASRService? _instance;
   static SherpaASRService get instance => _instance ??= SherpaASRService._();
@@ -80,19 +69,86 @@ class SherpaASRService {
     return '$baseDir/${model.key}';
   }
 
-  /// 检查模型是否已下载
-  Future<bool> isModelDownloaded(OfflineASRModel model) async {
+  /// 检查模型是否已拷贝到本地
+  Future<bool> isModelReady(OfflineASRModel model) async {
     final modelDir = await getModelPath(model);
     final modelFile = File('$modelDir/${model.modelFile}');
     final tokensFile = File('$modelDir/${model.tokensFile}');
     return modelFile.existsSync() && tokensFile.existsSync();
   }
 
-  /// 获取已下载的模型列表
-  Future<List<OfflineASRModel>> getDownloadedModels() async {
+  /// 从 Flutter assets 拷贝模型到本地目录（首次启动时）
+  ///
+  /// 对大文件（>10MB）采用分块写入，避免 rootBundle.load 一次性占用过多内存。
+  Future<bool> _copyModelFromAssets(OfflineASRModel model) async {
+    try {
+      final modelDir = await getModelPath(model);
+      final dir = Directory(modelDir);
+      if (!dir.existsSync()) {
+        dir.createSync(recursive: true);
+      }
+
+      final assetBase = 'assets/sherpa_models/${model.key}';
+      final filesToCopy = [model.modelFile, model.tokensFile];
+
+      for (final fileName in filesToCopy) {
+        final savePath = '$modelDir/$fileName';
+        final file = File(savePath);
+
+        // 如果文件已存在且大小 > 0，跳过
+        if (file.existsSync() && file.lengthSync() > 0) {
+          AppLogger.info('模型文件已存在，跳过拷贝: $savePath');
+          continue;
+        }
+
+        final assetPath = '$assetBase/$fileName';
+        AppLogger.info('从 assets 拷贝模型: $assetPath -> $savePath');
+
+        try {
+          final data = await rootBundle.load(assetPath);
+          final bytes = data.buffer.asUint8List();
+
+          // 分块写入文件，避免一次性写入过大
+          const chunkSize = 4 * 1024 * 1024; // 4MB per chunk
+          final sink = file.openWrite();
+          for (int offset = 0; offset < bytes.length; offset += chunkSize) {
+            final end = offset + chunkSize > bytes.length ? bytes.length : offset + chunkSize;
+            sink.add(bytes.sublist(offset, end));
+            await sink.flush();
+          }
+          await sink.close();
+
+          AppLogger.info('拷贝完成: $fileName (${bytes.length} bytes)');
+        } catch (e) {
+          AppLogger.error('从 assets 拷贝失败 ($assetPath): $e');
+          // 清理可能的不完整文件
+          if (file.existsSync()) {
+            file.deleteSync();
+          }
+          return false;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      AppLogger.error('拷贝模型失败: $e');
+      return false;
+    }
+  }
+
+  /// 确保模型文件在本地可用
+  Future<bool> ensureModelAvailable(OfflineASRModel model) async {
+    if (await isModelReady(model)) {
+      return true;
+    }
+    return _copyModelFromAssets(model);
+  }
+
+  /// 获取已就绪的模型列表
+  Future<List<OfflineASRModel>> getReadyModels() async {
     final result = <OfflineASRModel>[];
     for (final model in OfflineASRModel.values) {
-      if (await isModelDownloaded(model)) {
+      if (await isModelReady(model)) {
         result.add(model);
       }
     }
@@ -100,6 +156,9 @@ class SherpaASRService {
   }
 
   /// 初始化识别器（使用指定模型）
+  ///
+  /// 模型文件拷贝完成后会先让出 UI 线程，确保启动页面能渲染加载状态，
+  /// 然后才创建识别器（C++ FFI 同步调用，会短暂阻塞 UI）。
   Future<bool> initialize({OfflineASRModel? model}) async {
     if (_isInitializing) return false;
     _isInitializing = true;
@@ -109,9 +168,9 @@ class SherpaASRService {
 
       final targetModel = model ?? OfflineASRModel.paraformerZh;
 
-      // 检查模型是否已下载
-      if (!await isModelDownloaded(targetModel)) {
-        AppLogger.error('模型未下载: ${targetModel.key}');
+      // 确保模型可用（优先从 assets 拷贝，否则检查已下载）
+      if (!await ensureModelAvailable(targetModel)) {
+        AppLogger.error('模型不可用: ${targetModel.key}');
         _isInitializing = false;
         return false;
       }
@@ -128,6 +187,9 @@ class SherpaASRService {
       _isInitialized = false;
 
       final modelDir = await getModelPath(targetModel);
+
+      // 让出 UI 线程，确保启动页面能渲染模型名称
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // 创建离线模型配置
       final offlineModelConfig = sherpa.OfflineModelConfig(
@@ -219,7 +281,15 @@ class SherpaASRService {
     }
   }
 
-  /// 释放资源
+  /// 停用识别器（释放资源但保留实例，可再次 initialize）
+  void deactivate() {
+    _recognizer?.free();
+    _recognizer = null;
+    _isInitialized = false;
+    _currentModel = null;
+  }
+
+  /// 释放资源并销毁实例
   void dispose() {
     _recognizer?.free();
     _recognizer = null;

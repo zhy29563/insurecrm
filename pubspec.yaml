@@ -33,15 +33,26 @@ dependencies:
   shared_preferences: ^2.2.3
   archive: ^3.4.10
   file_picker: ^8.0.0
-  google_mlkit_text_recognition: ^0.15.1
   record: ^6.2.0
-  http: ^1.2.2
   sherpa_onnx: ^1.13.2
+  paddle_ocr_flutter: ^0.0.3
+  onnxruntime: ^1.4.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon/icon.png"
+  adaptive_icon_background: "#1565C0"
+  adaptive_icon_foreground: "assets/app_icon/icon.png"
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/sherpa_models/paraformer-zh/
+    - assets/embedding_model/

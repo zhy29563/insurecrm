@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:insurance_manager/providers/app_state.dart';
-import 'package:insurance_manager/pages/home_page.dart';
+import 'package:insurance_manager/pages/splash_page.dart';
 import 'package:insurance_manager/database/database_helper.dart';
 import 'package:insurance_manager/utils/app_logger.dart';
 
@@ -188,7 +188,7 @@ class MyApp extends StatelessWidget {
           theme: _lightTheme,
           darkTheme: _darkTheme,
           themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
-          home: const HomePage(),
+          home: const SplashPage(),
           debugShowCheckedModeBanner: false,
         );
       },

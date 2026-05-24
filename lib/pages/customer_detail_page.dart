@@ -14,7 +14,7 @@ import 'package:insurance_manager/models/visit.dart';
 import 'package:insurance_manager/models/colleague.dart';
 import 'package:insurance_manager/models/sale.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:insurance_manager/services/ocr_service.dart';
 import 'package:insurance_manager/pages/product_detail_page.dart';
 import 'package:insurance_manager/pages/settings_page.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -319,6 +319,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     if (_formKey.currentState?.validate() ?? false) {
       final appState = Provider.of<AppState>(context, listen: false);
 
+      // 从 AppState 获取最新客户数据，避免使用过期的 widget.customer 快照
+      // 用户在详情页可能添加了拜访记录、标签、关系等，这些数据只存在于 AppState 中
+      final latestCustomer = widget.customer?.id != null
+          ? appState.customers.where((c) => c.id == widget.customer!.id).firstOrNull
+          : null;
+
       final customer = Customer(
         id: widget.customer?.id,
         name: _nameController.text,
@@ -326,14 +332,19 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         age: int.tryParse(_ageController.text),
         gender: _gender,
         rating: _rating,
+        latitude: latestCustomer?.latitude ?? widget.customer?.latitude,
+        longitude: latestCustomer?.longitude ?? widget.customer?.longitude,
+        address: latestCustomer?.address ?? widget.customer?.address,
         phones: _phones,
         addresses: _addresses,
         persistentPhotoList: _photos,
         birthday: _birthdayController.text.isEmpty
             ? null
             : _birthdayController.text,
+        nextFollowUpDate: latestCustomer?.nextFollowUpDate ?? widget.customer?.nextFollowUpDate,
         createdAt:
-            widget.customer?.createdAt ?? DateTime.now().toIso8601String(),
+            latestCustomer?.createdAt ?? widget.customer?.createdAt ?? DateTime.now().toIso8601String(),
+        persistentTagList: latestCustomer?.persistentTagList ?? widget.customer?.persistentTagList ?? [],
         wechatId: _wechatIdController.text.isEmpty
             ? null
             : _wechatIdController.text,
@@ -346,10 +357,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         source: _source,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
         purchaseIntentionLevel: _rating,
-        persistentTagList: widget.customer?.persistentTagList ?? [],
-        visits: widget.customer?.visits ?? [],
-        products: widget.customer?.products ?? [],
-        relationships: widget.customer?.relationships ?? [],
+        visits: latestCustomer?.visits ?? widget.customer?.visits ?? [],
+        products: latestCustomer?.products ?? widget.customer?.products ?? [],
+        relationships: latestCustomer?.relationships ?? widget.customer?.relationships ?? [],
       );
 
       try {
@@ -506,19 +516,17 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         ),
       );
 
-      // 使用 ML Kit 识别文字
-      final inputImage = InputImage.fromFilePath(picked.path);
-      final textRecognizer = TextRecognizer(
-        script: TextRecognitionScript.chinese,
-      );
-      final recognizedText = await textRecognizer.processImage(inputImage);
-      textRecognizer.close();
+      // 使用本地 OCR 识别文字
+      final ocr = OcrService.instance;
+      String fullText = '';
+      if (ocr.isInitialized) {
+        final result = await ocr.recognizeText(picked.path);
+        fullText = result ?? '';
+      }
 
       // 关闭加载对话框
       if (context.mounted) Navigator.pop(context);
 
-      // 解析识别结果
-      final fullText = recognizedText.text;
       if (fullText.trim().isEmpty) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(

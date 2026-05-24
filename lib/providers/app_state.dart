@@ -11,6 +11,9 @@ import 'package:insurance_manager/models/user.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:insurance_manager/services/backup_service.dart';
+import 'package:insurance_manager/services/sherpa_asr_service.dart';
+import 'package:insurance_manager/services/ocr_service.dart';
+import 'package:insurance_manager/services/semantic_service.dart';
 import 'package:insurance_manager/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,6 +30,23 @@ class AppState extends ChangeNotifier {
   List<String> allTags = [];
   bool isDataLoading = false;
   bool darkMode = false;
+  bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
+
+  /// 加载阶段，用于启动页显示进度
+  String _loadingStage = '';
+  String get loadingStage => _loadingStage;
+  double _loadingProgress = 0.0;
+  double get loadingProgress => _loadingProgress;
+  bool _isLoadingModel = false;
+  bool get isLoadingModel => _isLoadingModel;
+
+  void _setLoadingStage(String stage, double progress, {bool isModel = false}) {
+    _loadingStage = stage;
+    _loadingProgress = progress;
+    _isLoadingModel = isModel;
+    notifyListeners();
+  }
 
   // 客户关系标签（可自定义）
   static const List<String> _defaultRelationshipLabels = [
@@ -40,13 +60,6 @@ class AppState extends ChangeNotifier {
   ];
   List<String> _relationshipLabels = List.from(_defaultRelationshipLabels);
   List<String> get relationshipLabels => _relationshipLabels;
-
-  // AI引擎配置 (AI = Artificial Intelligence, 人工智能)
-  // category: 'asr' = 语音识别, 'chat' = 对话分析
-  Map<String, dynamic> aiProviderConfigs = {
-    'doubao': {'apiKey': '', 'enabled': false, 'category': 'chat'},
-    'qianwen': {'apiKey': '', 'enabled': false, 'category': 'chat'},
-  };
 
   // 统计数据
   List<Map<String, dynamic>> monthlySales = [];
@@ -123,32 +136,67 @@ class AppState extends ChangeNotifier {
   // Initialize app data (parallelized for performance)
   Future<void> initializeApp() async {
     try {
-      // Load config data in parallel (lightweight)
-      await Future.wait([_loadRelationshipLabels(), _loadAIConfigs()]);
+      // 阶段1: 加载配置
+      _setLoadingStage('正在加载配置...', 0.05);
+      await Future.delayed(const Duration(milliseconds: 50));
+      await Future.wait([_loadRelationshipLabels()]);
 
-      // Load core data (customers first since others may depend on it)
+      // 阶段2: 加载客户数据
+      _setLoadingStage('正在加载客户数据...', 0.15);
+      await Future.delayed(const Duration(milliseconds: 50));
       await loadCustomers();
 
-      // Products, colleagues, sales can be loaded in parallel
+      // 阶段3: 加载产品、同事、销售
+      _setLoadingStage('正在加载业务数据...', 0.30);
+      await Future.delayed(const Duration(milliseconds: 50));
       await Future.wait([loadProducts(), loadColleagues(), loadSales()]);
 
-      // Load dependent data (reminders + statistics + notifications in parallel)
+      // 阶段4: 加载提醒、统计、通知
+      _setLoadingStage('正在加载统计数据...', 0.45);
+      await Future.delayed(const Duration(milliseconds: 50));
       await Future.wait([
         loadReminders(),
         loadStatistics(),
         loadSystemNotifications(),
       ]);
 
-      // Auto backup check (non-blocking)
+      // 阶段5: 预加载离线语音模型
       if (!kIsWeb) {
+        _setLoadingStage('Paraformer 中文离线语音模型', 0.60, isModel: true);
+        await Future.delayed(const Duration(milliseconds: 500));
         try {
-          await BackupService.instance.runAutoBackupIfNeeded();
+          await SherpaASRService.instance.initialize();
         } catch (e) {
-          AppLogger.error('auto backup: $e');
+          AppLogger.error('init ASR: $e');
+        }
+
+        // 阶段6: 预加载OCR模型
+        _setLoadingStage('PP-OCRv5 离线文字识别模型', 0.75, isModel: true);
+        await Future.delayed(const Duration(milliseconds: 500));
+        try {
+          await OcrService.instance.initialize();
+        } catch (e) {
+          AppLogger.error('init OCR: $e');
+        }
+
+        // 阶段7: 预加载语义分析模型
+        _setLoadingStage('BGE-small-zh 语义分析模型', 0.90, isModel: true);
+        await Future.delayed(const Duration(milliseconds: 500));
+        try {
+          await SemanticService.instance.initialize();
+        } catch (e) {
+          AppLogger.error('init Semantic: $e');
         }
       }
+
+      // 完成
+      _setLoadingStage('加载完成', 1.0);
+      _isInitialized = true;
+      notifyListeners();
     } catch (e) {
       AppLogger.error('initializing app: $e');
+      _isInitialized = true; // Still proceed even on error
+      notifyListeners();
     }
   }
 
@@ -1201,7 +1249,6 @@ class AppState extends ChangeNotifier {
               'rating': 5,
               'latitude': 39.9042,
               'longitude': 116.4074,
-              'tags': '高意向,重点客户',
               'birthday': '1991-05-15',
               'next_follow_up_date': now
                   .add(const Duration(days: 2))
@@ -1219,7 +1266,6 @@ class AppState extends ChangeNotifier {
               'rating': 4,
               'latitude': 31.2304,
               'longitude': 121.4737,
-              'tags': '中等意向',
               'birthday': '1998-08-22',
               'next_follow_up_date': now
                   .add(const Duration(days: 7))
@@ -1237,7 +1283,6 @@ class AppState extends ChangeNotifier {
               'rating': 3,
               'latitude': 23.1291,
               'longitude': 113.2644,
-              'tags': '低意向',
               'birthday': '1984-03-10',
               'next_follow_up_date': now
                   .subtract(const Duration(days: 3))
@@ -1255,7 +1300,6 @@ class AppState extends ChangeNotifier {
               'rating': 5,
               'latitude': 22.5431,
               'longitude': 114.0579,
-              'tags': '高意向,VIP客户',
               'birthday': '1996-11-08',
               'next_follow_up_date': now
                   .add(const Duration(days: 1))
@@ -1273,7 +1317,6 @@ class AppState extends ChangeNotifier {
               'rating': 4,
               'latitude': 30.2741,
               'longitude': 120.1551,
-              'tags': '中等意向,重点客户',
               'birthday': '1988-07-25',
               'next_follow_up_date': now
                   .add(const Duration(days: 5))
@@ -1528,7 +1571,7 @@ class AppState extends ChangeNotifier {
               'description': '上门讲解太平洋健康险方案',
               'reminder_date': now.toIso8601String().substring(0, 10),
               'reminder_time': '14:00',
-              'type': 'visit',
+              'type': 'custom',
               'status': 'pending',
               'created_at': now.toIso8601String(),
             },
@@ -2067,7 +2110,11 @@ class AppState extends ChangeNotifier {
     try {
       if (kIsWeb) {
         // For web platform, use in-memory data
-        // No sample colleagues for now
+        if (colleagues.isEmpty && !_isSeedingSampleData && kDebugMode) {
+          _isSeedingSampleData = true;
+          await _addSampleColleagues();
+          _isSeedingSampleData = false;
+        }
       } else {
         // For mobile platforms, use database
         final db = DatabaseHelper.instance;
@@ -2075,12 +2122,65 @@ class AppState extends ChangeNotifier {
         colleagues = colleagueMaps
             .map((map) => Colleague.fromMap(map))
             .toList();
+
+        // 仅在 Debug 模式下添加示例同事数据（如果没有数据）
+        if (colleagues.isEmpty && !_isSeedingSampleData && kDebugMode) {
+          _isSeedingSampleData = true;
+          await _addSampleColleagues();
+          // 重新从数据库加载
+          final updated = await db.getAllColleagues();
+          colleagues = updated.map((map) => Colleague.fromMap(map)).toList();
+          _isSeedingSampleData = false;
+        }
       }
     } catch (e) {
       AppLogger.error('loading colleagues: $e');
     } finally {
       isDataLoading = false;
       notifyListeners();
+    }
+  }
+
+  // 添加示例同事数据（仅 Debug 模式）
+  Future<void> _addSampleColleagues() async {
+    if (kIsWeb) {
+      final testColleagues = [
+        Colleague(
+          name: '张三',
+          phone: '13800138001',
+          departmentAndRole: '销售经理',
+        ),
+        Colleague(
+          name: '李四',
+          phone: '13800138002',
+          departmentAndRole: '销售代表',
+        ),
+        Colleague(
+          name: '王五',
+          phone: '13800138003',
+          departmentAndRole: '市场专员',
+        ),
+        Colleague(
+          name: '赵六',
+          phone: '13800138004',
+          departmentAndRole: '客服经理',
+        ),
+      ];
+      for (int i = 0; i < testColleagues.length; i++) {
+        testColleagues[i].id = i + 1;
+        colleagues.add(testColleagues[i]);
+      }
+    } else {
+      final db = DatabaseHelper.instance;
+      final testColleagues = [
+        {'name': '张三', 'phone': '13800138001', 'specialty': '销售经理'},
+        {'name': '李四', 'phone': '13800138002', 'specialty': '销售代表'},
+        {'name': '王五', 'phone': '13800138003', 'specialty': '市场专员'},
+        {'name': '赵六', 'phone': '13800138004', 'specialty': '客服经理'},
+      ];
+      for (final colleague in testColleagues) {
+        await db.insertColleague(colleague);
+      }
     }
   }
 
@@ -2603,164 +2703,6 @@ class AppState extends ChangeNotifier {
   void toggleDarkMode(bool value) {
     darkMode = value;
     notifyListeners();
-  }
-
-  // 更新AI引擎配置
-  Future<void> updateAIConfig(
-    String provider,
-    Map<String, dynamic> config,
-  ) async {
-    aiProviderConfigs[provider] = config;
-    if (!kIsWeb) {
-      await _saveAIConfigToDb(provider, config);
-    }
-    notifyListeners();
-  }
-
-  // 删除AI引擎配置
-  Future<void> deleteAIConfig(String provider) async {
-    aiProviderConfigs.remove(provider);
-    if (!kIsWeb) {
-      try {
-        final db = DatabaseHelper.instance;
-        await db.deleteAIConfigByKey(provider);
-      } catch (e) {
-        AppLogger.error('deleting AI config from db: $e');
-      }
-    }
-    notifyListeners();
-  }
-
-  // 获取已启用的AI引擎列表
-  List<Map<String, dynamic>> get enabledAIEngines {
-    return aiProviderConfigs.entries
-        .where((e) => e.value['enabled'] == true)
-        .map(
-          (e) => {
-            'key': e.key,
-            'name': e.value['name'] ?? e.key,
-            'apiKey': e.value['apiKey'] ?? '',
-            'baseUrl': e.value['baseUrl'] ?? '',
-            'model': e.value['model'] ?? '',
-            'category': e.value['category'] ?? 'chat',
-            'enabled': true,
-          },
-        )
-        .toList();
-  }
-
-  // 获取已启用的ASR(语音识别)引擎
-  List<Map<String, dynamic>> get enabledASREngines {
-    return enabledAIEngines.where((e) => e['category'] == 'asr').toList();
-  }
-
-  // 获取已启用的Chat(对话分析)引擎
-  List<Map<String, dynamic>> get enabledChatEngines {
-    return enabledAIEngines.where((e) => e['category'] == 'chat').toList();
-  }
-
-  // 保存单个AI配置到数据库
-  Future<void> _saveAIConfigToDb(
-    String provider,
-    Map<String, dynamic> config,
-  ) async {
-    try {
-      final db = DatabaseHelper.instance;
-      final now = DateTime.now().toIso8601String();
-      final existing = await db.getAIConfigByKey(provider);
-      if (existing != null) {
-        await db.updateAIConfig(provider, {
-          'name': config['name'] ?? provider,
-          'api_key': config['apiKey'] ?? '',
-          'base_url': config['baseUrl'] ?? '',
-          'model': config['model'] ?? '',
-          'category': config['category'] ?? 'chat',
-          'enabled': (config['enabled'] == true) ? 1 : 0,
-          'updated_at': now,
-        });
-      } else {
-        await db.insertAIConfig({
-          'provider_key': provider,
-          'name': config['name'] ?? provider,
-          'api_key': config['apiKey'] ?? '',
-          'base_url': config['baseUrl'] ?? '',
-          'model': config['model'] ?? '',
-          'category': config['category'] ?? 'chat',
-          'enabled': (config['enabled'] == true) ? 1 : 0,
-          'created_at': now,
-          'updated_at': now,
-        });
-      }
-    } catch (e) {
-      AppLogger.error('saving AI config to db: $e');
-    }
-  }
-
-  // 加载AI配置（优先从数据库，降级到SharedPreferences）
-  Future<void> _loadAIConfigs() async {
-    try {
-      if (!kIsWeb) {
-        final db = DatabaseHelper.instance;
-        final dbConfigs = await db.getAllAIConfigs();
-        if (dbConfigs.isNotEmpty) {
-          final Map<String, dynamic> loaded = {};
-          for (final row in dbConfigs) {
-            loaded[row['provider_key']?.toString() ?? ''] = {
-              'name': row['name'],
-              'apiKey': row['api_key'] ?? '',
-              'baseUrl': row['base_url'] ?? '',
-              'model': row['model'] ?? '',
-              'category': row['category'] ?? 'chat',
-              'enabled': row['enabled'] == 1,
-            };
-          }
-          aiProviderConfigs = loaded;
-          notifyListeners();
-          return;
-        }
-      }
-      // Fallback: load from SharedPreferences (legacy)
-      final prefs = await SharedPreferences.getInstance();
-      final encoded = prefs.getString('ai_configs');
-      if (encoded != null && encoded.isNotEmpty) {
-        final Map<String, dynamic> loaded = {};
-        for (final entry in encoded.split(';;')) {
-          final parts = entry.split('::');
-          if (parts.length == 2) {
-            final key = parts[0];
-            final Map<String, dynamic> config = {};
-            for (final kv in parts[1].split('|')) {
-              final kvParts = kv.split('=');
-              if (kvParts.length == 2) {
-                config[kvParts[0]] = kvParts[1] == 'true'
-                    ? true
-                    : kvParts[1] == 'false'
-                    ? false
-                    : kvParts[1];
-              }
-            }
-            loaded[key] = config;
-          }
-        }
-        if (loaded.isNotEmpty) {
-          aiProviderConfigs = loaded;
-          notifyListeners();
-          // Migrate to database
-          for (final entry in loaded.entries) {
-            await _saveAIConfigToDb(
-              entry.key,
-              (entry.value is Map<String, dynamic>)
-                  ? entry.value as Map<String, dynamic>
-                  : <String, dynamic>{},
-            );
-          }
-          // Clear legacy SharedPreferences
-          await prefs.remove('ai_configs');
-        }
-      }
-    } catch (e) {
-      AppLogger.error('loading AI configs: $e');
-    }
   }
 
   // 更新同事信息
