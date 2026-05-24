@@ -44,3 +44,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# AI model files (large binary, use LFS if needed)
+assets/sherpa_models/**/*.onnx
+assets/sherpa_models/**/model.bin
+assets/sherpa_models/**/tokens.txt
