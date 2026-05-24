@@ -201,7 +201,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('选择公司'),
-        content: Column(
+        content: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ..._companyList.map<Widget>(
@@ -234,6 +235,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               child: const Text('添加新公司'),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -245,7 +247,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('选择分类'),
-        content: Column(
+        content: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ..._categoryList.map<Widget>(
@@ -279,6 +282,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               child: const Text('添加新分类'),
             ),
           ],
+          ),
         ),
       ),
     );

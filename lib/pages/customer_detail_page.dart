@@ -611,7 +611,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('识别结果'),
-          content: Column(
+          content: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -627,6 +628,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
             ],
+          ),
           ),
           actions: [
             TextButton(

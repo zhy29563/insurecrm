@@ -653,7 +653,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             Text('数据恢复'),
           ],
         ),
-        content: Column(
+        content: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -705,6 +706,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
               ),
             ),
           ],
+          ),
         ),
         actions: [
           TextButton(

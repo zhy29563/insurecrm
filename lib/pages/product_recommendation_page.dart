@@ -43,6 +43,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       AppDesign.categoryColor(category);
   List<Product> _recommendedProducts = [];
   bool _isAnalyzing = false;
+  bool _hasAnalyzed = false; // 是否已执行过分析
+  String? _analysisMode; // 当前使用的分析模式：'semantic' / 'keyword' / null
 
   @override
   void initState() {
@@ -151,11 +153,9 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
           if (mounted && result.finalResult) {
             final text = result.recognizedWords;
             if (text.isNotEmpty) {
-              setState(() {
-                _segments.add(
-                  _InputSegment(text: text, source: _InputSource.systemASR),
-                );
-              });
+              final current = _requirementController.text.trim();
+              final newText = current.isEmpty ? text : '$current，$text';
+              _requirementController.text = newText;
             }
           }
         },
@@ -273,11 +273,9 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
 
       if (transcript != null && transcript.isNotEmpty) {
         if (mounted) {
-          setState(() {
-            _segments.add(
-              _InputSegment(text: transcript, source: _InputSource.offlineASR),
-            );
-          });
+          final current = _requirementController.text.trim();
+          final newText = current.isEmpty ? transcript : '$current，$transcript';
+          setState(() => _requirementController.text = newText);
         }
       } else {
         if (mounted) {
@@ -332,6 +330,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       _manualText = '';
       _selectedImage = null;
       _recommendedProducts = [];
+      _hasAnalyzed = false;
+      _analysisMode = null;
     });
   }
 
@@ -423,11 +423,9 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       if (mounted) {
         setState(() => _isRecognizingImage = false);
         if (result != null && result.isNotEmpty) {
-          setState(() {
-            _segments.add(
-              _InputSegment(text: result, source: _InputSource.ocr),
-            );
-          });
+          final current = _requirementController.text.trim();
+          final newText = current.isEmpty ? result : '$current，$result';
+          setState(() => _requirementController.text = newText);
         }
       }
     } catch (e) {
@@ -458,26 +456,28 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         ),
         content: SizedBox(
           width: MediaQuery.of(context).size.width * 0.85,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '已识别到文字内容，可编辑修正后填入需求框：',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: editController,
-                maxLines: 8,
-                autofocus: false,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '已识别到文字内容，可编辑修正后填入需求框：',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: editController,
+                  maxLines: 8,
+                  autofocus: false,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         actions: [
@@ -507,14 +507,35 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       ).showSnackBar(const SnackBar(content: Text('请输入客户要求')));
       return;
     }
+    // 去除标点和空格后，有效内容至少需要2个字符
+    final cleaned = requirement.replaceAll(RegExp(r'[，。、；：！？\s,.;:!?]'), '');
+    if (cleaned.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入有效的客户需求（至少2个字）')),
+      );
+      return;
+    }
+    // 检测是否包含至少一个中文或有意义的英文单词
+    final hasChinese = RegExp(r'[\u4e00-\u9fa5]').hasMatch(cleaned);
+    final hasWord = RegExp(r'[a-zA-Z]{3,}').hasMatch(cleaned);
+    if (!hasChinese && !hasWord) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入有意义的客户需求描述')),
+      );
+      return;
+    }
 
     setState(() => _isAnalyzing = true);
+    _hasAnalyzed = true;
+    _analysisMode = null;
 
     final appState = Provider.of<AppState>(context, listen: false);
     final semantic = SemanticService.instance;
 
     // 语义分析模式：使用嵌入模型计算相似度
     if (semantic.isInitialized) {
+      AppLogger.info('使用语义分析模式 (BGE-small-zh)');
+      _analysisMode = 'semantic';
       final scored = <Product, double>{};
 
       for (final product in appState.products) {
@@ -529,18 +550,41 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
         if (productText.isEmpty) continue;
 
         final similarity = semantic.computeSimilarity(requirement, productText);
-        if (similarity > 0.5) {
-          // 阈值：相似度 > 0.5 才计入
+        if (similarity > 0.58) {
+          // 阈值：相似度 > 0.58 才计入（提高门槛减少无关匹配）
           scored[product] = similarity;
         }
       }
 
+      if (scored.isEmpty) {
+        AppLogger.info('语义匹配无结果，降级为关键词匹配');
+        _analysisMode = 'keyword';
+        _fallbackKeywordMatch(appState, requirement);
+        return;
+      }
+
       final sorted = scored.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
+
+      // 区分校验：最高分必须比平均分高 15% 以上，否则认为输入无区分度
+      if (scored.length >= 3) {
+        final avgScore =
+            scored.values.reduce((a, b) => a + b) / scored.length;
+        final topScore = sorted.first.value;
+        if ((topScore - avgScore) / avgScore < 0.15) {
+          AppLogger.info(
+            '语义区分度不足 (top=$topScore, avg=${avgScore.toStringAsFixed(3)})',
+          );
+          setState(() => _isAnalyzing = false);
+          return;
+        }
+      }
+
       final recommended = sorted.take(5).map((e) => e.key).toList();
 
       if (recommended.isEmpty) {
-        // 语义匹配无结果时降级为关键词匹配
+        AppLogger.info('语义匹配无结果，降级为关键词匹配');
+        _analysisMode = 'keyword';
         _fallbackKeywordMatch(appState, requirement);
         return;
       }
@@ -551,6 +595,8 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
       });
     } else {
       // 模型未初始化，降级为关键词匹配
+      AppLogger.info('语义模型未就绪，降级为关键词匹配模式');
+      _analysisMode = 'keyword';
       _fallbackKeywordMatch(appState, requirement);
     }
   }
@@ -600,7 +646,9 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
     recommended.addAll(sorted.take(5).map((e) => e.key));
 
     if (recommended.isEmpty) {
-      recommended.addAll(appState.products.take(5));
+      // 无匹配结果，不兜底推荐
+      setState(() => _isAnalyzing = false);
+      return;
     }
 
     setState(() {
@@ -688,123 +736,118 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                   ),
                   const SizedBox(height: 12),
 
-                  // 手动输入框
-                  TextField(
-                    controller: _requirementController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: '输入客户的保险需求，如：健康保险、重疾保险...',
-                      hintStyle: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade400,
-                      ),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: primaryColor, width: 1.5),
-                      ),
-                    ),
-                  ),
-
-                  // 识别片段列表（可单独删除）
-                  if (_segments.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        for (int i = 0; i < _segments.length; i++)
-                          _buildSegmentChip(_segments[i], i, isDark),
-                      ],
-                    ),
-                  ],
-
-                  // OCR 图片预览
-                  if (_selectedImage != null && _isRecognizingImage)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: kIsWeb
-                                ? const SizedBox.shrink()
-                                : Image.file(
-                                    _selectedImage!,
-                                    height: 48,
-                                    width: 48,
-                                    fit: BoxFit.cover,
-                                  ),
-                          ),
-                          const SizedBox(width: 10),
-                          const SizedBox(
-                            height: 14,
-                            width: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '正在识别文字...',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  const SizedBox(height: 12),
-
-                  // 工具栏
+                  // 微信风格输入栏：[语音] [输入框] [拍照]
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      _buildVoiceButton(appState),
-                      const SizedBox(width: 8),
-                      _buildToolButton(
-                        icon: _isRecognizingImage
-                            ? Icons.hourglass_top_rounded
-                            : Icons.document_scanner_rounded,
-                        label: _isRecognizingImage ? '识别中' : '拍照识别',
-                        color: const Color(0xFF43A047),
-                        onTap: _isRecognizingImage ? () {} : _pickImage,
-                      ),
-                      const Spacer(),
-                      // 分析按钮（紧凑）
-                      FilledButton.icon(
-                        onPressed: _isAnalyzing ? null : _analyzeProducts,
-                        icon: _isAnalyzing
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.auto_awesome_rounded, size: 18),
-                        label: Text(_isAnalyzing ? '分析中' : '推荐'),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
+                      // 左侧语音按钮
+                      GestureDetector(
+                        onTap: _isListening || _isRecordingForASR
+                            ? _stopListening
+                            : _startListening,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: (_isListening || _isRecordingForASR)
+                                ? const Color(0xFFE53935).withValues(alpha: 0.1)
+                                : Colors.grey.shade100,
                           ),
-                          textStyle: const TextStyle(fontSize: 14),
+                          child: Icon(
+                            _isListening || _isRecordingForASR
+                                ? Icons.stop_rounded
+                                : Icons.mic_none_rounded,
+                            color: (_isListening || _isRecordingForASR)
+                                ? const Color(0xFFE53935)
+                                : Colors.grey.shade600,
+                            size: 22,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+
+                      // 中间输入框（弹性填充）
+                      Expanded(
+                        child: TextField(
+                          controller: _requirementController,
+                          maxLines: 3,
+                          minLines: 1,
+                          decoration: InputDecoration(
+                            hintText: '输入客户的保险需求...',
+                            hintStyle: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade400,
+                            ),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: BorderSide(
+                                color: primaryColor,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // 右侧拍照按钮
+                      IconButton(
+                        onPressed: _isRecognizingImage ? () {} : _pickImage,
+                        icon: Icon(
+                          _isRecognizingImage
+                              ? Icons.hourglass_top_rounded
+                              : Icons.document_scanner_rounded,
+                          size: 22,
+                          color: _isRecognizingImage
+                              ? Colors.orange
+                              : const Color(0xFF43A047),
+                        ),
+                        tooltip: _isRecognizingImage ? '识别中' : '拍照识别',
+                      ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // 推荐按钮（全宽，独占一行）
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _isAnalyzing ? null : _analyzeProducts,
+                      icon: _isAnalyzing
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.auto_awesome_rounded, size: 18),
+                      label: Text(_isAnalyzing ? '分析' : 'AI分析与推荐'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        textStyle: const TextStyle(fontSize: 13),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -836,6 +879,43 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                       fontSize: 16,
                     ),
                   ),
+                  if (_analysisMode != null) ...[
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _analysisMode == 'semantic'
+                            ? const Color(0xFF1E88E5).withValues(alpha: 0.1)
+                            : const Color(0xFF9E9E9E).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _analysisMode == 'semantic'
+                                ? Icons.psychology_rounded
+                                : Icons.search_rounded,
+                            size: 13,
+                            color: _analysisMode == 'semantic'
+                                ? const Color(0xFF1E88E5)
+                                : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            _analysisMode == 'semantic' ? 'AI语义' : '关键词',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _analysisMode == 'semantic'
+                                  ? const Color(0xFF1E88E5)
+                                  : Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
@@ -843,9 +923,13 @@ class _ProductRecommendationPageState extends State<ProductRecommendationPage> {
                 (product) => _buildProductCard(product, isDark),
               ),
             ] else if (!_isAnalyzing) ...[
-              const EmptyStatePlaceholder(
-                icon: Icons.lightbulb_outline_rounded,
-                message: '输入客户需求，将为您推荐合适的产品',
+              EmptyStatePlaceholder(
+                icon: _hasAnalyzed
+                    ? Icons.search_off_rounded
+                    : Icons.lightbulb_outline_rounded,
+                message: _hasAnalyzed
+                    ? '未找到匹配的产品，请尝试更具体的需求描述'
+                    : '输入客户需求，将为您推荐合适的产品',
               ),
             ],
           ],
