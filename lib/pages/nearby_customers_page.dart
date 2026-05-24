@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:insurance_manager/providers/app_state.dart';
 import 'package:insurance_manager/models/customer.dart';
@@ -19,17 +20,43 @@ class NearbyCustomersPage extends StatefulWidget {
 
 class _NearbyCustomersPageState extends State<NearbyCustomersPage> {
   Position? _currentPosition;
+  String _address = '';
   List<Map<String, dynamic>> _nearbyCustomers = [];
   bool _isLoading = false;
   bool _isLocating = false;
   String? _errorMessage;
   double _radius = 5.0; // 默认5公里
 
-  final List<double> _radiusOptions = [1, 3, 5, 10, 20];
-
   @override
   void dispose() {
     super.dispose();
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.location_off_rounded, size: 48, color: Colors.orange),
+        title: const Text('需要位置权限'),
+        content: const Text(
+          '位置权限已被拒绝或受限，请在系统设置中允许应用使用位置信息。\n\n点击下方按钮将自动跳转到设置页面。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+            icon: const Icon(Icons.settings, size: 18),
+            label: const Text('去设置'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _getCurrentLocation() async {
@@ -43,15 +70,26 @@ class _NearbyCustomersPageState extends State<NearbyCustomersPage> {
     try {
       // 检查并请求定位权限
       if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-        var status = await Permission.location.status;
+        // Android 12+ 使用 locationWhenInUse，兼容性更好
+        var status = await Permission.locationWhenInUse.status;
         if (!status.isGranted) {
-          status = await Permission.location.request();
+          status = await Permission.locationWhenInUse.request();
           if (!status.isGranted) {
+            // 引导用户前往系统设置开启权限
+            final isPermanentlyDenied =
+                status == PermissionStatus.permanentlyDenied ||
+                status == PermissionStatus.denied;
             if (mounted) {
               setState(() {
                 _isLocating = false;
-                _errorMessage = '需要位置权限才能使用附近客户功能';
+                _errorMessage = isPermanentlyDenied
+                    ? '位置权限被拒绝，请在设置中手动开启'
+                    : '需要位置权限才能使用附近客户功能';
               });
+              // 如果是永久拒绝，提示跳转设置
+              if (isPermanentlyDenied && mounted) {
+                _showPermissionDialog();
+              }
             }
             return;
           }
@@ -75,9 +113,50 @@ class _NearbyCustomersPageState extends State<NearbyCustomersPage> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
+      // 逆地理编码：将坐标转为可读地址
+      String address = '';
+      try {
+        final placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final pm = placemarks.first;
+          // 组装可读地址：省市区+街道
+          final parts = [
+            if (pm.administrativeArea?.isNotEmpty == true)
+              pm.administrativeArea!,
+            if (pm.locality?.isNotEmpty == true) pm.locality!,
+            if (pm.subLocality?.isNotEmpty == true) pm.subLocality!,
+            if (pm.thoroughfare?.isNotEmpty == true) pm.thoroughfare!,
+            if (pm.name?.isNotEmpty == true && pm.name != pm.thoroughfare)
+              pm.name!,
+          ];
+          address = parts.join('');
+          if (address.isEmpty) {
+            // 如果中文地址为空，尝试英文组合
+            final fallback = [
+              if (pm.country != null) pm.country!,
+              if (pm.subAdministrativeArea?.isNotEmpty == true)
+                pm.subAdministrativeArea!,
+              if (pm.street?.isNotEmpty == true) pm.street!,
+            ].join(', ');
+            address = fallback;
+          }
+          if (address.isEmpty) {
+            address =
+                '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+          }
+        }
+      } catch (_) {
+        address =
+            '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+      }
+
       if (mounted) {
         setState(() {
           _currentPosition = position;
+          _address = address;
           _isLocating = false;
         });
         _loadNearbyCustomers(position.latitude, position.longitude);
@@ -98,10 +177,10 @@ class _NearbyCustomersPageState extends State<NearbyCustomersPage> {
     final appState = Provider.of<AppState>(context, listen: false);
     final nearby = appState.getCustomersSortedByDistance(lat, lon);
 
-    // 按半径过滤
+    // 按半径过滤（_calculateDistance 返回 km）
     final filtered = nearby.where((item) {
       final dist = item['distance'] as double? ?? 0;
-      return dist <= _radius * 1000; // 转换为米
+      return dist <= _radius;
     }).toList();
 
     if (mounted) {
@@ -112,18 +191,23 @@ class _NearbyCustomersPageState extends State<NearbyCustomersPage> {
     }
   }
 
-  String _formatDistance(double meters) {
-    if (meters < 1000) {
-      return '${meters.round()}m';
+  String _formatRadiusLabel(double km) {
+    if (km >= 1) return '${km.toStringAsFixed(km == km.roundToDouble() ? 0 : 1)}km';
+    return '${(km * 1000).round()}m';
+  }
+
+  String _formatDistance(double km) {
+    if (km >= 1) {
+      return '${km.toStringAsFixed(1)}km';
     } else {
-      return '${(meters / 1000).toStringAsFixed(1)}km';
+      return '${(km * 1000).round()}m';
     }
   }
 
-  Color _distanceColor(double meters) {
-    if (meters < 1000) return const Color(0xFF43A047); // 绿色 - 近
-    if (meters < 3000) return const Color(0xFFFB8C00); // 橙色 - 中
-    return const Color(0xFFE53935); // 红色 - 远
+  Color _distanceColor(double km) {
+    if (km < 1) return const Color(0xFF43A047); // 绿色 - 1km以内
+    if (km < 3) return const Color(0xFFFB8C00); // 橙色 - 3km以内
+    return const Color(0xFFE53935); // 红色 - 更远
   }
 
   @override
@@ -175,7 +259,7 @@ class _NearbyCustomersPageState extends State<NearbyCustomersPage> {
                     Expanded(
                       child: Text(
                         _currentPosition != null
-                            ? '${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)}'
+                            ? _address
                             : '尚未获取位置',
                         style: TextStyle(
                           fontSize: 14,
@@ -183,6 +267,8 @@ class _NearbyCustomersPageState extends State<NearbyCustomersPage> {
                               ? _textPrimary(context)
                               : Colors.grey,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (!_isLocating)
@@ -207,48 +293,58 @@ class _NearbyCustomersPageState extends State<NearbyCustomersPage> {
                   ],
                 ),
 
-                // 半径选择器
+                // 半径滑动条
                 if (_currentPosition != null) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
+                      Icon(
+                        Icons.tune_rounded,
+                        size: 16,
+                        color: Colors.grey.shade500,
+                      ),
+                      const SizedBox(width: 6),
                       Text(
-                        '搜索范围：',
+                        _radius >= 1
+                            ? '${_radius.toStringAsFixed(_radius.truncateToDouble() == _radius ? 0 : 1)} km'
+                            : '${(_radius * 1000).round()} m',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: SegmentedButton<double>(
-                          segments: _radiusOptions
-                              .map((r) => ButtonSegment(
-                                    value: r.toDouble(),
-                                    label: Text('${r.toInt()}km'),
-                                  ))
-                              .toList(),
-                          selected: {_radius},
-                          onSelectionChanged: (values) {
-                            setState(() => _radius = values.first);
-                            if (_currentPosition != null) {
-                              _loadNearbyCustomers(
-                                _currentPosition!.latitude,
-                                _currentPosition!.longitude,
-                              );
-                            }
-                          },
-                          style: SegmentedButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            textStyle: const TextStyle(fontSize: 12),
-                            selectedBackgroundColor:
-                                primaryColor.withValues(alpha: 0.15),
-                            selectedForegroundColor: primaryColor,
-                          ),
+                          fontWeight: FontWeight.w600,
+                          color: primaryColor,
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 4),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: primaryColor,
+                      inactiveTrackColor: primaryColor.withValues(alpha: 0.15),
+                      thumbColor: primaryColor,
+                      overlayColor: primaryColor.withValues(alpha: 0.12),
+                      trackHeight: 4,
+                      thumbShape:
+                          const RoundSliderThumbShape(enabledThumbRadius: 7),
+                    ),
+                    child: Slider(
+                      value: _radius,
+                      min: 1,
+                      max: kDebugMode ? 200.0 : 20.0,
+                      divisions: (kDebugMode ? 199 : 19) * 2, // 每0.5km一格
+                      label: _formatRadiusLabel(_radius),
+                      onChanged: (value) {
+                        setState(() => _radius = value);
+                      },
+                      onChangeEnd: (value) {
+                        if (_currentPosition != null) {
+                          _loadNearbyCustomers(
+                            _currentPosition!.latitude,
+                            _currentPosition!.longitude,
+                          );
+                        }
+                      },
+                    ),
                   ),
                 ],
               ],
@@ -416,18 +512,20 @@ class _NearbyCustomersPageState extends State<NearbyCustomersPage> {
                     customer.phones.isNotEmpty ? customer.phones[0] : '暂无电话',
                     style: const TextStyle(fontSize: 13, color: Colors.grey),
                   ),
-                  if (customer.address?.isNotEmpty == true) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      customer.address!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: 2),
+                  Text(
+                    customer.address?.isNotEmpty == true
+                        ? customer.address!
+                        : (customer.addresses.isNotEmpty
+                            ? customer.addresses[0]
+                            : '暂无地址'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
                     ),
-                  ],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
