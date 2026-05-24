@@ -441,15 +441,6 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddSheet,
-        backgroundColor: const Color(0xFF43A047),
-        icon: const Icon(Icons.person_add_rounded, color: Colors.white),
-        label: const Text(
-          '添加同事',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ),
     );
   }
 
@@ -457,7 +448,7 @@ class _ColleagueManagementPageState extends State<ColleagueManagementPage> {
     return EmptyStatePlaceholder(
       icon: Icons.group_off_rounded,
       message: _searchQuery.isEmpty ? '暂无同事信息' : '未找到匹配的同事',
-      actionHint: _searchQuery.isEmpty ? '点击右下角按钮添加第一位同事' : '尝试使用其他关键词搜索',
+      actionHint: _searchQuery.isEmpty ? '点击右上角按钮添加第一位同事' : '尝试使用其他关键词搜索',
     );
   }
 
