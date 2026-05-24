@@ -1,7 +1,5 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:insurance_manager/utils/app_logger.dart';
@@ -13,7 +11,7 @@ enum OfflineASRModel {
     'Paraformer 中文离线',
     'model.int8.onnx',
     'tokens.txt',
-    ~120, // 模型大小 MB
+    ~120,
   );
 
   const OfflineASRModel(
@@ -32,8 +30,6 @@ enum OfflineASRModel {
 }
 
 /// Sherpa-ONNX 离线语音识别服务
-///
-/// 内置 Paraformer-zh 中文离线模型，首次启动时从 assets 拷贝到本地。
 class SherpaASRService {
   static SherpaASRService? _instance;
   static SherpaASRService get instance => _instance ??= SherpaASRService._();
@@ -77,73 +73,20 @@ class SherpaASRService {
     return modelFile.existsSync() && tokensFile.existsSync();
   }
 
-  /// 从 Flutter assets 拷贝模型到本地目录（首次启动时）
-  ///
-  /// 对大文件（>10MB）采用分块写入，避免 rootBundle.load 一次性占用过多内存。
-  Future<bool> _copyModelFromAssets(OfflineASRModel model) async {
-    try {
-      final modelDir = await getModelPath(model);
-      final dir = Directory(modelDir);
-      if (!dir.existsSync()) {
-        dir.createSync(recursive: true);
-      }
-
-      final assetBase = 'assets/sherpa_models/${model.key}';
-      final filesToCopy = [model.modelFile, model.tokensFile];
-
-      for (final fileName in filesToCopy) {
-        final savePath = '$modelDir/$fileName';
-        final file = File(savePath);
-
-        // 如果文件已存在且大小 > 0，跳过
-        if (file.existsSync() && file.lengthSync() > 0) {
-          AppLogger.info('模型文件已存在，跳过拷贝: $savePath');
-          continue;
-        }
-
-        final assetPath = '$assetBase/$fileName';
-        AppLogger.info('从 assets 拷贝模型: $assetPath -> $savePath');
-
-        try {
-          final data = await rootBundle.load(assetPath);
-          final bytes = data.buffer.asUint8List();
-
-          // 分块写入文件，避免一次性写入过大
-          const chunkSize = 4 * 1024 * 1024; // 4MB per chunk
-          final sink = file.openWrite();
-          for (int offset = 0; offset < bytes.length; offset += chunkSize) {
-            final end = offset + chunkSize > bytes.length ? bytes.length : offset + chunkSize;
-            sink.add(bytes.sublist(offset, end));
-            await sink.flush();
-          }
-          await sink.close();
-
-          AppLogger.info('拷贝完成: $fileName (${bytes.length} bytes)');
-        } catch (e) {
-          AppLogger.error('从 assets 拷贝失败 ($assetPath): $e');
-          // 清理可能的不完整文件
-          if (file.existsSync()) {
-            file.deleteSync();
-          }
-          return false;
-        }
-      }
-
-      return true;
-    } catch (e) {
-      AppLogger.error('拷贝模型失败: $e');
-      return false;
-    }
-  }
-
-  /// 确保模型文件在本地可用
+  /// 检查模型文件是否在本地可用
   Future<bool> ensureModelAvailable(OfflineASRModel model) async {
     if (await isModelReady(model)) {
       return true;
     }
-    return _copyModelFromAssets(model);
+    AppLogger.error(
+      '语音识别模型文件不存在: ${model.displayName}\n'
+      '请手动执行下载脚本:\n'
+      '  bash scripts/download_sherpa_models.sh',
+    );
+    return false;
   }
 
+  /// 从网络下载模型文件
   /// 获取已就绪的模型列表
   Future<List<OfflineASRModel>> getReadyModels() async {
     final result = <OfflineASRModel>[];
@@ -156,9 +99,6 @@ class SherpaASRService {
   }
 
   /// 初始化识别器（使用指定模型）
-  ///
-  /// 模型文件拷贝完成后会先让出 UI 线程，确保启动页面能渲染加载状态，
-  /// 然后才创建识别器（C++ FFI 同步调用，会短暂阻塞 UI）。
   Future<bool> initialize({OfflineASRModel? model}) async {
     if (_isInitializing) return false;
     _isInitializing = true;
@@ -187,9 +127,6 @@ class SherpaASRService {
       _isInitialized = false;
 
       final modelDir = await getModelPath(targetModel);
-
-      // 让出 UI 线程，确保启动页面能渲染模型名称
-      await Future.delayed(const Duration(milliseconds: 100));
 
       // 创建离线模型配置
       final offlineModelConfig = sherpa.OfflineModelConfig(
