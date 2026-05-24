@@ -2344,7 +2344,7 @@ class AppState extends ChangeNotifier {
   ) async {
     try {
       if (kIsWeb) {
-        // For web platform, add to in-memory list
+        // For web platform, add to in-memory list (双向)
         final customerIndex = customers.indexWhere((c) => c.id == customerId);
         if (customerIndex == -1) return;
         final customer = customers[customerIndex];
@@ -2353,59 +2353,48 @@ class AppState extends ChangeNotifier {
         );
         if (relatedCustomerIndex == -1) return;
         final relatedCustomer = customers[relatedCustomerIndex];
-        final newRelationship = {
-          'id':
-              (customer.relationships.fold(0, (max, r) {
-                final id = (r['id'] as num?)?.toInt();
-                return id != null && id > max ? id : max;
-              })) +
-              1,
+
+        // 为 customerId 添加关系
+        final maxIdA =
+            _nextRelationshipId(customer.relationships);
+        final relA = {
+          'id': maxIdA,
           'related_customer_id': relatedCustomerId,
           'name': relatedCustomer.name,
           'relationship': relationship,
         };
-        // Create a new mutable list and add the new relationship
-        final updatedRelationships = List<Map<String, dynamic>>.from(
+        final updatedRelA = List<Map<String, dynamic>>.from(
           customer.relationships,
-        );
-        updatedRelationships.add(newRelationship);
-        // Create a new customer with the updated relationships
-        final updatedCustomer = Customer(
-          id: customer.id,
-          name: customer.name,
-          alias: customer.alias,
-          age: customer.age,
-          gender: customer.gender,
-          rating: customer.rating,
-          latitude: customer.latitude,
-          longitude: customer.longitude,
-          address: customer.address,
-          phones: customer.phones,
-          addresses: customer.addresses,
-          visits: customer.visits,
-          products: customer.products,
-          relationships: updatedRelationships,
-          birthday: customer.birthday,
-          nextFollowUpDate: customer.nextFollowUpDate,
-          createdAt: customer.createdAt ?? DateTime.now().toIso8601String(),
-          persistentTagList: customer.persistentTagList,
-          persistentPhotoList: customer.persistentPhotoList,
-          wechatId: customer.wechatId,
-          idCardNumber: customer.idCardNumber,
-          occupation: customer.occupation,
-          source: customer.source,
-          notes: customer.notes,
-          purchaseIntentionLevel: customer.purchaseIntentionLevel,
-        );
-        // Replace the old customer with the new one
-        customers[customerIndex] = updatedCustomer;
+        )..add(relA);
+
+        // 为 relatedCustomerId 添加反向关系
+        final maxIdB = _nextRelationshipId(
+            relatedCustomer.relationships);
+        final relB = {
+          'id': maxIdB,
+          'related_customer_id': customerId,
+          'name': customer.name,
+          'relationship': relationship,
+        };
+        final updatedRelB = List<Map<String, dynamic>>.from(
+          relatedCustomer.relationships,
+        )..add(relB);
+
+        customers[customerIndex] = customer.withRelationships(updatedRelA);
+        customers[relatedCustomerIndex] =
+            relatedCustomer.withRelationships(updatedRelB);
         notifyListeners();
       } else {
-        // For mobile platforms, use database
+        // For mobile platforms, use database (双向)
         final db = DatabaseHelper.instance;
         await db.insertCustomerRelationship({
           'customer_id': customerId,
           'related_customer_id': relatedCustomerId,
+          'relationship': relationship,
+        });
+        await db.insertCustomerRelationship({
+          'customer_id': relatedCustomerId,
+          'related_customer_id': customerId,
           'relationship': relationship,
         });
         await Future.wait([loadCustomers(), loadStatistics()]);
@@ -2413,6 +2402,16 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       AppLogger.error('adding customer relationship: $e');
     }
+  }
+
+  /// 获取下一个关系 ID（内存模式用）
+  static int _nextRelationshipId(List<dynamic> relationships) {
+    int maxId = 0;
+    for (final r in relationships) {
+      final id = (r as Map)['id'] as num?;
+      if (id != null && id.toInt() > maxId) maxId = id.toInt();
+    }
+    return maxId + 1;
   }
 
   // Load all sales
@@ -2904,50 +2903,70 @@ class AppState extends ChangeNotifier {
   Future<void> deleteCustomerRelationship(int id) async {
     try {
       if (kIsWeb) {
+        // 找到要删除的关系记录，获取双方客户ID
+        Map<String, dynamic>? targetRel;
+        int? customerId;
+        int? relatedCustomerId;
+        for (final customer in customers) {
+          for (final r in customer.relationships) {
+            if ((r['id'] as num?)?.toInt() == id) {
+              targetRel = r;
+              customerId = customer.id;
+              relatedCustomerId = (r['related_customer_id'] as num?)?.toInt();
+              break;
+            }
+          }
+          if (targetRel != null) break;
+        }
+        if (targetRel == null || customerId == null || relatedCustomerId == null)
+            return;
+
         for (int i = 0; i < customers.length; i++) {
           final customer = customers[i];
-          final hadRelationship = customer.relationships.any(
-            (r) => r['id'] == id,
-          );
+          final hadRelationship =
+              customer.relationships.any((r) => r['id'] == id);
           if (hadRelationship) {
             final updatedRelationships = List<Map<String, dynamic>>.from(
-              customer.relationships,
-            )..removeWhere((r) => r['id'] == id);
-            customers[i] = Customer(
-              id: customer.id,
-              name: customer.name,
-              alias: customer.alias,
-              age: customer.age,
-              gender: customer.gender,
-              rating: customer.rating,
-              latitude: customer.latitude,
-              longitude: customer.longitude,
-              address: customer.address,
-              phones: customer.phones,
-              addresses: customer.addresses,
-              visits: customer.visits,
-              products: customer.products,
-              relationships: updatedRelationships,
-              birthday: customer.birthday,
-              nextFollowUpDate: customer.nextFollowUpDate,
-              createdAt: customer.createdAt,
-              persistentTagList: customer.persistentTagList,
-              persistentPhotoList: customer.persistentPhotoList,
-              wechatId: customer.wechatId,
-              idCardNumber: customer.idCardNumber,
-              occupation: customer.occupation,
-              source: customer.source,
-              notes: customer.notes,
-              purchaseIntentionLevel: customer.purchaseIntentionLevel,
-            );
-            break;
+                customer.relationships)
+              ..removeWhere((r) => r['id'] == id);
+            customers[i] = customer.withRelationships(updatedRelationships);
+          }
+          // 同时删除反向关系
+          if (customer.id == relatedCustomerId) {
+            final reverseUpdated =
+                List<Map<String, dynamic>>.from(customer.relationships)
+                  ..removeWhere((r) =>
+                      (r['related_customer_id'] as num?)?.toInt() ==
+                      customerId &&
+                      r['relationship'] == targetRel!['relationship']);
+            if (reverseUpdated.length != customer.relationships.length) {
+              customers[i] = customer.withRelationships(reverseUpdated);
+            }
           }
         }
         _calculateInMemoryStatistics();
         notifyListeners();
       } else {
-        final db = DatabaseHelper.instance;
-        await db.deleteCustomerRelationship(id);
+        final dbHelper = DatabaseHelper.instance;
+        // 找到该记录对应的双方ID
+        final db = await dbHelper.database;
+        final relMaps = await db.query(
+          DatabaseHelper.tableCustomerRelations,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        if (relMaps.isNotEmpty) {
+          final rel = relMaps.first;
+          final cid = rel['customer_id'] as int?;
+          final rcid = rel['related_customer_id'] as int?;
+          if (cid != null && rcid != null) {
+            await dbHelper.deleteBidirectionalRelationship(cid, rcid);
+          } else {
+            await dbHelper.deleteCustomerRelationship(id);
+          }
+        } else {
+          await dbHelper.deleteCustomerRelationship(id);
+        }
         await Future.wait([loadCustomers(), loadStatistics()]);
       }
     } catch (e) {

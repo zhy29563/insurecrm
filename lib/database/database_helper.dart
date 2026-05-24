@@ -11,7 +11,7 @@ import 'dart:convert';
 class DatabaseHelper {
   static const _databaseFileName = 'insurance_manager.db'; // 数据库文件名
   static const _legacyDatabaseFileName = 'insurance_app.db'; // 旧版数据库文件名（用于迁移）
-  static const _databaseVersion = 14;
+  static const _databaseVersion = 15;
   static int get databaseVersion => _databaseVersion;
 
   // Database table names
@@ -1270,8 +1270,28 @@ class DatabaseHelper {
         await db.execute('DROP TABLE ai_configs_old');
       } catch (_) {}
     }
-
-    // Ensure admin password hash is always correct (fixes stale hashes from older versions)
+    if (oldVersion < 15) {
+      // v15: 修复客户关系为双向（历史数据可能只有单向记录）
+      final allRels = await db.query(tableCustomerRelations);
+      for (final rel in allRels) {
+        final cid = rel['customer_id'] as int?;
+        final rcid = rel['related_customer_id'] as int?;
+        if (cid == null || rcid == null || cid == rcid) continue;
+        // 检查是否已存在反向记录
+        final reverse = await db.query(
+          tableCustomerRelations,
+          where: 'customer_id = ? AND related_customer_id = ? AND relationship = ?',
+          whereArgs: [rcid, cid, rel['relationship']],
+        );
+        if (reverse.isEmpty) {
+          await db.insert(tableCustomerRelations, {
+            'customer_id': rcid,
+            'related_customer_id': cid,
+            'relationship': rel['relationship'],
+          });
+        }
+      }
+    }
     if (oldVersion < _databaseVersion) {
       try {
         await db.update(
@@ -1979,6 +1999,18 @@ class DatabaseHelper {
       tableCustomerRelations,
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  /// 删除双向关系：删除 (customerId, relatedCustomerId) 的两条记录
+  Future<void> deleteBidirectionalRelationship(
+      int customerId, int relatedCustomerId) async {
+    final Database db = await instance.database;
+    await db.delete(
+      tableCustomerRelations,
+      where:
+          '(customer_id = ? AND related_customer_id = ?) OR (customer_id = ? AND related_customer_id = ?)',
+      whereArgs: [customerId, relatedCustomerId, relatedCustomerId, customerId],
     );
   }
 

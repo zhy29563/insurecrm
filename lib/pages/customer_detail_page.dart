@@ -395,6 +395,95 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     });
   }
 
+  /// 打开地址选择器（跳转第三方地图）
+  Future<void> _openAddressInMap(String address) async {
+    final encodedAddress = Uri.encodeComponent(address);
+
+    // 构建可用地图列表
+    final maps = <Map<String, String>>[
+      {
+        'name': '高德地图',
+        'scheme': 'amapuri://route/plan/?dlat=&dlon=&dname=$encodedAddress',
+      },
+      {
+        'name': '百度地图',
+        'scheme': 'baidumap://map/direction?destination=$encodedAddress&coord_type=gcj02',
+      },
+      {
+        'name': '腾讯地图',
+        'scheme': 'qqmap://map/routeplan?type=drive&to=$encodedAddress',
+      },
+    ];
+
+    // 过滤已安装的地图
+    final availableMaps = <Map<String, String>>[];
+    for (final map in maps) {
+      final uri = Uri.parse(map['scheme']!);
+      if (await canLaunchUrl(uri)) {
+        availableMaps.add(map);
+      }
+    }
+
+    if (!mounted) return;
+
+    if (availableMaps.isEmpty) {
+      // 无已安装地图，使用 geo URI 兜底（会弹出系统选择）
+      final geoUri = Uri.parse('geo:0,0?q=$encodedAddress');
+      if (await canLaunchUrl(geoUri)) {
+        await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('未找到可用的地图应用')),
+        );
+      }
+      return;
+    }
+
+    if (availableMaps.length == 1) {
+      // 只有1个地图，直接打开
+      await launchUrl(Uri.parse(availableMaps[0]['scheme']!),
+          mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    // 多个地图时弹选择框
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  '导航到该地址',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              ...availableMaps.map((map) => ListTile(
+                    leading: Icon(Icons.map_rounded, color: Colors.blue.shade600),
+                    title: Text(map['name']!),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await launchUrl(Uri.parse(map['scheme']!),
+                          mode: LaunchMode.externalApplication);
+                    },
+                  )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _addAddress() {
     final address = _addressController.text.trim();
     if (address.isNotEmpty && !_addresses.contains(address)) {
@@ -1837,9 +1926,30 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                           ),
                         ],
                       )
-                    : Text(
-                        address,
-                        style: TextStyle(fontSize: 15, color: _textPrimary),
+                    : GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _openAddressInMap(address),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                address,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.blue.shade700,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.directions_rounded,
+                              size: 18,
+                              color: Colors.blue.shade500,
+                            ),
+                          ],
+                        ),
                       ),
               ),
             ],

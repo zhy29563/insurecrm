@@ -139,4 +139,35 @@ class Customer {
           .clamp(0, 5),
     );
   }
+
+  /// 创建副本，仅替换 relationships 字段
+  Customer withRelationships(List<Map<String, dynamic>> newRelationships) {
+    return Customer(
+      id: id,
+      name: name,
+      alias: alias,
+      age: age,
+      gender: gender,
+      rating: rating,
+      latitude: latitude,
+      longitude: longitude,
+      address: address,
+      phones: List.from(phones),
+      addresses: List.from(addresses),
+      visits: List.from(visits),
+      products: List.from(products),
+      relationships: newRelationships,
+      birthday: birthday,
+      nextFollowUpDate: nextFollowUpDate,
+      createdAt: createdAt,
+      persistentTagList: List.from(persistentTagList),
+      persistentPhotoList: List.from(persistentPhotoList),
+      wechatId: wechatId,
+      idCardNumber: idCardNumber,
+      occupation: occupation,
+      source: source,
+      notes: notes,
+      purchaseIntentionLevel: purchaseIntentionLevel,
+    );
+  }
 }
