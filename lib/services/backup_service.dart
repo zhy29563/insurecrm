@@ -104,7 +104,7 @@ class BackupService {
 
     // Ensure all data is flushed from WAL to main database file before copying
     final db = await dbHelper.database;
-    await db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
+    await db.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
 
     // Prepare backup archive
     final encoder = ZipFileEncoder();

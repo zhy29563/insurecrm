@@ -221,69 +221,6 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           ),
           const SizedBox(height: 16),
 
-          // ===== Cloud Sync Info =====
-          _buildCard(
-            isDark: isDark,
-            icon: Icons.cloud_upload_rounded,
-            iconColor: const Color(0xFF0288D1),
-            title: '云端同步（可选）',
-            children: [
-              Text(
-                '将备份文件上传至云端存储，支持跨设备同步',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.blue.shade900.withValues(alpha: 0.3)
-                      : Colors.blue.shade50.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.blue.shade800.withValues(alpha: 0.5)
-                        : Colors.blue.shade100,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 18,
-                          color: Colors.blue.shade700,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '使用方式',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: Colors.blue.shade900,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '• 点击备份文件右侧的「分享」按钮，可将备份上传到网盘、微信等云端位置\n'
-                      '• 在新设备上下载后通过「导入备份」功能导入即可完成跨设备迁移\n'
-                      '• 建议定期手动备份到云端以防数据丢失',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.blue.shade800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
           // ===== Backup List =====
           Row(
             children: [
